@@ -67,7 +67,30 @@ async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
+MY_USER_ID = int(os.getenv("ADMIN_USER_ID"))  # ← paste your ID here
 
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id != MY_USER_ID:
+        return  # silently ignore, don't even reply
+    
+    try:
+        with open("usage.log", "r") as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        await update.message.reply_text("No usage data yet.")
+        return
+
+    started = sum(1 for l in lines if "started" in l)
+    cv_uploaded = sum(1 for l in lines if "cv_uploaded" in l)
+    roadmap = sum(1 for l in lines if "roadmap_requested" in l)
+
+    await update.message.reply_text(
+        f"📊 *Bot Stats*\n\n"
+        f"Started: {started}\n"
+        f"CV uploaded: {cv_uploaded}\n"
+        f"Roadmap requested: {roadmap}",
+        parse_mode="Markdown"
+    )
 
 # ── Message handler (text = JD input) ────────────────────────────────────────
 
