@@ -67,6 +67,8 @@ async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
+
+
 # ── Message handler (text = JD input) ────────────────────────────────────────
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
