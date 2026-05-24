@@ -2,6 +2,9 @@ import logging
 import os
 import base64
 
+import json
+from datetime import datetime
+
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -25,6 +28,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+def log_event(user_id: int, event: str):
+    entry = {
+        "ts": datetime.utcnow().isoformat(),
+        "user_id": user_id,
+        "event": event
+    }
+    with open("usage.log", "a") as f:
+        f.write(json.dumps(entry) + "\n")
+
 # ── Keyboard helpers ──────────────────────────────────────────────────────────
 
 def continue_button(callback: str) -> InlineKeyboardMarkup:
@@ -36,6 +49,7 @@ def continue_button(callback: str) -> InlineKeyboardMarkup:
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     state.reset(user_id)
+    log_event(user_id, "started")
     await update.message.reply_text(
         "👋 <b>Analytics Engineer Career Coach</b>\n\n"
         "I will analyse your CV against a real job description and give you a personalised roadmap.\n\n"
@@ -76,6 +90,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     user["jd"] = text
     user["phase"] = "jd_received"
+    log_event(user_id, "jd_submitted")
 
     await update.message.reply_text(
         "✅ <b>Job description saved.</b>\n\n"
@@ -118,6 +133,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         "📄 CV received. Analysing… this takes about 20 seconds.",
         parse_mode=ParseMode.HTML,
     )
+    log_event(user_id, "cv_uploaded") 
 
     try:
         file = await context.bot.get_file(doc.file_id)
@@ -196,6 +212,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     elif action == "output_5":
         user["phase"] = "output_5"
+        log_event(user_id, "roadmap_requested")
 
         # Show loading message
         loading = await query.message.reply_text(
