@@ -1,4 +1,5 @@
 import os
+import re
 
 
 import json
@@ -121,8 +122,11 @@ async def search_vacancies(job_title: str, location: str, work_setup: str, indus
         messages=[{"role": "user", "content": prompt}]
     )
     text = "".join(b.text for b in response.content if b.type == "text")
-    text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    return json.loads(text)
+        # Web search responses wrap JSON in prose — extract the JSON array
+    match = re.search(r'\[.*\]', text, re.DOTALL)
+    if not match:
+        raise ValueError(f"No JSON array found in response: {text[:200]}")
+    return json.loads(match.group(0))
 
 
 async def score_vacancy(cv_b64: str, vacancy: dict) -> dict:
