@@ -20,7 +20,7 @@ TOOL_LABELS = {
 }
 
 
-def output_1(ats: dict) -> str:
+def step_ats(ats: dict) -> str:
     score = ats["score"]
     bar = _score_bar(score)
     matched = ", ".join(ats.get("matched", [])) or "none"
@@ -37,7 +37,7 @@ def output_1(ats: dict) -> str:
     )
 
 
-def output_2(xyz: dict) -> str:
+def step_xyz(xyz: dict) -> str:
     passing = xyz.get("passing", [])
     failing = xyz.get("failing", [])
     rewrites = xyz.get("rewrites", [])
@@ -66,7 +66,7 @@ def output_2(xyz: dict) -> str:
     return "\n".join(lines)
 
 
-def output_3(tools: dict) -> str:
+def step_tools(tools: dict) -> str:
     lines = ["<b>🛠 Output 3 — Tool Radar</b>\n"]
     for key, label in TOOL_LABELS.items():
         rating = tools.get(key, "not_found")
@@ -78,7 +78,7 @@ def output_3(tools: dict) -> str:
     return "\n".join(lines)
 
 
-def output_4(level: dict) -> str:
+def step_level(level: dict) -> str:
     assessment = level.get("assessment", "Unknown")
     reasoning = level.get("reasoning", "")
 
@@ -96,7 +96,7 @@ def output_4(level: dict) -> str:
     )
 
 
-def output_5_header(level: str) -> str:
+def step_roadmap_header(level: str) -> str:
     return f"<b>🗺 Output 5 — Your Roadmap ({level})</b>\n\n⏳ Searching for live roles and building your plan..."
 
 
@@ -160,3 +160,21 @@ def _bold(text: str) -> str:
         else:
             result.append(_esc(part))
     return "".join(result)
+
+
+def vacancy_card(vacancy: dict, score: dict, index: int, total: int) -> str:
+    pct = score.get("score", 0)
+    bar = _score_bar(pct)
+    matched = ", ".join(score.get("matched", [])) or "none"
+    missing = ", ".join(score.get("missing", [])) or "none"
+
+    return (
+        f"<b>{index}/{total} · {pct}% Match</b>\n"
+        f"{bar}\n\n"
+        f"<b>{_esc(vacancy['title'])}</b> @ <b>{_esc(vacancy['company'])}</b>\n"
+        f"📍 {_esc(vacancy['location'])}\n\n"
+        f"{_esc(vacancy['summary'])}\n\n"
+        f"✅ <b>Matched:</b> {_esc(matched)}\n"
+        f"❌ <b>Missing:</b> {_esc(missing)}\n\n"
+        f"🔗 <a href='{vacancy['url']}'>View job posting</a>"
+    )

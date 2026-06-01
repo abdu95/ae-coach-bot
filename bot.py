@@ -1,273 +1,441 @@
 import logging
 import os
 import base64
-
 import json
+import asyncio
 from datetime import datetime
 
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
-    Application,
-    CommandHandler,
-    MessageHandler,
-    CallbackQueryHandler,
-    ContextTypes,
-    filters,
+    Application, CommandHandler, MessageHandler,
+    CallbackQueryHandler, ContextTypes, filters,
 )
 from telegram.constants import ParseMode
+
+load_dotenv()
 
 import state
 import coach
 import formatter
 
-load_dotenv()
 logging.basicConfig(
     format="%(asctime)s — %(name)s — %(levelname)s — %(message)s",
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
 
+ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "0"))
 
-def log_event(user_id: int, event: str):
-    entry = {
-        "ts": datetime.utcnow().isoformat(),
-        "user_id": user_id,
-        "event": event
-    }
+WELCOME = (
+    "👋 <b>AE Career Coach</b>\n\n"
+    "Here is how I work:\n\n"
+    "1️⃣ You upload your CV\n"
+    "2️⃣ I suggest job titles that fit your profile\n"
+    "3️⃣ You tell me location, work setup, and industry\n"
+    "4️⃣ I search live job postings and score your CV against each one\n"
+    "5️⃣ You pick a role to apply for\n"
+    "6️⃣ I analyse your CV against that role step by step\n\n"
+    "📄 <b>Upload your CV as a PDF to begin.</b>"
+)
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def log_event(user_id: int, event: str) -> None:
+    entry = {"ts": datetime.utcnow().isoformat(), "user_id": user_id, "event": event}
     with open("usage.log", "a") as f:
         f.write(json.dumps(entry) + "\n")
 
-# ── Keyboard helpers ──────────────────────────────────────────────────────────
 
-def continue_button(callback: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([[InlineKeyboardButton("Continue →", callback_data=callback)]])
+def action_button(label: str, callback: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[InlineKeyboardButton(label, callback_data=callback)]])
 
 
-# ── Command handlers ──────────────────────────────────────────────────────────
+# ── Commands ──────────────────────────────────────────────────────────────────
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     state.reset(user_id)
     log_event(user_id, "started")
+    await update.message.reply_text(WELCOME, parse_mode=ParseMode.HTML)
+
+
+async def reset_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    state.reset(update.effective_user.id)
     await update.message.reply_text(
-        "👋 <b>Analytics Engineer Career Coach</b>\n\n"
-        "I will analyse your CV against a real job description and give you a personalised roadmap.\n\n"
-        "First, <b>paste the job description</b> you are targeting — copy the full text from the job posting.",
+        "🔄 Reset. Upload your CV to start again.",
         parse_mode=ParseMode.HTML,
     )
 
-
-async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_id = update.effective_user.id
-    state.reset(user_id)
-    await update.message.reply_text(
-        "🔄 Reset. Send me a job description to start over.",
-        parse_mode=ParseMode.HTML,
-    )
-
-
-MY_USER_ID = int(os.getenv("ADMIN_USER_ID"))  # ← paste your ID here
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.effective_user.id != MY_USER_ID:
-        return  # silently ignore, don't even reply
-    
+    if update.effective_user.id != ADMIN_USER_ID:
+        return
     try:
-        with open("usage.log", "r") as f:
-            lines = f.readlines()
+        lines = open("usage.log").readlines()
     except FileNotFoundError:
-        await update.message.reply_text("No usage data yet.")
+        await update.message.reply_text("No data yet.")
         return
 
-    started = sum(1 for l in lines if "started" in l)
-    cv_uploaded = sum(1 for l in lines if "cv_uploaded" in l)
-    roadmap = sum(1 for l in lines if "roadmap_requested" in l)
+    events = []
+    for line in lines:
+        try:
+            events.append(json.loads(line.strip()))
+        except Exception:
+            continue
+
+    def total(event_name):
+        return sum(1 for e in events if e.get("event") == event_name)
+
+    def unique(event_name):
+        return len(set(e["user_id"] for e in events if e.get("event") == event_name))
 
     await update.message.reply_text(
-        f"📊 *Bot Stats*\n\n"
-        f"Started: {started}\n"
-        f"CV uploaded: {cv_uploaded}\n"
-        f"Roadmap requested: {roadmap}",
-        parse_mode="Markdown"
-    )
-
-# ── Message handler (text = JD input) ────────────────────────────────────────
-
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_id = update.effective_user.id
-    user = state.get(user_id)
-    text = update.message.text.strip()
-
-    if user["phase"] != "idle":
-        await update.message.reply_text(
-            "Send /reset to start over, or upload your CV if you have already pasted a JD.",
-            parse_mode=ParseMode.HTML,
-        )
-        return
-
-    if len(text) < 100:
-        await update.message.reply_text(
-            "That looks too short for a job description. Please paste the full JD text.",
-            parse_mode=ParseMode.HTML,
-        )
-        return
-
-    user["jd"] = text
-    user["phase"] = "jd_received"
-    log_event(user_id, "jd_submitted")
-
-    await update.message.reply_text(
-        "✅ <b>Job description saved.</b>\n\n"
-        "Now <b>upload your CV as a PDF file</b>.",
+        f"📊 <b>Bot Stats</b>\n\n"
+        f"<b>Started</b>\n"
+        f"  Total: {total('started')} · Unique: {unique('started')}\n\n"
+        f"<b>CV uploaded</b>\n"
+        f"  Total: {total('cv_uploaded')} · Unique: {unique('cv_uploaded')}\n\n"
+        f"<b>Role chosen</b>\n"
+        f"  Total: {total('role_chosen')} · Unique: {unique('role_chosen')}\n\n"
+        f"<b>Roadmap requested</b>\n"
+        f"  Total: {total('roadmap_requested')} · Unique: {unique('roadmap_requested')}",
         parse_mode=ParseMode.HTML,
     )
 
-
-# ── Document handler (CV upload) ──────────────────────────────────────────────
+# ── CV upload ─────────────────────────────────────────────────────────────────
 
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     user = state.get(user_id)
     doc = update.message.document
 
-    if user["phase"] == "idle":
-        await update.message.reply_text(
-            "Please paste a job description first. Send /start to begin.",
-            parse_mode=ParseMode.HTML,
-        )
-        return
-
-    if user["phase"] != "jd_received":
-        await update.message.reply_text(
-            "Send /reset to start over.",
-            parse_mode=ParseMode.HTML,
-        )
-        return
-
     if not doc.file_name.lower().endswith(".pdf"):
-        await update.message.reply_text(
-            "Please upload a <b>PDF</b> file.",
-            parse_mode=ParseMode.HTML,
-        )
+        await update.message.reply_text("Please upload a <b>PDF</b> file.", parse_mode=ParseMode.HTML)
         return
 
-    # Download and encode CV
-    user["phase"] = "analyzing"
-    status_msg = await update.message.reply_text(
-        "📄 CV received. Analysing… this takes about 20 seconds.",
-        parse_mode=ParseMode.HTML,
-    )
-    log_event(user_id, "cv_uploaded") 
+    log_event(user_id, "cv_uploaded")
+    msg = await update.message.reply_text("📄 Got your CV. Analysing your profile…")
 
     try:
         file = await context.bot.get_file(doc.file_id)
         cv_bytes = await file.download_as_bytearray()
         user["cv_b64"] = base64.b64encode(cv_bytes).decode("utf-8")
     except Exception as e:
-        logger.error(f"File download error: {e}")
-        await status_msg.edit_text("❌ Could not download your CV. Please try again.")
-        user["phase"] = "jd_received"
+        logger.error(f"Download error: {e}")
+        await msg.edit_text("❌ Could not read your CV. Please try again.")
         return
 
-    # Run analysis
     try:
-        outputs = await coach.analyze_cv(user["jd"], user["cv_b64"])
-        user["outputs"] = outputs
-        user["level"] = outputs["level"]["assessment"]
+        titles = await coach.suggest_job_titles(user["cv_b64"])
+        user["suggested_titles"] = titles
+        user["phase"] = "titles_suggested"
     except Exception as e:
-        logger.error(f"Claude analysis error: {e}")
-        await status_msg.edit_text(
-            "❌ Analysis failed. Please try again or send /reset."
-        )
-        user["phase"] = "jd_received"
+        logger.error(f"Title suggestion error: {e}")
+        await msg.edit_text("❌ Could not analyse your CV. Please try again.")
         return
 
-    await status_msg.delete()
+    await msg.delete()
 
-    # Show Output 1
-    user["phase"] = "output_1"
-    msg = formatter.output_1(outputs["ats"])
+    buttons = [
+        [InlineKeyboardButton(t, callback_data=f"title_{i}")]
+        for i, t in enumerate(titles)
+    ]
+    buttons.append([InlineKeyboardButton("✏️ Enter my own title", callback_data="title_custom")])
+
     await update.message.reply_text(
-        msg,
+        "Based on your CV, here are the roles that fit your profile.\n\n"
+        "Which one are you targeting?",
         parse_mode=ParseMode.HTML,
-        reply_markup=continue_button("output_2"),
+        reply_markup=InlineKeyboardMarkup(buttons),
     )
 
 
-# ── Callback handler (Continue buttons) ──────────────────────────────────────
+# ── Text handler (custom inputs) ──────────────────────────────────────────────
+
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = update.effective_user.id
+    user = state.get(user_id)
+    text = update.message.text.strip()
+    message = update.message
+
+    if user["phase"] == "waiting_title":
+        user["job_title"] = text
+        user["phase"] = "title_chosen"
+        await message.reply_text(f"✅ <b>{text}</b> saved.", parse_mode=ParseMode.HTML)
+        await ask_location(message, user_id)
+
+    elif user["phase"] == "waiting_location":
+        user["location"] = text
+        user["phase"] = "location_chosen"
+        await message.reply_text(f"📍 <b>{text}</b> saved.", parse_mode=ParseMode.HTML)
+        await ask_setup(message)
+
+    elif user["phase"] == "waiting_industry":
+        user["industry"] = text
+        user["phase"] = "industry_chosen"
+        await message.reply_text(f"✅ <b>{text}</b> saved.", parse_mode=ParseMode.HTML)
+        await start_search(message, context, user_id)
+
+    else:
+        await message.reply_text(
+            "Send /start to begin or /reset to start over.",
+            parse_mode=ParseMode.HTML,
+        )
+
+
+# ── Preference prompts ────────────────────────────────────────────────────────
+
+async def ask_location(message, user_id: int) -> None:
+    title = state.get(user_id)["job_title"]
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🇪🇺 Europe", callback_data="loc_eu"),
+            InlineKeyboardButton("🇺🇸 United States", callback_data="loc_us"),
+        ],
+        [InlineKeyboardButton("✏️ Enter location", callback_data="loc_custom")],
+    ])
+    await message.reply_text(
+        f"Great — <b>{title}</b> it is.\n\nWhere are you looking?",
+        parse_mode=ParseMode.HTML,
+        reply_markup=keyboard,
+    )
+
+
+async def ask_setup(message) -> None:
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton("🏠 Remote", callback_data="setup_remote"),
+        InlineKeyboardButton("🏢 Office", callback_data="setup_office"),
+        InlineKeyboardButton("🔀 Hybrid", callback_data="setup_hybrid"),
+    ]])
+    await message.reply_text(
+        "Work setup preference?",
+        parse_mode=ParseMode.HTML,
+        reply_markup=keyboard,
+    )
+
+
+async def ask_industry(message) -> None:
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🏥 Health", callback_data="ind_health"),
+            InlineKeyboardButton("💳 FinTech", callback_data="ind_fintech"),
+        ],
+        [InlineKeyboardButton("✏️ Enter industry", callback_data="ind_custom")],
+    ])
+    await message.reply_text(
+        "Which industry?",
+        parse_mode=ParseMode.HTML,
+        reply_markup=keyboard,
+    )
+
+
+# ── Vacancy search & display ──────────────────────────────────────────────────
+
+async def start_search(message, context, user_id: int) -> None:
+    user = state.get(user_id)
+    msg = await message.reply_text(
+        f"🔍 Searching for <b>{user['job_title']}</b> roles in "
+        f"<b>{user['location']}</b> · {user['work_setup']} · {user['industry']}…\n\n"
+        f"This takes about 30 seconds.",
+        parse_mode=ParseMode.HTML,
+    )
+
+    try:
+        vacancies = await coach.search_vacancies(
+            user["job_title"], user["location"], user["work_setup"], user["industry"]
+        )
+        scores = await asyncio.gather(*[
+            coach.score_vacancy(user["cv_b64"], v) for v in vacancies
+        ])
+        for v, s in zip(vacancies, scores):
+            v["score_data"] = s
+        vacancies.sort(key=lambda v: v["score_data"].get("score", 0), reverse=True)
+        user["vacancies"] = vacancies
+        user["vacancy_index"] = 0
+        user["phase"] = "vacancy_browsing"
+    except Exception as e:
+        logger.error(f"Search error: {e}")
+        await msg.edit_text("❌ Search failed. Send /reset and try again.")
+        return
+
+    await msg.delete()
+    await show_vacancy(message, user_id)
+
+
+async def show_vacancy(message, user_id: int) -> None:
+    user = state.get(user_id)
+    vacancies = user["vacancies"]
+    idx = user["vacancy_index"]
+    total = len(vacancies)
+    vacancy = vacancies[idx]
+
+    text = formatter.vacancy_card(vacancy, vacancy["score_data"], idx + 1, total)
+
+    row = []
+    if idx < total - 1:
+        row.append(InlineKeyboardButton("Next role →", callback_data="vac_next"))
+    row.append(InlineKeyboardButton("Apply to this role →", callback_data="vac_choose"))
+    keyboard = InlineKeyboardMarkup([row])
+
+    await message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=keyboard)
+
+
+# ── CV analysis steps ─────────────────────────────────────────────────────────
+
+async def run_analysis(message, user_id: int) -> None:
+    user = state.get(user_id)
+    vacancy = user["chosen_vacancy"]
+    jd_text = (
+        f"Role: {vacancy['title']}\n"
+        f"Company: {vacancy['company']}\n"
+        f"Location: {vacancy['location']}\n\n"
+        f"{vacancy['summary']}"
+    )
+
+    msg = await message.reply_text("🔍 Analysing your CV against this role…")
+
+    try:
+        outputs = await coach.analyze_cv(jd_text, user["cv_b64"])
+        user["outputs"] = outputs
+        user["level"] = outputs["level"]["assessment"]
+        user["phase"] = "step_1"
+    except Exception as e:
+        logger.error(f"Analysis error: {e}")
+        await msg.edit_text("❌ Analysis failed. Send /reset and try again.")
+        return
+
+    await msg.delete()
+    text = formatter.step_ats(user["outputs"]["ats"])
+    await message.reply_text(
+        text,
+        parse_mode=ParseMode.HTML,
+        reply_markup=action_button("Check my CV writing →", "step_2"),
+    )
+
+
+# ── Callback handler ──────────────────────────────────────────────────────────
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
-
     user_id = update.effective_user.id
     user = state.get(user_id)
     action = query.data
+    message = query.message
 
-    # Remove the Continue button from the previous message
     await query.edit_message_reply_markup(reply_markup=None)
 
-    if action == "output_2":
-        user["phase"] = "output_2"
-        msg = formatter.output_2(user["outputs"]["xyz"])
-        await query.message.reply_text(
-            msg,
+    # ── Job title
+    if action.startswith("title_") and action != "title_custom":
+        idx = int(action.split("_")[1])
+        user["job_title"] = user["suggested_titles"][idx]
+        user["phase"] = "title_chosen"
+        await ask_location(message, user_id)
+
+    elif action == "title_custom":
+        user["phase"] = "waiting_title"
+        await message.reply_text("Type the job title you are targeting 👇")
+
+    # ── Location
+    elif action == "loc_eu":
+        user["location"] = "Europe"
+        await ask_setup(message)
+
+    elif action == "loc_us":
+        user["location"] = "United States"
+        await ask_setup(message)
+
+    elif action == "loc_custom":
+        user["phase"] = "waiting_location"
+        await message.reply_text("Type your preferred location (city or country) 👇")
+
+    # ── Work setup
+    elif action in ("setup_remote", "setup_office", "setup_hybrid"):
+        user["work_setup"] = action.split("_")[1].capitalize()
+        await ask_industry(message)
+
+    # ── Industry
+    elif action == "ind_health":
+        user["industry"] = "Healthcare"
+        await start_search(message, context, user_id)
+
+    elif action == "ind_fintech":
+        user["industry"] = "FinTech"
+        await start_search(message, context, user_id)
+
+    elif action == "ind_custom":
+        user["phase"] = "waiting_industry"
+        await message.reply_text("Type the industry you are targeting 👇")
+
+    # ── Vacancy browsing
+    elif action == "vac_next":
+        user["vacancy_index"] += 1
+        await show_vacancy(message, user_id)
+
+    elif action == "vac_choose":
+        vacancy = user["vacancies"][user["vacancy_index"]]
+        user["chosen_vacancy"] = vacancy
+        log_event(user_id, "role_chosen")
+        await message.reply_text(
+            f"✅ <b>{vacancy['title']}</b> @ <b>{vacancy['company']}</b> selected.\n\n"
+            f"Now let me analyse your CV against this specific role.",
             parse_mode=ParseMode.HTML,
-            reply_markup=continue_button("output_3"),
+        )
+        await run_analysis(message, user_id)
+
+    # ── Analysis steps
+    elif action == "step_2":
+        user["phase"] = "step_2"
+        await message.reply_text(
+            formatter.step_xyz(user["outputs"]["xyz"]),
+            parse_mode=ParseMode.HTML,
+            reply_markup=action_button("See my skill gaps →", "step_3"),
         )
 
-    elif action == "output_3":
-        user["phase"] = "output_3"
-        msg = formatter.output_3(user["outputs"]["tools"])
-        await query.message.reply_text(
-            msg,
+    elif action == "step_3":
+        user["phase"] = "step_3"
+        await message.reply_text(
+            formatter.step_tools(user["outputs"]["tools"]),
             parse_mode=ParseMode.HTML,
-            reply_markup=continue_button("output_4"),
+            reply_markup=action_button("Assess my level →", "step_4"),
         )
 
-    elif action == "output_4":
-        user["phase"] = "output_4"
-        msg = formatter.output_4(user["outputs"]["level"])
-        await query.message.reply_text(
-            msg,
+    elif action == "step_4":
+        user["phase"] = "step_4"
+        await message.reply_text(
+            formatter.step_level(user["outputs"]["level"]),
             parse_mode=ParseMode.HTML,
-            reply_markup=continue_button("output_5"),
+            reply_markup=action_button("Get my roadmap →", "step_5"),
         )
 
-    elif action == "output_5":
-        user["phase"] = "output_5"
+    elif action == "step_5":
+        user["phase"] = "step_5"
         log_event(user_id, "roadmap_requested")
+        vacancy = user["chosen_vacancy"]
+        jd_text = f"Role: {vacancy['title']}\nCompany: {vacancy['company']}\n\n{vacancy['summary']}"
 
-        # Show loading message
-        loading = await query.message.reply_text(
-            formatter.output_5_header(user["level"]),
+        loading = await message.reply_text(
+            formatter.step_roadmap_header(user["level"]),
             parse_mode=ParseMode.HTML,
         )
-
         try:
-            roadmap_text = await coach.generate_roadmap(
-                user["level"], user["jd"], user["cv_b64"]
-            )
+            roadmap = await coach.generate_roadmap(user["level"], jd_text, user["cv_b64"])
         except Exception as e:
-            logger.error(f"Roadmap generation error: {e}")
+            logger.error(f"Roadmap error: {e}")
             await loading.edit_text("❌ Roadmap generation failed. Send /reset to try again.")
             return
 
         await loading.delete()
+        formatted = formatter.format_roadmap(roadmap)
+        header = f"<b>🗺 Your Roadmap — {user['level']}</b>\n\n"
+        for chunk in formatter.split_long(header + formatted):
+            await message.reply_text(chunk, parse_mode=ParseMode.HTML)
 
-        # Format and send (split if over 4000 chars)
-        formatted = formatter.format_roadmap(roadmap_text)
-        header = f"<b>🗺 Output 5 — Your Roadmap ({user['level']})</b>\n\n"
-        chunks = formatter.split_long(header + formatted)
-
-        for chunk in chunks:
-            await query.message.reply_text(chunk, parse_mode=ParseMode.HTML)
-
-        # Done — offer reset
         user["phase"] = "done"
-        await query.message.reply_text(
-            "✅ <b>Done.</b> Send /reset to assess another CV.",
+        await message.reply_text(
+            "✅ Done. Send /reset to analyse another role.",
             parse_mode=ParseMode.HTML,
         )
 
@@ -278,24 +446,23 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     logger.error("Unhandled exception", exc_info=context.error)
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
+# ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     token = os.getenv("TELEGRAM_TOKEN")
     if not token:
-        raise ValueError("TELEGRAM_TOKEN not set in environment")
+        raise ValueError("TELEGRAM_TOKEN not set")
 
     app = Application.builder().token(token).build()
-
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("reset", reset))
+    app.add_handler(CommandHandler("reset", reset_cmd))
     app.add_handler(CommandHandler("stats", stats))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_handler(MessageHandler(filters.Document.PDF, handle_document))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_error_handler(error_handler)
 
-    logger.info("Bot starting...")
+    logger.info("Bot starting…")
     app.run_polling(drop_pending_updates=True)
 
 

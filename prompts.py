@@ -245,6 +245,47 @@ Search job boards for Senior or Lead Analytics Engineer openings matching this c
 List 6-8 companies with: company name, role title, location, one sentence why it fits.
 """
 
+
+JOB_TITLE_PROMPT = """
+Analyze this CV and suggest exactly 5 job titles this candidate is most suited for,
+based on their domain, education, tools, and experience.
+
+Return ONLY a JSON array of 5 strings. No preamble, no explanation.
+Example: ["Analytics Engineer", "Data Engineer", "BI Developer", "Data Analyst", "Analytics Manager"]
+"""
+
+VACANCY_SEARCH_PROMPT = """
+Search for currently active job postings matching these criteria:
+- Job title: {job_title}
+- Location: {location}
+- Work setup: {work_setup}
+- Industry: {industry}
+
+Find 5 real, active job postings. For each return:
+- company: company name
+- title: exact job title
+- location: city and country
+- url: direct link to the job posting
+- summary: 2-sentence description of the role
+
+Return ONLY a JSON array of 5 objects with these exact keys.
+No expired postings. No preamble. Raw JSON only.
+"""
+
+VACANCY_SCORE_PROMPT = """
+You will receive a candidate CV and a job description.
+
+Compare them and return ONLY a JSON object:
+{
+  "score": <integer 0-100>,
+  "matched": [<up to 6 keywords found in both CV and JD>],
+  "missing": [<up to 6 important JD keywords absent from CV>],
+  "verdict": "<1 sentence honest assessment>"
+}
+
+No preamble. Raw JSON only.
+"""
+
 ROADMAP_PROMPTS = {
     "Pre-Junior": ROADMAP_PROMPT_PRE_JUNIOR,
     "Junior": ROADMAP_PROMPT_JUNIOR,
