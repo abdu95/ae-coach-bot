@@ -282,7 +282,7 @@ async def show_vacancy(message, user_id: int) -> None:
     row = []
     if user["search_count"] < MAX_SEARCHES:
         row.append(InlineKeyboardButton("Show me another →", callback_data="vac_another"))
-    row.append(InlineKeyboardButton("Apply to this role →", callback_data="vac_choose"))
+    row.append(InlineKeyboardButton("Compare my CV to this role →", callback_data="vac_choose"))
 
     await message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup([row]))
 
