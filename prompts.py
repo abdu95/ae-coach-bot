@@ -297,6 +297,20 @@ Return ONLY a JSON object (not an array) with these exact keys:
 No preamble. Raw JSON only.
 """
 
+VACANCY_SCORE_PROMPT = """
+You will receive a candidate CV and a job description.
+
+Compare them and return ONLY a JSON object:
+{
+  "score": <integer 0-100>,
+  "matched": [<up to 6 keywords found in both CV and JD>],
+  "missing": [<up to 6 important JD keywords absent from CV>],
+  "verdict": "<1 sentence honest assessment>"
+}
+
+No preamble. Raw JSON only.
+"""
+
 ROADMAP_PROMPTS = {
     "Pre-Junior": ROADMAP_PROMPT_PRE_JUNIOR,
     "Junior": ROADMAP_PROMPT_JUNIOR,

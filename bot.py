@@ -5,6 +5,9 @@ import json
 import asyncio
 from datetime import datetime
 
+import io
+from pypdf import PdfReader
+
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -123,6 +126,10 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     try:
         file = await context.bot.get_file(doc.file_id)
         cv_bytes = await file.download_as_bytearray()
+
+        # Extract text once to save tokens on later calls
+        reader = PdfReader(io.BytesIO(bytes(cv_bytes)))
+        user["cv_text"] = "\n".join(page.extract_text() or "" for page in reader.pages)
         user["cv_b64"] = base64.b64encode(cv_bytes).decode("utf-8")
     except Exception as e:
         logger.error(f"Download error: {e}")

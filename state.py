@@ -16,6 +16,7 @@ def _empty() -> dict:
     return {
         "phase": "idle",
         "cv_b64": "",
+        "cv_text": "",
         "job_title": "",
         "location": "",
         "work_setup": "",
