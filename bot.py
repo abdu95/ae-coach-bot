@@ -137,7 +137,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     try:
-        titles = await coach.suggest_job_titles(user["cv_b64"])
+        titles = await coach.suggest_job_titles(user["cv_text"])
         user["suggested_titles"] = titles
         user["phase"] = "titles_suggested"
     except Exception as e:
@@ -260,7 +260,7 @@ async def start_search(message, context, user_id: int) -> None:
             await msg.edit_text("No matching role found. Send /reset to try different filters.")
             return
 
-        score = await coach.score_vacancy(user["cv_b64"], vacancy)
+        score = await coach.score_vacancy(user["cv_text"], vacancy)
         vacancy["score_data"] = score
         user["current_vacancy"] = vacancy
         user["seen_companies"].append(vacancy["company"])
@@ -302,7 +302,7 @@ async def run_analysis(message, user_id: int) -> None:
     msg = await message.reply_text("🔍 Analysing your CV against this role…")
 
     try:
-        outputs = await coach.analyze_cv(jd_text, user["cv_b64"])
+        outputs = await coach.analyze_cv(jd_text, user["cv_text"])
         user["outputs"] = outputs
         user["level"] = outputs["level"]["assessment"]
         user["phase"] = "step_1"
@@ -426,7 +426,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             parse_mode=ParseMode.HTML,
         )
         try:
-            roadmap = await coach.generate_roadmap(user["level"], jd_text, user["cv_b64"])
+            roadmap = await coach.generate_roadmap(user["level"], jd_text, user["cv_text"])
         except Exception as e:
             logger.error(f"Roadmap error: {e}")
             await loading.edit_text("❌ Roadmap generation failed. Send /reset to try again.")
