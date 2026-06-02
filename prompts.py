@@ -272,16 +272,27 @@ Return ONLY a JSON array of 5 objects with these exact keys.
 No expired postings. No preamble. Raw JSON only.
 """
 
-VACANCY_SCORE_PROMPT = """
-You will receive a candidate CV and a job description.
 
-Compare them and return ONLY a JSON object:
-{
-  "score": <integer 0-100>,
-  "matched": [<up to 6 keywords found in both CV and JD>],
-  "missing": [<up to 6 important JD keywords absent from CV>],
-  "verdict": "<1 sentence honest assessment>"
-}
+VACANCY_SEARCH_PROMPT = """
+Search for ONE currently active job posting matching these criteria as closely as possible:
+- Job title: {job_title}
+- Location: {location}
+- Work setup: {work_setup}
+- Industry: {industry}
+
+If you cannot find a perfect match, return the closest real active posting you can find.
+A close match is better than no result. Do not invent postings.
+
+{exclude}
+
+Return ONLY a JSON object (not an array) with these exact keys:
+{{
+  "company": "company name",
+  "title": "exact job title",
+  "location": "city and country",
+  "url": "direct link to the posting",
+  "summary": "2-sentence role description"
+}}
 
 No preamble. Raw JSON only.
 """

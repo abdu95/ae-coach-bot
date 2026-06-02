@@ -106,26 +106,48 @@ async def suggest_job_titles(cv_b64: str) -> list:
     return json.loads(raw)
 
 
-async def search_vacancies(job_title: str, location: str, work_setup: str, industry: str) -> list:
-    """Search live job postings and return 5 matches."""
+# async def search_vacancies(job_title: str, location: str, work_setup: str, industry: str) -> list:
+#     """Search live job postings and return 5 matches."""
+#     from prompts import VACANCY_SEARCH_PROMPT
+#     prompt = VACANCY_SEARCH_PROMPT.format(
+#         job_title=job_title,
+#         location=location,
+#         work_setup=work_setup,
+#         industry=industry
+#     )
+#     response = await client.messages.create(
+#         model=MODEL,
+#         max_tokens=1500,
+#         tools=[{"type": "web_search_20250305", "name": "web_search"}],
+#         messages=[{"role": "user", "content": prompt}]
+#     )
+#     text = "".join(b.text for b in response.content if b.type == "text")
+#         # Web search responses wrap JSON in prose — extract the JSON array
+#     match = re.search(r'\[.*\]', text, re.DOTALL)
+#     if not match:
+#         raise ValueError(f"No JSON array found in response: {text[:200]}")
+#     return json.loads(match.group(0))
+
+async def search_one_vacancy(job_title, location, work_setup, industry, seen_companies=None):
     from prompts import VACANCY_SEARCH_PROMPT
+    exclude = ""
+    if seen_companies:
+        exclude = f"Do NOT return jobs from these companies (already shown): {', '.join(seen_companies)}"
+
     prompt = VACANCY_SEARCH_PROMPT.format(
-        job_title=job_title,
-        location=location,
-        work_setup=work_setup,
-        industry=industry
+        job_title=job_title, location=location,
+        work_setup=work_setup, industry=industry, exclude=exclude
     )
     response = await client.messages.create(
-        model=MODEL,
-        max_tokens=1500,
+        model=MODEL, max_tokens=1000,
         tools=[{"type": "web_search_20250305", "name": "web_search"}],
         messages=[{"role": "user", "content": prompt}]
     )
     text = "".join(b.text for b in response.content if b.type == "text")
-        # Web search responses wrap JSON in prose — extract the JSON array
-    match = re.search(r'\[.*\]', text, re.DOTALL)
+    import re
+    match = re.search(r'\{.*\}', text, re.DOTALL)
     if not match:
-        raise ValueError(f"No JSON array found in response: {text[:200]}")
+        return None  # no vacancy found
     return json.loads(match.group(0))
 
 

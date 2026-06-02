@@ -11,17 +11,20 @@ def get(user_id: int) -> dict:
 def reset(user_id: int) -> None:
     _users[user_id] = _empty()
 
+
 def _empty() -> dict:
     return {
-        "phase": "idle",          # current stage
-        "cv_b64": "",             # base64 CV
-        "job_title": "",          # chosen or typed job title
-        "location": "",           # EU / US / custom
-        "work_setup": "",         # remote / office / hybrid
-        "industry": "",           # health / fintech / custom
-        "suggested_titles": [],   # 5 titles Claude suggested
-        "vacancies": [],          # 5 vacancy dicts from search
-        "vacancy_index": 0,       # which vacancy user is viewing
-        "chosen_vacancy": None,   # vacancy user chose to apply
-        "current_step": 0,        # 1-5 analysis steps
+        "phase": "idle",
+        "cv_b64": "",
+        "job_title": "",
+        "location": "",
+        "work_setup": "",
+        "industry": "",
+        "suggested_titles": [],
+        "current_vacancy": None,    # the one being shown
+        "seen_companies": [],       # companies already shown
+        "search_count": 0,          # capped at 3
+        "chosen_vacancy": None,
+        "outputs": None,
+        "level": "",
     }

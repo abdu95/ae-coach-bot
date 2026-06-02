@@ -169,7 +169,7 @@ def vacancy_card(vacancy: dict, score: dict, index: int, total: int) -> str:
     missing = ", ".join(score.get("missing", [])) or "none"
 
     return (
-        f"<b>{index}/{total} · {pct}% Match</b>\n"
+        f"<b>Search {index} of {total} · {pct}% Match</b>\n"
         f"{bar}\n\n"
         f"<b>{_esc(vacancy['title'])}</b> @ <b>{_esc(vacancy['company'])}</b>\n"
         f"📍 {_esc(vacancy['location'])}\n\n"

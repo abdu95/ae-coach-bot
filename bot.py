@@ -39,6 +39,8 @@ WELCOME = (
     "📄 <b>Upload your CV as a PDF to begin.</b>"
 )
 
+MAX_SEARCHES = 3
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -235,25 +237,26 @@ async def ask_industry(message) -> None:
 
 async def start_search(message, context, user_id: int) -> None:
     user = state.get(user_id)
+    user["search_count"] += 1
+
     msg = await message.reply_text(
-        f"🔍 Searching for <b>{user['job_title']}</b> roles in "
-        f"<b>{user['location']}</b> · {user['work_setup']} · {user['industry']}…\n\n"
-        f"This takes about 30 seconds.",
+        f"🔍 Searching for a matching role… (search {user['search_count']} of {MAX_SEARCHES})",
         parse_mode=ParseMode.HTML,
     )
 
     try:
-        vacancies = await coach.search_vacancies(
-            user["job_title"], user["location"], user["work_setup"], user["industry"]
+        vacancy = await coach.search_one_vacancy(
+            user["job_title"], user["location"], user["work_setup"],
+            user["industry"], user["seen_companies"]
         )
-        scores = await asyncio.gather(*[
-            coach.score_vacancy(user["cv_b64"], v) for v in vacancies
-        ])
-        for v, s in zip(vacancies, scores):
-            v["score_data"] = s
-        vacancies.sort(key=lambda v: v["score_data"].get("score", 0), reverse=True)
-        user["vacancies"] = vacancies
-        user["vacancy_index"] = 0
+        if not vacancy:
+            await msg.edit_text("No matching role found. Send /reset to try different filters.")
+            return
+
+        score = await coach.score_vacancy(user["cv_b64"], vacancy)
+        vacancy["score_data"] = score
+        user["current_vacancy"] = vacancy
+        user["seen_companies"].append(vacancy["company"])
         user["phase"] = "vacancy_browsing"
     except Exception as e:
         logger.error(f"Search error: {e}")
@@ -266,20 +269,15 @@ async def start_search(message, context, user_id: int) -> None:
 
 async def show_vacancy(message, user_id: int) -> None:
     user = state.get(user_id)
-    vacancies = user["vacancies"]
-    idx = user["vacancy_index"]
-    total = len(vacancies)
-    vacancy = vacancies[idx]
-
-    text = formatter.vacancy_card(vacancy, vacancy["score_data"], idx + 1, total)
+    vacancy = user["current_vacancy"]
+    text = formatter.vacancy_card(vacancy, vacancy["score_data"], user["search_count"], MAX_SEARCHES)
 
     row = []
-    if idx < total - 1:
-        row.append(InlineKeyboardButton("Next role →", callback_data="vac_next"))
+    if user["search_count"] < MAX_SEARCHES:
+        row.append(InlineKeyboardButton("Show me another →", callback_data="vac_another"))
     row.append(InlineKeyboardButton("Apply to this role →", callback_data="vac_choose"))
-    keyboard = InlineKeyboardMarkup([row])
 
-    await message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=keyboard)
+    await message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup([row]))
 
 
 # ── CV analysis steps ─────────────────────────────────────────────────────────
@@ -370,17 +368,17 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await message.reply_text("Type the industry you are targeting 👇")
 
     # ── Vacancy browsing
-    elif action == "vac_next":
-        user["vacancy_index"] += 1
-        await show_vacancy(message, user_id)
+
+    elif action == "vac_another":
+        await start_search(message, context, user_id)
 
     elif action == "vac_choose":
-        vacancy = user["vacancies"][user["vacancy_index"]]
+        vacancy = user["current_vacancy"]
         user["chosen_vacancy"] = vacancy
         log_event(user_id, "role_chosen")
         await message.reply_text(
             f"✅ <b>{vacancy['title']}</b> @ <b>{vacancy['company']}</b> selected.\n\n"
-            f"Now let me analyse your CV against this specific role.",
+            f"Now let me analyse your CV against this role.",
             parse_mode=ParseMode.HTML,
         )
         await run_analysis(message, user_id)
