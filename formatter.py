@@ -67,13 +67,12 @@ def step_xyz(xyz: dict) -> str:
 
 
 def step_tools(tools: dict) -> str:
-    lines = ["<b>🛠 Output 3 — Tool Radar</b>\n"]
-    for key, label in TOOL_LABELS.items():
-        rating = tools.get(key, "not_found")
+    lines = ["<b>🛠 Skill Radar</b>\n"]
+    for name, rating in tools.items():
         emoji = TOOL_EMOJI.get(rating, "❓")
         rating_text = rating.replace("_", " ").title()
-        lines.append(f"{emoji}  <b>{label}</b> — {rating_text}")
-
+        label = name.replace("_", " ")
+        lines.append(f"{emoji}  <b>{_esc(label)}</b> — {rating_text}")
     lines.append("\n✅ Strong  🟡 Mentioned  ❌ Not found")
     return "\n".join(lines)
 
