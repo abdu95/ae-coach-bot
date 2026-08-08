@@ -99,6 +99,15 @@ def step_roadmap_header(level: str) -> str:
     return f"<b>🗺 Step 5 — Your Roadmap ({level})</b>\n\n⏳ Searching for live roles and building your plan..."
 
 
+def step_roadmap_loading(item: int, title: str) -> str:
+    return f"<b>🗺 Step 5 — Action Item {item}: {title}</b>\n\n⏳ Building this section..."
+
+
+def step_roadmap_block(item: int, title: str, text: str) -> str:
+    header = f"<b>🗺 Step 5 — Action Item {item}: {title}</b>\n\n"
+    return header + format_roadmap(text)
+
+
 def format_roadmap(text: str) -> str:
     """
     Convert markdown-ish roadmap text from Claude into Telegram HTML.

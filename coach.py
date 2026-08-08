@@ -3,7 +3,7 @@ import json
 import re
 import anthropic
 from dotenv import load_dotenv
-from prompts import ANALYSIS_PROMPT, ROADMAP_PROMPTS
+from prompts import ANALYSIS_PROMPT, ROADMAP_BLOCKS
 
 load_dotenv()
 
@@ -86,13 +86,18 @@ async def analyze_cv(jd: str, cv_text: str) -> dict:
     return _extract_json(response.content[0].text)
 
 
-async def generate_roadmap(level: str, jd: str, cv_text: str) -> str:
-    """Generate roadmap text based on level, with web search for roles."""
-    prompt = ROADMAP_PROMPTS.get(level, ROADMAP_PROMPTS["Junior"])
+def roadmap_block_title(level: str, item: int) -> str:
+    blocks = ROADMAP_BLOCKS.get(level, ROADMAP_BLOCKS["Junior"])
+    return blocks[item]["title"]
+
+
+async def generate_roadmap(level: str, item: int, jd: str, cv_text: str) -> str:
+    """Generate one roadmap action item (1, 2, or 3) for the given level."""
+    blocks = ROADMAP_BLOCKS.get(level, ROADMAP_BLOCKS["Junior"])
+    prompt = blocks[item]["prompt"]
     response = await client.messages.create(
         model=MODEL,
-        max_tokens=2500,
-        tools=[{"type": "web_search_20250305", "name": "web_search"}],
+        max_tokens=1800,
         messages=[{
             "role": "user",
             "content": f"CV:\n{cv_text}\n\nJOB DESCRIPTION:\n{jd}\n\n{prompt}"

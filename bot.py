@@ -156,6 +156,41 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 # ── Step callbacks ────────────────────────────────────────────────────────────
 
+async def send_roadmap_item(message, user_id: int, item: int) -> None:
+    user = state.get(user_id)
+    level = user["level"]
+    title = coach.roadmap_block_title(level, item)
+
+    loading = await message.reply_text(
+        formatter.step_roadmap_loading(item, title),
+        parse_mode=ParseMode.HTML,
+    )
+    try:
+        text = await coach.generate_roadmap(level, item, user["jd"], user["cv_text"])
+    except Exception as e:
+        logger.error(f"Roadmap error (item {item}): {e}")
+        await loading.edit_text("❌ Roadmap generation failed. Send /reset to try again.")
+        return
+
+    await loading.delete()
+    formatted = formatter.step_roadmap_block(item, title, text)
+
+    if item < 3:
+        next_title = coach.roadmap_block_title(level, item + 1)
+        chunks = formatter.split_long(formatted)
+        for chunk in chunks[:-1]:
+            await message.reply_text(chunk, parse_mode=ParseMode.HTML)
+        await message.reply_text(
+            chunks[-1],
+            parse_mode=ParseMode.HTML,
+            reply_markup=action_button(f"Continue: {next_title} →", f"step_5_{item + 1}"),
+        )
+    else:
+        for chunk in formatter.split_long(formatted):
+            await message.reply_text(chunk, parse_mode=ParseMode.HTML)
+        await message.reply_text("✅ Done. Send /reset to analyse another role.")
+
+
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
@@ -193,24 +228,11 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     elif action == "step_5":
         log_event(user_id, "roadmap_requested")
-        loading = await message.reply_text(
-            formatter.step_roadmap_header(user["level"]),
-            parse_mode=ParseMode.HTML,
-        )
-        try:
-            roadmap = await coach.generate_roadmap(user["level"], user["jd"], user["cv_text"])
-        except Exception as e:
-            logger.error(f"Roadmap error: {e}")
-            await loading.edit_text("❌ Roadmap failed. Send /reset to try again.")
-            return
+        await send_roadmap_item(message, user_id, item=1)
 
-        await loading.delete()
-        formatted = formatter.format_roadmap(roadmap)
-        header = f"<b>🗺 Your Roadmap — {user['level']}</b>\n\n"
-        for chunk in formatter.split_long(header + formatted):
-            await message.reply_text(chunk, parse_mode=ParseMode.HTML)
-
-        await message.reply_text("✅ Done. Send /reset to analyse another role.")
+    elif action in ("step_5_2", "step_5_3"):
+        item = 2 if action == "step_5_2" else 3
+        await send_roadmap_item(message, user_id, item=item)
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:

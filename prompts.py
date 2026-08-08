@@ -57,28 +57,35 @@ Tool rating guide:
 """
 
 
-ROADMAP_PROMPT_PRE_JUNIOR = """
-The candidate's CV and the target job description (JD) are provided.
+NO_PREAMBLE = (
+    "Do not add a title, introduction, or 'target role analysis' section, and do not "
+    "restate the JD. Start your reply directly with the heading below — nothing before it."
+)
 
+
+# ── Pre-Junior ─────────────────────────────────────────────────────────────────
+
+ROADMAP_PRE_JUNIOR_CONTEXT = """
 CONTEXT:
 - First identify the target role from the JD (Data Analyst, Data Engineer, BI Developer, etc.)
 - Candidate level: Pre-Junior (no real production experience in this role's domain)
 - Your task: identify the gap between what the JD requires and what the CV shows,
-  then build a roadmap that closes that gap realistically within 3 months.
+  then close that gap realistically within 3 months.
 
 GAP ANALYSIS RULES:
 - Every recommendation must tie to a specific skill or tool THIS JD requires that the CV lacks
 - Do not give generic advice — reference actual JD requirements and actual CV gaps
-- Be honest: this candidate cannot land the target role yet. The roadmap leads to a
+- Be honest: this candidate cannot land the target role yet — this plan leads to a
   stepping-stone role first
 - Simulations and course projects are not production experience — do not treat them as such
+"""
 
-DEPTH FOR PRE-JUNIOR:
-- Focus on the foundational tools named in THIS JD (use free tiers where possible)
-- One achievable portfolio project, not three — quality over quantity
-- Stepping-stone roles: a more junior or adjacent version of the target role
+ROADMAP_PRE_JUNIOR_ITEM1 = f"""
+The candidate's CV and the target job description (JD) are provided.
+{ROADMAP_PRE_JUNIOR_CONTEXT}
+{NO_PREAMBLE}
 
-Write a practical career roadmap using this exact structure:
+Write ONLY this section:
 
 ### 3-Month Plan
 Month 1 — Foundation:
@@ -87,7 +94,7 @@ Month 1 — Foundation:
 - [action 3]
 
 Month 2 — Build:
-- [action 1: start the portfolio project below, tied to JD requirements]
+- [action 1: start a portfolio project tied to JD requirements]
 - [action 2]
 - [action 3]
 
@@ -95,6 +102,15 @@ Month 3 — Ship & Apply:
 - [action 1: finish and publish the project]
 - [action 2: start applying to stepping-stone roles]
 - [action 3]
+"""
+
+ROADMAP_PRE_JUNIOR_ITEM2 = f"""
+The candidate's CV and the target job description (JD) are provided.
+{ROADMAP_PRE_JUNIOR_CONTEXT}
+DEPTH: one achievable portfolio project, not three — quality over quantity.
+{NO_PREAMBLE}
+
+Write ONLY this section:
 
 ### Portfolio Project
 Name: [project name relevant to the JD domain]
@@ -103,6 +119,14 @@ Dataset: [specific public dataset with URL, relevant to the JD industry if possi
 What to build: [3-4 sentences — exactly what to build]
 What it demonstrates: [which specific JD requirements it proves]
 How to present: [GitHub README structure and how to add it to the CV]
+"""
+
+ROADMAP_PRE_JUNIOR_ITEM3 = f"""
+The candidate's CV and the target job description (JD) are provided.
+{ROADMAP_PRE_JUNIOR_CONTEXT}
+{NO_PREAMBLE}
+
+Write ONLY this section:
 
 ### Stepping-Stone Roles
 Suggest 4-5 realistic role types the candidate could land now (a more junior or adjacent
@@ -110,14 +134,14 @@ version of the target role). For each: role title, why it is a realistic step, w
 """
 
 
-ROADMAP_PROMPT_JUNIOR = """
-The candidate's CV and the target job description (JD) are provided.
+# ── Junior ───────────────────────────────────────────────────────────────────
 
+ROADMAP_JUNIOR_CONTEXT = """
 CONTEXT:
 - First identify the target role from the JD.
 - Candidate level: Junior (0-2 years production experience in this role's domain)
 - Your task: identify the gap between what the JD requires and what the CV demonstrates,
-  then build a roadmap that closes that gap at Junior depth.
+  then close that gap at Junior depth.
 
 GAP ANALYSIS RULES:
 - Only give advice tied to a specific missing skill or weakness relative to THIS JD
@@ -125,13 +149,15 @@ GAP ANALYSIS RULES:
   that the CV lacks
 - Prioritise gaps by hiring impact: what would make or break getting this specific role
 - Be honest about what is missing — do not soften gaps
+"""
 
-DEPTH FOR JUNIOR LEVEL:
-- CV fixes: focus on quantification and clarity, not leadership language
-- Technical prep: foundational topics relevant to THIS role
-- Phone screen: help them tell a clear story about real work, even if limited
+ROADMAP_JUNIOR_ITEM1 = f"""
+The candidate's CV and the target job description (JD) are provided.
+{ROADMAP_JUNIOR_CONTEXT}
+DEPTH: focus on quantification and clarity, not leadership language.
+{NO_PREAMBLE}
 
-Write a focused job-search roadmap using this exact structure:
+Write ONLY this section:
 
 ### CV Fixes (Top 5)
 1. [specific fix tied to a JD requirement the CV understates or misses — include before/after rewrite]
@@ -139,6 +165,16 @@ Write a focused job-search roadmap using this exact structure:
 3.
 4.
 5.
+"""
+
+ROADMAP_JUNIOR_ITEM2 = f"""
+The candidate's CV and the target job description (JD) are provided.
+{ROADMAP_JUNIOR_CONTEXT}
+DEPTH: foundational technical topics relevant to THIS role; help them tell a clear
+story about real work, even if limited.
+{NO_PREAMBLE}
+
+Write ONLY these two sections:
 
 ### Phone Screen Strategy
 Opening line: [exact sentence to open "tell me about yourself" — referencing their strongest credential]
@@ -152,6 +188,14 @@ Topics to study in priority order (based on JD requirements the CV is weakest on
 3.
 4.
 5.
+"""
+
+ROADMAP_JUNIOR_ITEM3 = f"""
+The candidate's CV and the target job description (JD) are provided.
+{ROADMAP_JUNIOR_CONTEXT}
+{NO_PREAMBLE}
+
+Write ONLY this section:
 
 ### Target Companies
 Suggest 6-8 companies or role types matching this candidate's profile and the target role.
@@ -159,27 +203,29 @@ For each: company or role type, location if relevant, one sentence why it fits.
 """
 
 
-ROADMAP_PROMPT_MID = """
-The candidate's CV and the target job description (JD) are provided.
+# ── Mid ──────────────────────────────────────────────────────────────────────
 
+ROADMAP_MID_CONTEXT = """
 CONTEXT:
 - First identify the target role from the JD.
 - Candidate level: Mid (2-4 years production experience in this role's domain)
 - Your task: identify the gap between what the JD requires and what the CV demonstrates,
-  then build a roadmap that closes that gap at Mid depth.
+  then close that gap at Mid depth.
 
 GAP ANALYSIS RULES:
 - Only give advice tied to specific missing skills or weaknesses relative to THIS JD
 - Do not give generic advice — every recommendation grounded in a JD requirement the CV lacks
 - Prioritise gaps by hiring impact: ownership, stakeholder communication, depth of craft
 - At Mid level, gaps are often about demonstrating ownership and impact, not just tool knowledge
+"""
 
-DEPTH FOR MID LEVEL:
-- CV fixes: emphasise ownership, business impact, and cross-team work — not just task descriptions
-- Technical prep: intermediate topics relevant to THIS role
-- Phone screen: help them show they can own work end to end, not just execute tickets
+ROADMAP_MID_ITEM1 = f"""
+The candidate's CV and the target job description (JD) are provided.
+{ROADMAP_MID_CONTEXT}
+DEPTH: emphasise ownership, business impact, and cross-team work — not just task descriptions.
+{NO_PREAMBLE}
 
-Write a focused job-search roadmap using this exact structure:
+Write ONLY this section:
 
 ### CV Fixes (Top 5)
 1. [specific fix tied to a JD requirement — include before/after rewrite showing ownership language]
@@ -187,6 +233,16 @@ Write a focused job-search roadmap using this exact structure:
 3.
 4.
 5.
+"""
+
+ROADMAP_MID_ITEM2 = f"""
+The candidate's CV and the target job description (JD) are provided.
+{ROADMAP_MID_CONTEXT}
+DEPTH: intermediate technical topics relevant to THIS role; help them show they can own
+work end to end, not just execute tickets.
+{NO_PREAMBLE}
+
+Write ONLY these two sections:
 
 ### Phone Screen Strategy
 Opening line: [exact sentence to open "tell me about yourself" — signalling ownership and impact]
@@ -200,6 +256,14 @@ Topics to study in priority order (based on JD requirements the CV is weakest on
 3.
 4.
 5.
+"""
+
+ROADMAP_MID_ITEM3 = f"""
+The candidate's CV and the target job description (JD) are provided.
+{ROADMAP_MID_CONTEXT}
+{NO_PREAMBLE}
+
+Write ONLY this section:
 
 ### Target Companies
 Suggest 6-8 companies or role types at this JD's level or one step above.
@@ -207,14 +271,14 @@ For each: company or role type, location if relevant, one sentence why it fits.
 """
 
 
-ROADMAP_PROMPT_SENIOR = """
-The candidate's CV and the target job description (JD) are provided.
+# ── Senior ───────────────────────────────────────────────────────────────────
 
+ROADMAP_SENIOR_CONTEXT = """
 CONTEXT:
 - First identify the target role from the JD.
 - Candidate level: Senior (4+ years production experience in this role's domain)
 - Your task: identify the gap between what the JD requires and what the CV demonstrates,
-  then build a roadmap that closes that gap at Senior depth.
+  then close that gap at Senior depth.
 
 GAP ANALYSIS RULES:
 - Only give advice tied to specific missing signals relative to THIS JD
@@ -222,13 +286,15 @@ GAP ANALYSIS RULES:
   cross-org impact rather than tool knowledge — identify which type of gap this candidate has
 - Do not give generic advice — reference specific JD requirements and specific CV weaknesses
 - Be direct: if the CV reads like a Mid candidate, say so and fix it
+"""
 
-DEPTH FOR SENIOR LEVEL:
-- CV fixes: every bullet must show scope, influence, and business outcome — not just execution
-- Technical prep: advanced topics relevant to THIS role, plus leadership and stakeholder alignment
-- Phone screen: help them lead with strategic impact, not implementation details
+ROADMAP_SENIOR_ITEM1 = f"""
+The candidate's CV and the target job description (JD) are provided.
+{ROADMAP_SENIOR_CONTEXT}
+DEPTH: every bullet must show scope, influence, and business outcome — not just execution.
+{NO_PREAMBLE}
 
-Write a focused job-search roadmap using this exact structure:
+Write ONLY this section:
 
 ### CV Fixes (Top 5)
 1. [specific fix focused on leadership scope and business impact — include before/after rewrite]
@@ -236,6 +302,16 @@ Write a focused job-search roadmap using this exact structure:
 3.
 4.
 5.
+"""
+
+ROADMAP_SENIOR_ITEM2 = f"""
+The candidate's CV and the target job description (JD) are provided.
+{ROADMAP_SENIOR_CONTEXT}
+DEPTH: advanced technical topics relevant to THIS role, plus leadership and stakeholder
+alignment; help them lead with strategic impact, not implementation details.
+{NO_PREAMBLE}
+
+Write ONLY these two sections:
 
 ### Phone Screen Strategy
 Opening line: [exact sentence to open "tell me about yourself" — signalling seniority and scope]
@@ -249,6 +325,14 @@ Topics to study in priority order (based on JD requirements the CV is weakest on
 3.
 4.
 5.
+"""
+
+ROADMAP_SENIOR_ITEM3 = f"""
+The candidate's CV and the target job description (JD) are provided.
+{ROADMAP_SENIOR_CONTEXT}
+{NO_PREAMBLE}
+
+Write ONLY this section:
 
 ### Target Companies
 Suggest 6-8 companies or role types at Senior or Lead level.
@@ -305,9 +389,25 @@ No preamble. Raw JSON only.
 """
 
 
-ROADMAP_PROMPTS = {
-    "Pre-Junior": ROADMAP_PROMPT_PRE_JUNIOR,
-    "Junior": ROADMAP_PROMPT_JUNIOR,
-    "Mid": ROADMAP_PROMPT_MID,
-    "Senior": ROADMAP_PROMPT_SENIOR,
+ROADMAP_BLOCKS = {
+    "Pre-Junior": {
+        1: {"title": "3-Month Plan", "prompt": ROADMAP_PRE_JUNIOR_ITEM1},
+        2: {"title": "Portfolio Project", "prompt": ROADMAP_PRE_JUNIOR_ITEM2},
+        3: {"title": "Stepping-Stone Roles", "prompt": ROADMAP_PRE_JUNIOR_ITEM3},
+    },
+    "Junior": {
+        1: {"title": "CV Fixes", "prompt": ROADMAP_JUNIOR_ITEM1},
+        2: {"title": "Interview Prep", "prompt": ROADMAP_JUNIOR_ITEM2},
+        3: {"title": "Target Companies", "prompt": ROADMAP_JUNIOR_ITEM3},
+    },
+    "Mid": {
+        1: {"title": "CV Fixes", "prompt": ROADMAP_MID_ITEM1},
+        2: {"title": "Interview Prep", "prompt": ROADMAP_MID_ITEM2},
+        3: {"title": "Target Companies", "prompt": ROADMAP_MID_ITEM3},
+    },
+    "Senior": {
+        1: {"title": "CV Fixes", "prompt": ROADMAP_SENIOR_ITEM1},
+        2: {"title": "Interview Prep", "prompt": ROADMAP_SENIOR_ITEM2},
+        3: {"title": "Target Companies", "prompt": ROADMAP_SENIOR_ITEM3},
+    },
 }
