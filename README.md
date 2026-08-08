@@ -8,11 +8,11 @@ Analyses a candidate's CV against a job description and delivers a personalised 
 /start
   → User pastes job description
   → User uploads CV (PDF)
-  → Output 1: ATS Score        [Continue →]
-  → Output 2: XYZ Formula Check [Continue →]
-  → Output 3: Tool Radar        [Continue →]
-  → Output 4: Level Assessment  [Continue →]
-  → Output 5: Full Roadmap (with live job search)
+  → Step 1: ATS Score        [Continue →]
+  → Step 2: XYZ Formula Check [Continue →]
+  → Step 3: Tool Radar        [Continue →]
+  → Step 4: Level Assessment  [Continue →]
+  → Step 5: Full Roadmap (with live job search)
 ```
 
 ## Local Setup
@@ -63,5 +63,5 @@ No Dockerfile needed. Free tier is enough for low-traffic usage.
 ## Notes
 
 - State is in-memory — resets if the bot restarts. For persistence, replace the dict in `state.py` with SQLite.
-- Output 5 uses Anthropic's built-in web search tool to find live job openings.
+- Step 5 uses Anthropic's built-in web search tool to find live job openings.
 - `/reset` clears a user's state and restarts the flow.

@@ -28,7 +28,7 @@ def step_ats(ats: dict) -> str:
     verdict = ats.get("verdict", "")
 
     return (
-        f"<b>📊 Output 1 — ATS Score</b>\n\n"
+        f"<b>📊 Step 1 — ATS Score</b>\n\n"
         f"<b>Score: {score}/100</b>\n"
         f"{bar}\n\n"
         f"<b>Matched keywords:</b> {matched}\n\n"
@@ -42,7 +42,7 @@ def step_xyz(xyz: dict) -> str:
     failing = xyz.get("failing", [])
     rewrites = xyz.get("rewrites", [])
 
-    lines = ["<b>✍️ Output 2 — XYZ Formula Check</b>"]
+    lines = ["<b>✍️ Step 2 — XYZ Formula Check</b>"]
     lines.append("\nThe ideal bullet: <i>Accomplished X as measured by Y by doing Z</i>\n")
 
     if passing:
@@ -67,7 +67,7 @@ def step_xyz(xyz: dict) -> str:
 
 
 def step_tools(tools: dict) -> str:
-    lines = ["<b>🛠 Skill Radar</b>\n"]
+    lines = ["<b>🛠 Step 3 — Skill Radar</b>\n"]
     for name, rating in tools.items():
         emoji = TOOL_EMOJI.get(rating, "❓")
         rating_text = rating.replace("_", " ").title()
@@ -89,14 +89,14 @@ def step_level(level: dict) -> str:
     }.get(assessment, "📄")
 
     return (
-        f"<b>{level_emoji} Output 4 — Level Assessment</b>\n\n"
+        f"<b>{level_emoji} Step 4 — Level Assessment</b>\n\n"
         f"<b>Level: {assessment}</b>\n\n"
         f"{reasoning}"
     )
 
 
 def step_roadmap_header(level: str) -> str:
-    return f"<b>🗺 Output 5 — Your Roadmap ({level})</b>\n\n⏳ Searching for live roles and building your plan..."
+    return f"<b>🗺 Step 5 — Your Roadmap ({level})</b>\n\n⏳ Searching for live roles and building your plan..."
 
 
 def format_roadmap(text: str) -> str:
