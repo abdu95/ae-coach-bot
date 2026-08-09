@@ -57,14 +57,17 @@ async def send_language_picker(message, hint_code: str | None) -> None:
     )
 
 
-async def send_limit_reached(message, lang: str) -> None:
-    buttons = InlineKeyboardMarkup([[
+def waitlist_markup(lang: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[
         InlineKeyboardButton(i18n.t("join_waitlist_button", lang), callback_data="join_waitlist")
     ]])
+
+
+async def send_limit_reached(message, lang: str) -> None:
     await message.reply_text(
         i18n.limit_reached(USAGE_LIMIT, lang),
         parse_mode=ParseMode.HTML,
-        reply_markup=buttons,
+        reply_markup=waitlist_markup(lang),
     )
 
 
@@ -231,7 +234,12 @@ async def send_roadmap_item(message, user_id: int, item: int) -> None:
     else:
         for chunk in formatter.split_long(formatted):
             await message.reply_text(chunk, parse_mode=ParseMode.HTML)
-        await message.reply_text("✅ Done. Send /reset to analyse another role.")
+        remaining = max(0, USAGE_LIMIT - user["usage_count"])
+        done_text = i18n.analysis_done(remaining, USAGE_LIMIT, user["lang"])
+        if remaining <= 0:
+            await message.reply_text(done_text, parse_mode=ParseMode.HTML, reply_markup=waitlist_markup(user["lang"]))
+        else:
+            await message.reply_text(done_text, parse_mode=ParseMode.HTML)
 
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

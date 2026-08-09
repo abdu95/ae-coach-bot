@@ -94,6 +94,39 @@ CHECKS_LEFT = {
     "ru": "(осталось {remaining}/{limit} бесплатных проверок)",
 }
 
+ANALYSIS_DONE_CONTINUE = {
+    "en": (
+        "✅ This is the end of the analysis. Apply the tips above to your job application, "
+        "or send /reset to check another job posting.\n\n({remaining}/{limit} checks left)"
+    ),
+    "uz": (
+        "✅ Tahlil yakunlandi. Yuqoridagi tavsiyalarni ariza topshirishda qo'llang, "
+        "yoki boshqa lavozimni tekshirish uchun /reset yuboring.\n\n({remaining}/{limit} tekshiruv qoldi)"
+    ),
+    "ru": (
+        "✅ Анализ завершён. Примените советы выше в своей заявке, "
+        "или отправьте /reset, чтобы проверить другую вакансию.\n\n(осталось {remaining}/{limit} проверок)"
+    ),
+}
+
+ANALYSIS_DONE_LIMIT = {
+    "en": (
+        "✅ This is the end of the analysis. Apply the tips above to your job application.\n\n"
+        "You've used all {limit} free checks. Want to check another role? "
+        "Join the waitlist below and we'll notify you when more checks are available."
+    ),
+    "uz": (
+        "✅ Tahlil yakunlandi. Yuqoridagi tavsiyalarni ariza topshirishda qo'llang.\n\n"
+        "Siz barcha {limit} ta bepul tekshiruvdan foydalandingiz. Yana tekshirmoqchimisiz? "
+        "Ko'proq tekshiruvlar mavjud bo'lganda xabar berishimiz uchun pastdagi kutish ro'yxatiga qo'shiling."
+    ),
+    "ru": (
+        "✅ Анализ завершён. Примените советы выше в своей заявке.\n\n"
+        "Вы использовали все {limit} бесплатных проверок. Хотите проверить ещё одну вакансию? "
+        "Встаньте в список ожидания ниже — мы сообщим, когда будет доступно больше проверок."
+    ),
+}
+
 ROADMAP_WAIT_NOTE = {
     "en": "Usually takes about 15–20 seconds.",
     "uz": "Odatda 15–20 soniya vaqt oladi.",
@@ -165,4 +198,12 @@ def limit_reached(limit: int, lang: str) -> str:
 
 def checks_left(remaining: int, limit: int, lang: str) -> str:
     template = CHECKS_LEFT.get(lang) or CHECKS_LEFT["en"]
+    return template.format(remaining=remaining, limit=limit)
+
+
+def analysis_done(remaining: int, limit: int, lang: str) -> str:
+    if remaining <= 0:
+        template = ANALYSIS_DONE_LIMIT.get(lang) or ANALYSIS_DONE_LIMIT["en"]
+        return template.format(limit=limit)
+    template = ANALYSIS_DONE_CONTINUE.get(lang) or ANALYSIS_DONE_CONTINUE["en"]
     return template.format(remaining=remaining, limit=limit)
