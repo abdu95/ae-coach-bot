@@ -18,6 +18,7 @@ load_dotenv()
 import state
 import coach
 import formatter
+import i18n
 
 logging.basicConfig(
     format="%(asctime)s — %(name)s — %(levelname)s — %(message)s",
@@ -26,15 +27,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "0"))
-
-WELCOME = (
-    "👋 <b>AE Career Coach</b>\n\n"
-    "1️⃣ Upload your CV as a PDF\n"
-    "2️⃣ Paste the job description you are targeting\n"
-    "3️⃣ I analyse your CV against it step by step\n\n"
-    "📄 <b>Upload your CV to begin.</b>"
-)
-
 
 def log_event(user_id: int, event: str) -> None:
     entry = {"ts": datetime.utcnow().isoformat(), "user_id": user_id, "event": event}
@@ -73,7 +65,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not user["lang"]:
         await send_language_picker(update.message, update.effective_user.language_code)
     else:
-        await update.message.reply_text(WELCOME, parse_mode=ParseMode.HTML)
+        await update.message.reply_text(i18n.t("welcome", user["lang"]), parse_mode=ParseMode.HTML)
 
 
 async def reset_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -160,7 +152,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     user["jd"] = text
     user["phase"] = "analyzing"
 
-    msg = await update.message.reply_text("🔍 Analysing your CV against this role…")
+    msg = await update.message.reply_text(
+        i18n.t("analyzing", user["lang"]), parse_mode=ParseMode.HTML
+    )
     try:
         outputs = await coach.analyze_cv(user["jd"], user["cv_text"])
         user["outputs"] = outputs
@@ -187,7 +181,7 @@ async def send_roadmap_item(message, user_id: int, item: int) -> None:
     title = coach.roadmap_block_title(level, item)
 
     loading = await message.reply_text(
-        formatter.step_roadmap_loading(item, title),
+        i18n.roadmap_loading(item, title, user["lang"]),
         parse_mode=ParseMode.HTML,
     )
     try:
@@ -228,7 +222,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if action in ("lang_uz", "lang_ru"):
         user["lang"] = "uz" if action == "lang_uz" else "ru"
-        await message.reply_text(WELCOME, parse_mode=ParseMode.HTML)
+        await message.reply_text(i18n.t("welcome", user["lang"]), parse_mode=ParseMode.HTML)
         return
 
     if not user.get("outputs"):
