@@ -45,8 +45,11 @@ def get(user_id: int) -> dict:
 
 
 def reset(user_id: int) -> None:
-    _users[user_id] = _empty()
-    _save(user_id, _users[user_id])
+    lang = get(user_id).get("lang", "")
+    fresh = _empty()
+    fresh["lang"] = lang
+    _users[user_id] = fresh
+    _save(user_id, fresh)
 
 
 def persisting(handler):
@@ -105,4 +108,5 @@ def _empty() -> dict:
         "chosen_vacancy": None,
         "outputs": None,
         "level": "",
+        "lang": "",                 # "uz" or "ru", empty until chosen
     }

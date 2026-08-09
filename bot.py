@@ -46,18 +46,43 @@ def action_button(label: str, callback: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[InlineKeyboardButton(label, callback_data=callback)]])
 
 
+LANG_BUTTONS = {
+    "uz": ("🇺🇿 O'zbek", "lang_uz"),
+    "ru": ("🇷🇺 Русский", "lang_ru"),
+}
+
+
+async def send_language_picker(message, hint_code: str | None) -> None:
+    # language_code reflects the device's system language, not necessarily
+    # the user's preferred chat language — used only to order the buttons.
+    order = ["ru", "uz"] if hint_code == "ru" else ["uz", "ru"]
+    buttons = [[InlineKeyboardButton(LANG_BUTTONS[c][0], callback_data=LANG_BUTTONS[c][1])] for c in order]
+    await message.reply_text(
+        "🌐 Choose your language / Tilni tanlang / Выберите язык",
+        reply_markup=InlineKeyboardMarkup(buttons),
+    )
+
+
 # ── Commands ──────────────────────────────────────────────────────────────────
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     state.reset(user_id)
     log_event(user_id, "started")
-    await update.message.reply_text(WELCOME, parse_mode=ParseMode.HTML)
+    user = state.get(user_id)
+    if not user["lang"]:
+        await send_language_picker(update.message, update.effective_user.language_code)
+    else:
+        await update.message.reply_text(WELCOME, parse_mode=ParseMode.HTML)
 
 
 async def reset_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     state.reset(update.effective_user.id)
     await update.message.reply_text("🔄 Reset. Upload your CV to start again.")
+
+
+async def language_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await send_language_picker(update.message, update.effective_user.language_code)
 
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -201,6 +226,11 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     await query.edit_message_reply_markup(reply_markup=None)
 
+    if action in ("lang_uz", "lang_ru"):
+        user["lang"] = "uz" if action == "lang_uz" else "ru"
+        await message.reply_text(WELCOME, parse_mode=ParseMode.HTML)
+        return
+
     if not user.get("outputs"):
         await message.reply_text("Session expired. Send /reset to start over.")
         return
@@ -249,6 +279,7 @@ def main() -> None:
     app = Application.builder().token(token).build()
     app.add_handler(CommandHandler("start", state.persisting(start)))
     app.add_handler(CommandHandler("reset", state.persisting(reset_cmd)))
+    app.add_handler(CommandHandler("language", state.persisting(language_cmd)))
     app.add_handler(CommandHandler("stats", state.persisting(stats)))
     app.add_handler(MessageHandler(filters.Document.PDF, state.persisting(handle_document)))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, state.persisting(handle_text)))
