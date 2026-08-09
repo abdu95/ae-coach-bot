@@ -1,15 +1,92 @@
-# In-memory state per user.
-# Resets if the bot restarts. For persistence, swap dict for SQLite.
+# Per-user state, cached in memory and persisted to Postgres.
+# The in-memory dict is the fast path; every wrapped handler flushes
+# it to the DB after running, so a restart/redeploy doesn't lose state.
+
+import functools
+import json
+import os
+
+import psycopg2
+from psycopg2.pool import SimpleConnectionPool
 
 _users: dict = {}
+_pool: SimpleConnectionPool | None = None
+
+
+def init_db() -> None:
+    global _pool
+    dsn = os.getenv("DATABASE_URL")
+    if not dsn:
+        raise ValueError("DATABASE_URL not set")
+
+    _pool = SimpleConnectionPool(1, 5, dsn)
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS user_state (
+                    user_id BIGINT PRIMARY KEY,
+                    data JSONB NOT NULL,
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
+    finally:
+        _pool.putconn(conn)
+
 
 def get(user_id: int) -> dict:
     if user_id not in _users:
-        _users[user_id] = _empty()
+        loaded = _load(user_id)
+        merged = _empty()
+        if loaded:
+            merged.update(loaded)
+        _users[user_id] = merged
     return _users[user_id]
+
 
 def reset(user_id: int) -> None:
     _users[user_id] = _empty()
+    _save(user_id, _users[user_id])
+
+
+def persisting(handler):
+    """Decorator for telegram handlers: flushes the user's state to
+    Postgres after the handler runs, regardless of how it was mutated
+    (dict assignment, list.append, etc)."""
+    @functools.wraps(handler)
+    async def wrapper(update, context):
+        try:
+            return await handler(update, context)
+        finally:
+            user = getattr(update, "effective_user", None)
+            if user is not None and user.id in _users:
+                _save(user.id, _users[user.id])
+    return wrapper
+
+
+def _load(user_id: int) -> dict | None:
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT data FROM user_state WHERE user_id = %s", (user_id,))
+            row = cur.fetchone()
+            return row[0] if row else None
+    finally:
+        _pool.putconn(conn)
+
+
+def _save(user_id: int, data: dict) -> None:
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO user_state (user_id, data, updated_at)
+                VALUES (%s, %s, now())
+                ON CONFLICT (user_id) DO UPDATE
+                SET data = EXCLUDED.data, updated_at = now()
+            """, (user_id, json.dumps(data)))
+    finally:
+        _pool.putconn(conn)
 
 
 def _empty() -> dict:

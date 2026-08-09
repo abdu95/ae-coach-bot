@@ -27,14 +27,24 @@ Analyses a candidate's CV against a job description and delivers a personalised 
 
 https://console.anthropic.com → API Keys → Create Key
 
-### 3. Install and run
+### 3. Get a Postgres database
+
+State is persisted to Postgres (see Notes below). For local dev, run one via Docker:
+
+```bash
+docker run -d --name ae-coach-db -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:16
+```
+
+Then set `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres` in `.env`.
+
+### 4. Install and run
 
 ```bash
 git clone <your-repo>
 cd ae-coach-bot
 
 cp .env.example .env
-# Edit .env and add your tokens
+# Edit .env and add your tokens and DATABASE_URL
 
 pip install -r requirements.txt
 python bot.py
@@ -45,8 +55,9 @@ python bot.py
 1. Push to GitHub
 2. Go to https://railway.app → New Project → Deploy from GitHub
 3. Select your repo
-4. Add environment variables: `TELEGRAM_TOKEN` and `ANTHROPIC_API_KEY`
-5. Railway auto-detects Python and runs `python bot.py`
+4. In the same project: New → Database → Add PostgreSQL
+5. In the bot service's Variables tab, add a reference to the Postgres `DATABASE_URL` (Railway's "Add Reference" option), plus `TELEGRAM_TOKEN` and `ANTHROPIC_API_KEY`
+6. Railway auto-detects Python and runs `python bot.py`
 
 No Dockerfile needed. Free tier is enough for low-traffic usage.
 
@@ -56,12 +67,12 @@ No Dockerfile needed. Free tier is enough for low-traffic usage.
 |---|---|
 | `bot.py` | Main entry point, all Telegram handlers |
 | `coach.py` | Anthropic API calls (analyze + roadmap) |
-| `state.py` | Per-user conversation state (in-memory) |
+| `state.py` | Per-user conversation state (Postgres-backed, in-memory cache) |
 | `prompts.py` | All Claude prompts per level |
 | `formatter.py` | Format outputs as Telegram HTML |
 
 ## Notes
 
-- State is in-memory — resets if the bot restarts. For persistence, replace the dict in `state.py` with SQLite.
+- State is cached in memory but persisted to Postgres as JSONB (one row per user) — survives restarts/redeploys. Requires `DATABASE_URL`.
 - Step 5 uses Anthropic's built-in web search tool to find live job openings.
 - `/reset` clears a user's state and restarts the flow.
