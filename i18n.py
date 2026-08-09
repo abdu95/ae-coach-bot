@@ -3,25 +3,43 @@
 
 WELCOME = {
     "en": (
-        "👋 <b>AE Career Coach</b>\n\n"
+        "👋 <b>Accepted AI</b>\n\n"
         "1️⃣ Upload your CV as a PDF\n"
         "2️⃣ Paste the job description you are targeting\n"
         "3️⃣ I analyse your CV against it step by step\n\n"
         "📄 <b>Upload your CV to begin.</b>"
     ),
     "uz": (
-        "👋 <b>AE Career Coach</b>\n\n"
+        "👋 <b>Accepted AI</b>\n\n"
         "1️⃣ CV'ingizni PDF formatida yuklang\n"
         "2️⃣ Maqsad qilgan ish tavsifini (job description) joylashtiring\n"
         "3️⃣ Men CV'ingizni bosqichma-bosqich tahlil qilaman\n\n"
         "📄 <b>Boshlash uchun CV'ingizni yuklang.</b>"
     ),
     "ru": (
-        "👋 <b>AE Career Coach</b>\n\n"
+        "👋 <b>Accepted AI</b>\n\n"
         "1️⃣ Загрузите своё резюме (CV) в формате PDF\n"
         "2️⃣ Вставьте описание вакансии, на которую претендуете\n"
         "3️⃣ Я проанализирую ваше резюме по шагам\n\n"
         "📄 <b>Загрузите резюме, чтобы начать.</b>"
+    ),
+}
+
+CV_RECEIVED = {
+    "en": (
+        "✅ CV received.\n\n"
+        "Now find the job posting you're targeting, copy its full job description text, "
+        "and paste it here."
+    ),
+    "uz": (
+        "✅ CV qabul qilindi.\n\n"
+        "Endi maqsad qilgan ish e'lonini toping, uning to'liq tavsif matnini nusxalab oling "
+        "va bu yerga joylashtiring."
+    ),
+    "ru": (
+        "✅ Резюме получено.\n\n"
+        "Теперь найдите вакансию, на которую претендуете, скопируйте полный текст описания "
+        "вакансии и вставьте его сюда."
     ),
 }
 
@@ -177,6 +195,7 @@ def t(key: str, lang: str) -> str:
 
 STRINGS = {
     "welcome": WELCOME,
+    "cv_received": CV_RECEIVED,
     "analyzing": ANALYZING,
     "roadmap_wait": ROADMAP_WAIT_NOTE,
     "join_waitlist_button": JOIN_WAITLIST_BUTTON,

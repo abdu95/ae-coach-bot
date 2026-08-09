@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "0"))
 
 WELCOME = (
-    "👋 <b>AE Career Coach</b>\n\n"
+    "👋 <b>Accepted AI</b>\n\n"
     "Here is how I work:\n\n"
     "1️⃣ You upload your CV\n"
     "2️⃣ I suggest job titles that fit your profile\n"

@@ -150,7 +150,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     await msg.delete()
     await update.message.reply_text(
-        "✅ CV received.\n\nNow <b>paste the full job description</b> you are targeting.",
+        i18n.t("cv_received", user["lang"]),
         parse_mode=ParseMode.HTML,
     )
 
