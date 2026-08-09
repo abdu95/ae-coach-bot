@@ -30,6 +30,13 @@ def init_db() -> None:
                     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
                 )
             """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS waitlist (
+                    user_id BIGINT PRIMARY KEY,
+                    username TEXT,
+                    joined_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
     finally:
         _pool.putconn(conn)
 
@@ -45,9 +52,11 @@ def get(user_id: int) -> dict:
 
 
 def reset(user_id: int) -> None:
-    lang = get(user_id).get("lang", "")
+    current = get(user_id)
     fresh = _empty()
-    fresh["lang"] = lang
+    fresh["lang"] = current.get("lang", "")
+    fresh["usage_count"] = current.get("usage_count", 0)
+    fresh["waitlisted"] = current.get("waitlisted", False)
     _users[user_id] = fresh
     _save(user_id, fresh)
 
@@ -109,4 +118,31 @@ def _empty() -> dict:
         "outputs": None,
         "level": "",
         "lang": "",                 # "uz" or "ru", empty until chosen
+        "usage_count": 0,           # successful analyses run, lifetime
+        "waitlisted": False,
     }
+
+
+def join_waitlist(user_id: int, username: str | None) -> bool:
+    """Add user to the waitlist. Returns True if newly added, False if already on it."""
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO waitlist (user_id, username)
+                VALUES (%s, %s)
+                ON CONFLICT (user_id) DO NOTHING
+            """, (user_id, username))
+            return cur.rowcount > 0
+    finally:
+        _pool.putconn(conn)
+
+
+def waitlist_count() -> int:
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM waitlist")
+            return cur.fetchone()[0]
+    finally:
+        _pool.putconn(conn)

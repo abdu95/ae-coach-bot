@@ -58,6 +58,42 @@ ANALYZING = {
     ),
 }
 
+LIMIT_REACHED = {
+    "en": (
+        "🚦 <b>You've used all {limit} free checks.</b>\n\n"
+        "We're working on making more checks available (including paid options). "
+        "Tap below to join the waitlist and we'll notify you here as soon as that's ready."
+    ),
+    "uz": (
+        "🚦 <b>Siz barcha {limit} ta bepul tekshiruvdan foydalandingiz.</b>\n\n"
+        "Ko'proq tekshiruvlarni (shu jumladan pullik variantlarni) taqdim etish ustida ishlayapmiz. "
+        "Kutish ro'yxatiga qo'shilish uchun pastdagi tugmani bosing — tayyor bo'lishi bilan shu yerda xabar beramiz."
+    ),
+    "ru": (
+        "🚦 <b>Вы использовали все {limit} бесплатных проверок.</b>\n\n"
+        "Мы работаем над тем, чтобы открыть больше проверок (в том числе платных). "
+        "Нажмите кнопку ниже, чтобы встать в список ожидания — мы сообщим здесь, как только это будет готово."
+    ),
+}
+
+JOIN_WAITLIST_BUTTON = {
+    "en": "🔔 Join waitlist",
+    "uz": "🔔 Kutish ro'yxatiga qo'shilish",
+    "ru": "🔔 Встать в список ожидания",
+}
+
+WAITLIST_JOINED = {
+    "en": "✅ You're on the waitlist! We'll message you here as soon as more checks are available.",
+    "uz": "✅ Siz kutish ro'yxatiga qo'shildingiz! Ko'proq tekshiruvlar mavjud bo'lishi bilan sizga shu yerda xabar beramiz.",
+    "ru": "✅ Вы в списке ожидания! Мы напишем вам здесь, как только станет доступно больше проверок.",
+}
+
+CHECKS_LEFT = {
+    "en": "({remaining}/{limit} free checks left)",
+    "uz": "({remaining}/{limit} bepul tekshiruv qoldi)",
+    "ru": "(осталось {remaining}/{limit} бесплатных проверок)",
+}
+
 ROADMAP_WAIT_NOTE = {
     "en": "Usually takes about 15–20 seconds.",
     "uz": "Odatda 15–20 soniya vaqt oladi.",
@@ -110,6 +146,8 @@ STRINGS = {
     "welcome": WELCOME,
     "analyzing": ANALYZING,
     "roadmap_wait": ROADMAP_WAIT_NOTE,
+    "join_waitlist_button": JOIN_WAITLIST_BUTTON,
+    "waitlist_joined": WAITLIST_JOINED,
 }
 
 
@@ -118,3 +156,13 @@ def roadmap_loading(item: int, title: str, lang: str) -> str:
     desc = desc_map.get(lang) or desc_map.get("en") or "Building this section..."
     wait = t("roadmap_wait", lang)
     return f"<b>🗺 Step 5 — Action Item {item}: {title}</b>\n\n⏳ {desc}\n\n{wait}"
+
+
+def limit_reached(limit: int, lang: str) -> str:
+    template = LIMIT_REACHED.get(lang) or LIMIT_REACHED["en"]
+    return template.format(limit=limit)
+
+
+def checks_left(remaining: int, limit: int, lang: str) -> str:
+    template = CHECKS_LEFT.get(lang) or CHECKS_LEFT["en"]
+    return template.format(remaining=remaining, limit=limit)

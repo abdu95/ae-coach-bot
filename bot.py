@@ -27,6 +27,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "0"))
+USAGE_LIMIT = 3
+
 
 def log_event(user_id: int, event: str) -> None:
     entry = {"ts": datetime.utcnow().isoformat(), "user_id": user_id, "event": event}
@@ -52,6 +54,17 @@ async def send_language_picker(message, hint_code: str | None) -> None:
     await message.reply_text(
         "🌐 Choose your language / Tilni tanlang / Выберите язык",
         reply_markup=InlineKeyboardMarkup(buttons),
+    )
+
+
+async def send_limit_reached(message, lang: str) -> None:
+    buttons = InlineKeyboardMarkup([[
+        InlineKeyboardButton(i18n.t("join_waitlist_button", lang), callback_data="join_waitlist")
+    ]])
+    await message.reply_text(
+        i18n.limit_reached(USAGE_LIMIT, lang),
+        parse_mode=ParseMode.HTML,
+        reply_markup=buttons,
     )
 
 
@@ -97,7 +110,8 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"📊 <b>Stats</b>\n\n"
         f"Started — Total {total('started')} · Unique {unique('started')}\n"
         f"CV uploaded — Total {total('cv_uploaded')} · Unique {unique('cv_uploaded')}\n"
-        f"Roadmap — Total {total('roadmap_requested')} · Unique {unique('roadmap_requested')}",
+        f"Roadmap — Total {total('roadmap_requested')} · Unique {unique('roadmap_requested')}\n"
+        f"Waitlist — {state.waitlist_count()}",
         parse_mode=ParseMode.HTML,
     )
 
@@ -108,6 +122,10 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     user_id = update.effective_user.id
     user = state.get(user_id)
     doc = update.message.document
+
+    if user["usage_count"] >= USAGE_LIMIT:
+        await send_limit_reached(update.message, user["lang"])
+        return
 
     if not doc.file_name.lower().endswith(".pdf"):
         await update.message.reply_text("Please upload a <b>PDF</b> file.", parse_mode=ParseMode.HTML)
@@ -145,6 +163,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await update.message.reply_text("Send /start to begin or /reset to start over.")
         return
 
+    if user["usage_count"] >= USAGE_LIMIT:
+        await send_limit_reached(update.message, user["lang"])
+        return
+
     if len(text) < 100:
         await update.message.reply_text("That looks too short. Please paste the full job description.")
         return
@@ -160,14 +182,16 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         user["outputs"] = outputs
         user["level"] = outputs["level"]["assessment"]
         user["phase"] = "step_1"
+        user["usage_count"] += 1
     except Exception as e:
         logger.error(f"Analysis error: {e}")
         await msg.edit_text("❌ Analysis failed. Send /reset and try again.")
         return
 
     await msg.delete()
+    remaining = max(0, USAGE_LIMIT - user["usage_count"])
     await update.message.reply_text(
-        formatter.step_ats(outputs["ats"]),
+        formatter.step_ats(outputs["ats"]) + f"\n\n{i18n.checks_left(remaining, USAGE_LIMIT, user['lang'])}",
         parse_mode=ParseMode.HTML,
         reply_markup=action_button("Check my CV writing →", "step_2"),
     )
@@ -223,6 +247,12 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if action in ("lang_uz", "lang_ru"):
         user["lang"] = "uz" if action == "lang_uz" else "ru"
         await message.reply_text(i18n.t("welcome", user["lang"]), parse_mode=ParseMode.HTML)
+        return
+
+    if action == "join_waitlist":
+        state.join_waitlist(user_id, update.effective_user.username)
+        user["waitlisted"] = True
+        await message.reply_text(i18n.t("waitlist_joined", user["lang"]))
         return
 
     if not user.get("outputs"):
