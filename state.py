@@ -265,6 +265,57 @@ def waitlist_count() -> int:
         _pool.putconn(conn)
 
 
+def set_quota_override(user_id: int, quota: int, source: str | None = None) -> bool:
+    """Returns False if this telegram_id has no `users` row yet (never
+    interacted with the bot), since UPDATE is a silent no-op in that case."""
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("""
+                UPDATE users
+                SET quota_override = %s, source = COALESCE(%s, source)
+                WHERE telegram_id = %s
+            """, (quota, source, user_id))
+            return cur.rowcount > 0
+    finally:
+        _pool.putconn(conn)
+
+
+def get_source(user_id: int) -> str | None:
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT source FROM users WHERE telegram_id = %s", (user_id,))
+            row = cur.fetchone()
+            return row[0] if row else None
+    finally:
+        _pool.putconn(conn)
+
+
+def pilot_count() -> int:
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT count(*) FROM users WHERE source = 'school21_pilot'")
+            return cur.fetchone()[0]
+    finally:
+        _pool.putconn(conn)
+
+
+def pilot_stats() -> dict:
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("""
+                SELECT count(*), coalesce(sum(checks_used), 0), coalesce(round(avg(checks_used), 1), 0)
+                FROM users WHERE source = 'school21_pilot'
+            """)
+            users, checks, avg = cur.fetchone()
+    finally:
+        _pool.putconn(conn)
+    return {"users": users, "checks": checks, "avg": float(avg)}
+
+
 def log_event(telegram_id: int, event_type: str, metadata: dict | None = None) -> None:
     conn = _pool.getconn()
     try:

@@ -24,8 +24,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "0"))
+ADMIN_IDS = {
+    int(x) for x in os.getenv("ADMIN_IDS", os.getenv("ADMIN_USER_ID", "0")).split(",") if x.strip()
+}
 FREE_LIMIT = int(os.getenv("FREE_LIMIT", "3"))
+PILOT_CODE = os.getenv("PILOT_CODE", "school21")
+PILOT_QUOTA = int(os.getenv("PILOT_QUOTA", "10"))
+PILOT_CAP = int(os.getenv("PILOT_CAP", "10"))
 
 
 def effective_quota(user_id: int) -> int:
@@ -75,11 +80,27 @@ async def send_limit_reached(message, user_id: int, lang: str) -> None:
 
 # ── Commands ──────────────────────────────────────────────────────────────────
 
+async def enroll_pilot(message, user_id: int, lang: str) -> None:
+    if state.get_source(user_id) == "school21_pilot":
+        await message.reply_text(i18n.t("pilot_already", lang))
+        return
+    if state.pilot_count() >= PILOT_CAP:
+        await message.reply_text(i18n.t("pilot_full", lang))
+        return
+    state.set_quota_override(user_id, PILOT_QUOTA, source="school21_pilot")
+    state.log_event(user_id, "pilot_enrolled")
+    await message.reply_text(i18n.pilot_enrolled(PILOT_QUOTA, lang))
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     state.reset(user_id)
     state.log_event(user_id, "started")
     user = state.get(user_id)
+
+    if context.args and context.args[0] == PILOT_CODE:
+        await enroll_pilot(update.message, user_id, user["lang"])
+
     if not user["lang"]:
         await send_language_picker(update.message, update.effective_user.language_code)
     else:
@@ -96,9 +117,10 @@ async def language_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.effective_user.id != ADMIN_USER_ID:
+    if update.effective_user.id not in ADMIN_IDS:
         return
     acct = state.account_stats()
+    pilot = state.pilot_stats()
     ev = state.event_stats(
         ["started", "cv_uploaded", "check_completed", "roadmap_requested", "limit_reached"]
     )
@@ -117,9 +139,28 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"{line('Check completed', 'check_completed')}\n"
         f"{line('Roadmap requested', 'roadmap_requested')}\n"
         f"{line('Limit reached', 'limit_reached')}\n\n"
-        f"Waitlist — {acct['waitlist']}",
+        f"Waitlist — {acct['waitlist']}\n\n"
+        f"🎓 School21 pilot — {pilot['users']} users · {pilot['checks']} checks · avg {pilot['avg']}/user",
         parse_mode=ParseMode.HTML,
     )
+
+
+async def grant_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id not in ADMIN_IDS:
+        return
+    if not context.args:
+        await update.message.reply_text("Usage: /grant <telegram_id> [quota]")
+        return
+    try:
+        target_id = int(context.args[0])
+        quota = int(context.args[1]) if len(context.args) > 1 else PILOT_QUOTA
+    except ValueError:
+        await update.message.reply_text("Usage: /grant <telegram_id> [quota]")
+        return
+    if state.set_quota_override(target_id, quota):
+        await update.message.reply_text(f"✅ Granted quota={quota} to {target_id}.")
+    else:
+        await update.message.reply_text(f"⚠️ {target_id} has never messaged the bot — nothing to grant.")
 
 
 # ── CV upload ─────────────────────────────────────────────────────────────────
@@ -320,6 +361,7 @@ def main() -> None:
     app.add_handler(CommandHandler("reset", state.persisting(reset_cmd)))
     app.add_handler(CommandHandler("language", state.persisting(language_cmd)))
     app.add_handler(CommandHandler("stats", state.persisting(stats)))
+    app.add_handler(CommandHandler("grant", state.persisting(grant_cmd)))
     app.add_handler(MessageHandler(filters.Document.PDF, state.persisting(handle_document)))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, state.persisting(handle_text)))
     app.add_handler(CallbackQueryHandler(state.persisting(handle_callback)))

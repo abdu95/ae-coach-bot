@@ -145,6 +145,24 @@ ANALYSIS_DONE_LIMIT = {
     ),
 }
 
+PILOT_ENROLLED = {
+    "en": "🎓 You're in the School21 pilot! You now have {quota} free checks.",
+    "uz": "🎓 Siz School21 pilot dasturiga qo'shildingiz! Endi sizda {quota} ta bepul tekshiruv mavjud.",
+    "ru": "🎓 Вы в пилоте School21! Теперь у вас {quota} бесплатных проверок.",
+}
+
+PILOT_ALREADY = {
+    "en": "✅ You're already enrolled in the School21 pilot.",
+    "uz": "✅ Siz allaqachon School21 pilot dasturida ro'yxatdan o'tgansiz.",
+    "ru": "✅ Вы уже участвуете в пилоте School21.",
+}
+
+PILOT_FULL = {
+    "en": "The School21 pilot is full, but you can still use your free checks below.",
+    "uz": "School21 pilot dasturi to'lgan, lekin bepul tekshiruvlaringizdan pastda foydalanishingiz mumkin.",
+    "ru": "Пилот School21 заполнен, но вы всё ещё можете использовать бесплатные проверки ниже.",
+}
+
 ROADMAP_WAIT_NOTE = {
     "en": "Usually takes about 15–20 seconds.",
     "uz": "Odatda 15–20 soniya vaqt oladi.",
@@ -200,6 +218,8 @@ STRINGS = {
     "roadmap_wait": ROADMAP_WAIT_NOTE,
     "join_waitlist_button": JOIN_WAITLIST_BUTTON,
     "waitlist_joined": WAITLIST_JOINED,
+    "pilot_already": PILOT_ALREADY,
+    "pilot_full": PILOT_FULL,
 }
 
 
@@ -208,6 +228,11 @@ def roadmap_loading(item: int, title: str, lang: str) -> str:
     desc = desc_map.get(lang) or desc_map.get("en") or "Building this section..."
     wait = t("roadmap_wait", lang)
     return f"<b>🗺 Step 5 — Action Item {item}: {title}</b>\n\n⏳ {desc}\n\n{wait}"
+
+
+def pilot_enrolled(quota: int, lang: str) -> str:
+    template = PILOT_ENROLLED.get(lang) or PILOT_ENROLLED["en"]
+    return template.format(quota=quota)
 
 
 def limit_reached(limit: int, lang: str) -> str:
