@@ -25,7 +25,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "0"))
-USAGE_LIMIT = 3
+FREE_LIMIT = int(os.getenv("FREE_LIMIT", "3"))
+
+
+def effective_quota(user_id: int) -> int:
+    override = state.get_quota_override(user_id)
+    return override if override is not None else FREE_LIMIT
+
+
+def can_run_check(user_id: int, user: dict) -> bool:
+    return user["usage_count"] < effective_quota(user_id)
 
 
 def action_button(label: str, callback: str) -> InlineKeyboardMarkup:
@@ -58,7 +67,7 @@ def waitlist_markup(lang: str) -> InlineKeyboardMarkup:
 async def send_limit_reached(message, user_id: int, lang: str) -> None:
     state.log_event(user_id, "limit_reached")
     await message.reply_text(
-        i18n.limit_reached(USAGE_LIMIT, lang),
+        i18n.limit_reached(effective_quota(user_id), lang),
         parse_mode=ParseMode.HTML,
         reply_markup=waitlist_markup(lang),
     )
@@ -120,7 +129,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     user = state.get(user_id)
     doc = update.message.document
 
-    if user["usage_count"] >= USAGE_LIMIT:
+    if not can_run_check(user_id, user):
         await send_limit_reached(update.message, user_id, user["lang"])
         return
 
@@ -160,7 +169,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await update.message.reply_text("Send /start to begin or /reset to start over.")
         return
 
-    if user["usage_count"] >= USAGE_LIMIT:
+    if not can_run_check(user_id, user):
         await send_limit_reached(update.message, user_id, user["lang"])
         return
 
@@ -187,9 +196,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     await msg.delete()
-    remaining = max(0, USAGE_LIMIT - user["usage_count"])
+    quota = effective_quota(user_id)
+    remaining = max(0, quota - user["usage_count"])
     await update.message.reply_text(
-        formatter.step_ats(outputs["ats"]) + f"\n\n{i18n.checks_left(remaining, USAGE_LIMIT, user['lang'])}",
+        formatter.step_ats(outputs["ats"]) + f"\n\n{i18n.checks_left(remaining, quota, user['lang'])}",
         parse_mode=ParseMode.HTML,
         reply_markup=action_button("Check my CV writing →", "step_2"),
     )
@@ -229,8 +239,9 @@ async def send_roadmap_item(message, user_id: int, item: int) -> None:
     else:
         for chunk in formatter.split_long(formatted):
             await message.reply_text(chunk, parse_mode=ParseMode.HTML)
-        remaining = max(0, USAGE_LIMIT - user["usage_count"])
-        done_text = i18n.analysis_done(remaining, USAGE_LIMIT, user["lang"])
+        quota = effective_quota(user_id)
+        remaining = max(0, quota - user["usage_count"])
+        done_text = i18n.analysis_done(remaining, quota, user["lang"])
         if remaining <= 0:
             await message.reply_text(done_text, parse_mode=ParseMode.HTML, reply_markup=waitlist_markup(user["lang"]))
         else:

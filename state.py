@@ -240,6 +240,21 @@ def join_waitlist(user_id: int, username: str | None) -> bool:
         _pool.putconn(conn)
 
 
+def get_quota_override(user_id: int) -> int | None:
+    """Read quota_override fresh from the DB rather than the in-memory cache
+    — it can be written by an entirely different process (the Payme webhook
+    service, an admin /grant), so a per-process cache would miss updates
+    until this bot restarts."""
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT quota_override FROM users WHERE telegram_id = %s", (user_id,))
+            row = cur.fetchone()
+            return row[0] if row else None
+    finally:
+        _pool.putconn(conn)
+
+
 def waitlist_count() -> int:
     conn = _pool.getconn()
     try:
