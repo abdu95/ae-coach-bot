@@ -23,6 +23,9 @@ def init_db() -> None:
     conn = _pool.getconn()
     try:
         with conn, conn.cursor() as cur:
+            # Legacy tables — kept only as the source for the one-time backfill
+            # below. Nothing writes to `waitlist` anymore; `user_state` still
+            # holds the session/flow fields (see _ACCOUNT_KEYS split in _save).
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS user_state (
                     user_id BIGINT PRIMARY KEY,
@@ -37,8 +40,62 @@ def init_db() -> None:
                     joined_at TIMESTAMPTZ NOT NULL DEFAULT now()
                 )
             """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    telegram_id     BIGINT PRIMARY KEY,
+                    username        TEXT,
+                    language        TEXT,
+                    source          TEXT DEFAULT 'organic',
+                    checks_used     INT  NOT NULL DEFAULT 0,
+                    quota_override  INT,
+                    joined_waitlist BOOLEAN NOT NULL DEFAULT FALSE,
+                    waitlist_at     TIMESTAMPTZ,
+                    first_seen_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    last_seen_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS events (
+                    id          BIGSERIAL PRIMARY KEY,
+                    telegram_id BIGINT NOT NULL,
+                    event_type  TEXT   NOT NULL,
+                    metadata    JSONB,
+                    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_events_type_time ON events (event_type, created_at)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_events_user ON events (telegram_id)")
+            _migrate_legacy_state(cur)
     finally:
         _pool.putconn(conn)
+
+
+def _migrate_legacy_state(cur) -> None:
+    """Backfill users from the legacy user_state/waitlist tables. Safe to run
+    on every startup: ON CONFLICT DO NOTHING means an already-migrated user
+    (one with a `users` row) is left untouched, so this is a no-op once
+    every pre-existing user has been copied over exactly once."""
+    cur.execute("""
+        INSERT INTO users (telegram_id, language, checks_used, joined_waitlist, first_seen_at, last_seen_at)
+        SELECT
+            user_id,
+            NULLIF(data->>'lang', ''),
+            COALESCE((data->>'usage_count')::int, 0),
+            COALESCE((data->>'waitlisted')::boolean, false),
+            updated_at,
+            updated_at
+        FROM user_state
+        ON CONFLICT (telegram_id) DO NOTHING
+    """)
+    cur.execute("""
+        INSERT INTO users (telegram_id, username, joined_waitlist, waitlist_at)
+        SELECT user_id, username, true, joined_at
+        FROM waitlist
+        ON CONFLICT (telegram_id) DO UPDATE
+        SET username = COALESCE(users.username, EXCLUDED.username),
+            joined_waitlist = true,
+            waitlist_at = COALESCE(users.waitlist_at, EXCLUDED.waitlist_at)
+    """)
 
 
 def get(user_id: int) -> dict:
@@ -47,6 +104,10 @@ def get(user_id: int) -> dict:
         merged = _empty()
         if loaded:
             merged.update(loaded)
+        account = _upsert_and_load_account(user_id)
+        merged["lang"] = account["language"] or ""
+        merged["usage_count"] = account["checks_used"]
+        merged["waitlisted"] = account["joined_waitlist"]
         _users[user_id] = merged
     return _users[user_id]
 
@@ -87,7 +148,29 @@ def _load(user_id: int) -> dict | None:
         _pool.putconn(conn)
 
 
+# Fields sourced from `users`, not persisted into the user_state JSONB blob.
+_ACCOUNT_KEYS = {"lang", "usage_count", "waitlisted"}
+
+
+def _upsert_and_load_account(user_id: int) -> dict:
+    """Ensure a `users` row exists for this telegram id, bump last_seen_at,
+    and return their account fields."""
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO users (telegram_id) VALUES (%s)
+                ON CONFLICT (telegram_id) DO UPDATE SET last_seen_at = now()
+                RETURNING language, checks_used, joined_waitlist
+            """, (user_id,))
+            language, checks_used, joined_waitlist = cur.fetchone()
+            return {"language": language, "checks_used": checks_used, "joined_waitlist": joined_waitlist}
+    finally:
+        _pool.putconn(conn)
+
+
 def _save(user_id: int, data: dict) -> None:
+    session = {k: v for k, v in data.items() if k not in _ACCOUNT_KEYS}
     conn = _pool.getconn()
     try:
         with conn, conn.cursor() as cur:
@@ -96,7 +179,16 @@ def _save(user_id: int, data: dict) -> None:
                 VALUES (%s, %s, now())
                 ON CONFLICT (user_id) DO UPDATE
                 SET data = EXCLUDED.data, updated_at = now()
-            """, (user_id, json.dumps(data)))
+            """, (user_id, json.dumps(session)))
+            cur.execute("""
+                UPDATE users
+                SET language = %s,
+                    checks_used = %s,
+                    joined_waitlist = %s,
+                    waitlist_at = CASE WHEN %s AND waitlist_at IS NULL THEN now() ELSE waitlist_at END,
+                    last_seen_at = now()
+                WHERE telegram_id = %s
+            """, (data["lang"] or None, data["usage_count"], data["waitlisted"], data["waitlisted"], user_id))
     finally:
         _pool.putconn(conn)
 
@@ -129,10 +221,12 @@ def join_waitlist(user_id: int, username: str | None) -> bool:
     try:
         with conn, conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO waitlist (user_id, username)
-                VALUES (%s, %s)
-                ON CONFLICT (user_id) DO NOTHING
-            """, (user_id, username))
+                UPDATE users
+                SET joined_waitlist = true,
+                    waitlist_at = COALESCE(waitlist_at, now()),
+                    username = COALESCE(%s, username)
+                WHERE telegram_id = %s AND NOT joined_waitlist
+            """, (username, user_id))
             return cur.rowcount > 0
     finally:
         _pool.putconn(conn)
@@ -142,7 +236,7 @@ def waitlist_count() -> int:
     conn = _pool.getconn()
     try:
         with conn, conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM waitlist")
+            cur.execute("SELECT COUNT(*) FROM users WHERE joined_waitlist")
             return cur.fetchone()[0]
     finally:
         _pool.putconn(conn)
