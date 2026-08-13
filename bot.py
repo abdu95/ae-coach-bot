@@ -1,6 +1,7 @@
 import logging
 import os
 import io
+import base64
 
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -31,6 +32,9 @@ FREE_LIMIT = int(os.getenv("FREE_LIMIT", "3"))
 PILOT_CODE = os.getenv("PILOT_CODE", "school21")
 PILOT_QUOTA = int(os.getenv("PILOT_QUOTA", "10"))
 PILOT_CAP = int(os.getenv("PILOT_CAP", "10"))
+PAYME_ID = os.getenv("PAYME_ID", "")
+PACKAGE_AMOUNT = 9_900_000  # 99,000 UZS in tiyin
+PACKAGE_NAME = "10_checks"
 
 
 def effective_quota(user_id: int) -> int:
@@ -63,18 +67,30 @@ async def send_language_picker(message, hint_code: str | None) -> None:
     )
 
 
-def waitlist_markup(lang: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([[
-        InlineKeyboardButton(i18n.t("join_waitlist_button", lang), callback_data="join_waitlist")
-    ]])
+def build_checkout_url(order_id: int, bot_username: str) -> str:
+    raw = f"m={PAYME_ID};ac.order_id={order_id};a={PACKAGE_AMOUNT};c=https://t.me/{bot_username}"
+    return "https://checkout.paycom.uz/" + base64.b64encode(raw.encode()).decode()
+
+
+def checkout_url_for(user_id: int, bot_username: str) -> str:
+    order_id = state.get_or_create_order(user_id, PACKAGE_AMOUNT, PACKAGE_NAME)
+    return build_checkout_url(order_id, bot_username)
+
+
+def out_of_checks_markup(lang: str, checkout_url: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(i18n.t("pay_button", lang), url=checkout_url)],
+        [InlineKeyboardButton(i18n.t("join_waitlist_button", lang), callback_data="join_waitlist")],
+    ])
 
 
 async def send_limit_reached(message, user_id: int, lang: str) -> None:
     state.log_event(user_id, "limit_reached")
+    checkout_url = checkout_url_for(user_id, message.get_bot().username)
     await message.reply_text(
         i18n.limit_reached(effective_quota(user_id), lang),
         parse_mode=ParseMode.HTML,
-        reply_markup=waitlist_markup(lang),
+        reply_markup=out_of_checks_markup(lang, checkout_url),
     )
 
 
@@ -284,7 +300,11 @@ async def send_roadmap_item(message, user_id: int, item: int) -> None:
         remaining = max(0, quota - user["usage_count"])
         done_text = i18n.analysis_done(remaining, quota, user["lang"])
         if remaining <= 0:
-            await message.reply_text(done_text, parse_mode=ParseMode.HTML, reply_markup=waitlist_markup(user["lang"]))
+            checkout_url = checkout_url_for(user_id, message.get_bot().username)
+            await message.reply_text(
+                done_text, parse_mode=ParseMode.HTML,
+                reply_markup=out_of_checks_markup(user["lang"], checkout_url),
+            )
         else:
             await message.reply_text(done_text, parse_mode=ParseMode.HTML)
 

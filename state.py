@@ -265,6 +265,31 @@ def waitlist_count() -> int:
         _pool.putconn(conn)
 
 
+def get_or_create_order(telegram_id: int, amount: int, package: str) -> int:
+    """Reuses an existing pending order for this user+package instead of
+    creating a new row every time the limit-reached message is shown, so
+    repeated prompts don't pile up dead `orders` rows."""
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("""
+                SELECT id FROM orders
+                WHERE telegram_id = %s AND package = %s AND state = 'pending'
+                ORDER BY created_at DESC LIMIT 1
+            """, (telegram_id, package))
+            row = cur.fetchone()
+            if row:
+                return row[0]
+            cur.execute("""
+                INSERT INTO orders (telegram_id, amount, package)
+                VALUES (%s, %s, %s)
+                RETURNING id
+            """, (telegram_id, amount, package))
+            return cur.fetchone()[0]
+    finally:
+        _pool.putconn(conn)
+
+
 def set_quota_override(user_id: int, quota: int, source: str | None = None) -> bool:
     """Returns False if this telegram_id has no `users` row yet (never
     interacted with the bot), since UPDATE is a silent no-op in that case."""

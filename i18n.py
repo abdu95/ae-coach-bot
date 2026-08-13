@@ -94,6 +94,12 @@ LIMIT_REACHED = {
     ),
 }
 
+PAY_BUTTON = {
+    "en": "💳 Pay 99,000 UZS — 10 checks",
+    "uz": "💳 To'lash — 99,000 so'm — 10 ta tekshiruv",
+    "ru": "💳 Оплатить 99,000 сум — 10 проверок",
+}
+
 JOIN_WAITLIST_BUTTON = {
     "en": "🔔 Join waitlist",
     "uz": "🔔 Kutish ro'yxatiga qo'shilish",
@@ -216,6 +222,7 @@ STRINGS = {
     "cv_received": CV_RECEIVED,
     "analyzing": ANALYZING,
     "roadmap_wait": ROADMAP_WAIT_NOTE,
+    "pay_button": PAY_BUTTON,
     "join_waitlist_button": JOIN_WAITLIST_BUTTON,
     "waitlist_joined": WAITLIST_JOINED,
     "pilot_already": PILOT_ALREADY,
