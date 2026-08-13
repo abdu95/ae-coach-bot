@@ -1,8 +1,6 @@
 import logging
 import os
 import io
-import json
-from datetime import datetime
 
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -28,12 +26,6 @@ logger = logging.getLogger(__name__)
 
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "0"))
 USAGE_LIMIT = 3
-
-
-def log_event(user_id: int, event: str) -> None:
-    entry = {"ts": datetime.utcnow().isoformat(), "user_id": user_id, "event": event}
-    with open("usage.log", "a") as f:
-        f.write(json.dumps(entry) + "\n")
 
 
 def action_button(label: str, callback: str) -> InlineKeyboardMarkup:
@@ -63,7 +55,8 @@ def waitlist_markup(lang: str) -> InlineKeyboardMarkup:
     ]])
 
 
-async def send_limit_reached(message, lang: str) -> None:
+async def send_limit_reached(message, user_id: int, lang: str) -> None:
+    state.log_event(user_id, "limit_reached")
     await message.reply_text(
         i18n.limit_reached(USAGE_LIMIT, lang),
         parse_mode=ParseMode.HTML,
@@ -76,7 +69,7 @@ async def send_limit_reached(message, lang: str) -> None:
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     state.reset(user_id)
-    log_event(user_id, "started")
+    state.log_event(user_id, "started")
     user = state.get(user_id)
     if not user["lang"]:
         await send_language_picker(update.message, update.effective_user.language_code)
@@ -96,25 +89,26 @@ async def language_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_user.id != ADMIN_USER_ID:
         return
-    try:
-        lines = open("usage.log").readlines()
-    except FileNotFoundError:
-        await update.message.reply_text("No data yet.")
-        return
-    events = []
-    for line in lines:
-        try:
-            events.append(json.loads(line.strip()))
-        except Exception:
-            continue
-    total = lambda e: sum(1 for x in events if x.get("event") == e)
-    unique = lambda e: len(set(x["user_id"] for x in events if x.get("event") == e))
+    acct = state.account_stats()
+    ev = state.event_stats(
+        ["started", "cv_uploaded", "check_completed", "roadmap_requested", "limit_reached"]
+    )
+
+    def line(label: str, key: str) -> str:
+        total, unique = ev[key]
+        return f"{label} — Total {total} · Unique {unique}"
+
     await update.message.reply_text(
         f"📊 <b>Stats</b>\n\n"
-        f"Started — Total {total('started')} · Unique {unique('started')}\n"
-        f"CV uploaded — Total {total('cv_uploaded')} · Unique {unique('cv_uploaded')}\n"
-        f"Roadmap — Total {total('roadmap_requested')} · Unique {unique('roadmap_requested')}\n"
-        f"Waitlist — {state.waitlist_count()}",
+        f"Unique users — {acct['unique_users']}\n"
+        f"Activated (≥1 check) — {acct['activated_users']}\n"
+        f"Total checks run — {acct['total_checks']}\n\n"
+        f"{line('Started', 'started')}\n"
+        f"{line('CV uploaded', 'cv_uploaded')}\n"
+        f"{line('Check completed', 'check_completed')}\n"
+        f"{line('Roadmap requested', 'roadmap_requested')}\n"
+        f"{line('Limit reached', 'limit_reached')}\n\n"
+        f"Waitlist — {acct['waitlist']}",
         parse_mode=ParseMode.HTML,
     )
 
@@ -127,14 +121,14 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     doc = update.message.document
 
     if user["usage_count"] >= USAGE_LIMIT:
-        await send_limit_reached(update.message, user["lang"])
+        await send_limit_reached(update.message, user_id, user["lang"])
         return
 
     if not doc.file_name.lower().endswith(".pdf"):
         await update.message.reply_text("Please upload a <b>PDF</b> file.", parse_mode=ParseMode.HTML)
         return
 
-    log_event(user_id, "cv_uploaded")
+    state.log_event(user_id, "cv_uploaded")
     msg = await update.message.reply_text("📄 Reading your CV…")
 
     try:
@@ -167,7 +161,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     if user["usage_count"] >= USAGE_LIMIT:
-        await send_limit_reached(update.message, user["lang"])
+        await send_limit_reached(update.message, user_id, user["lang"])
         return
 
     if len(text) < 100:
@@ -186,6 +180,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         user["level"] = outputs["level"]["assessment"]
         user["phase"] = "step_1"
         user["usage_count"] += 1
+        state.log_event(user_id, "check_completed")
     except Exception as e:
         logger.error(f"Analysis error: {e}")
         await msg.edit_text("❌ Analysis failed. Send /reset and try again.")
@@ -258,7 +253,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     if action == "join_waitlist":
-        state.join_waitlist(user_id, update.effective_user.username)
+        if state.join_waitlist(user_id, update.effective_user.username):
+            state.log_event(user_id, "waitlist_joined")
         user["waitlisted"] = True
         await message.reply_text(i18n.t("waitlist_joined", user["lang"]))
         return
@@ -289,7 +285,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         )
 
     elif action == "step_5":
-        log_event(user_id, "roadmap_requested")
+        state.log_event(user_id, "roadmap_requested")
         await send_roadmap_item(message, user_id, item=1)
 
     elif action in ("step_5_2", "step_5_3"):

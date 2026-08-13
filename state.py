@@ -154,16 +154,24 @@ _ACCOUNT_KEYS = {"lang", "usage_count", "waitlisted"}
 
 def _upsert_and_load_account(user_id: int) -> dict:
     """Ensure a `users` row exists for this telegram id, bump last_seen_at,
-    and return their account fields."""
+    and return their account fields. Logs a `user_seen` event exactly once,
+    the moment a user's row is first created (xmax = 0 is the standard
+    Postgres idiom for "this row was inserted, not updated, by this
+    statement")."""
     conn = _pool.getconn()
     try:
         with conn, conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO users (telegram_id) VALUES (%s)
                 ON CONFLICT (telegram_id) DO UPDATE SET last_seen_at = now()
-                RETURNING language, checks_used, joined_waitlist
+                RETURNING language, checks_used, joined_waitlist, (xmax = 0) AS is_new
             """, (user_id,))
-            language, checks_used, joined_waitlist = cur.fetchone()
+            language, checks_used, joined_waitlist, is_new = cur.fetchone()
+            if is_new:
+                cur.execute(
+                    "INSERT INTO events (telegram_id, event_type) VALUES (%s, 'user_seen')",
+                    (user_id,),
+                )
             return {"language": language, "checks_used": checks_used, "joined_waitlist": joined_waitlist}
     finally:
         _pool.putconn(conn)
@@ -240,3 +248,55 @@ def waitlist_count() -> int:
             return cur.fetchone()[0]
     finally:
         _pool.putconn(conn)
+
+
+def log_event(telegram_id: int, event_type: str, metadata: dict | None = None) -> None:
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO events (telegram_id, event_type, metadata) VALUES (%s, %s, %s)",
+                (telegram_id, event_type, json.dumps(metadata) if metadata is not None else None),
+            )
+    finally:
+        _pool.putconn(conn)
+
+
+def event_stats(event_types: list[str]) -> dict[str, tuple[int, int]]:
+    """Returns {event_type: (total_count, unique_users)} for each requested type."""
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("""
+                SELECT event_type, count(*), count(DISTINCT telegram_id)
+                FROM events
+                WHERE event_type = ANY(%s)
+                GROUP BY event_type
+            """, (event_types,))
+            rows = {row[0]: (row[1], row[2]) for row in cur.fetchall()}
+    finally:
+        _pool.putconn(conn)
+    return {et: rows.get(et, (0, 0)) for et in event_types}
+
+
+def account_stats() -> dict:
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("""
+                SELECT
+                    count(*),
+                    count(*) FILTER (WHERE checks_used > 0),
+                    coalesce(sum(checks_used), 0),
+                    count(*) FILTER (WHERE joined_waitlist)
+                FROM users
+            """)
+            unique_users, activated_users, total_checks, waitlist = cur.fetchone()
+    finally:
+        _pool.putconn(conn)
+    return {
+        "unique_users": unique_users,
+        "activated_users": activated_users,
+        "total_checks": total_checks,
+        "waitlist": waitlist,
+    }
