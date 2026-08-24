@@ -169,6 +169,90 @@ PILOT_FULL = {
     "ru": "Пилот School21 заполнен, но вы всё ещё можете использовать бесплатные проверки ниже.",
 }
 
+RESET_DONE = {
+    "en": "🔄 Reset. Upload your CV to start again.",
+    "uz": "🔄 Qayta boshlandi. Qaytadan boshlash uchun CV'ingizni yuklang.",
+    "ru": "🔄 Сброшено. Загрузите резюме, чтобы начать заново.",
+}
+
+PLEASE_UPLOAD_PDF = {
+    "en": "Please upload a <b>PDF</b> file.",
+    "uz": "Iltimos, <b>PDF</b> formatidagi faylni yuklang.",
+    "ru": "Пожалуйста, загрузите файл в формате <b>PDF</b>.",
+}
+
+READING_CV = {
+    "en": "📄 Reading your CV…",
+    "uz": "📄 CV'ingiz o'qilmoqda…",
+    "ru": "📄 Читаю ваше резюме…",
+}
+
+CV_READ_ERROR = {
+    "en": "❌ Could not read your CV. Please try again.",
+    "uz": "❌ CV'ingizni o'qib bo'lmadi. Qaytadan urinib ko'ring.",
+    "ru": "❌ Не удалось прочитать резюме. Попробуйте ещё раз.",
+}
+
+WRONG_PHASE = {
+    "en": "Send /start to begin or /reset to start over.",
+    "uz": "Boshlash uchun /start, qaytadan boshlash uchun /reset yuboring.",
+    "ru": "Отправьте /start, чтобы начать, или /reset, чтобы начать заново.",
+}
+
+JD_TOO_SHORT = {
+    "en": "That looks too short. Please paste the full job description.",
+    "uz": "Bu juda qisqa ko'rinyapti. Iltimos, ish tavsifining to'liq matnini joylashtiring.",
+    "ru": "Это слишком коротко. Пожалуйста, вставьте полный текст описания вакансии.",
+}
+
+ANALYSIS_FAILED = {
+    "en": "❌ Analysis failed. Send /reset and try again.",
+    "uz": "❌ Tahlil amalga oshmadi. /reset yuboring va qaytadan urinib ko'ring.",
+    "ru": "❌ Анализ не удался. Отправьте /reset и попробуйте снова.",
+}
+
+CHECK_WRITING_BUTTON = {
+    "en": "Check my CV writing →",
+    "uz": "CV yozuvimni tekshirish →",
+    "ru": "Проверить стиль резюме →",
+}
+
+ROADMAP_FAILED = {
+    "en": "❌ Roadmap generation failed. Send /reset to try again.",
+    "uz": "❌ Yo'l xaritasini yaratib bo'lmadi. Qaytadan urinish uchun /reset yuboring.",
+    "ru": "❌ Не удалось создать план действий. Отправьте /reset, чтобы попробовать снова.",
+}
+
+CONTINUE_BUTTON = {
+    "en": "Continue: {title} →",
+    "uz": "Davom etish: {title} →",
+    "ru": "Продолжить: {title} →",
+}
+
+SESSION_EXPIRED = {
+    "en": "Session expired. Send /reset to start over.",
+    "uz": "Sessiya muddati tugadi. Qaytadan boshlash uchun /reset yuboring.",
+    "ru": "Сессия истекла. Отправьте /reset, чтобы начать заново.",
+}
+
+SKILL_GAPS_BUTTON = {
+    "en": "See my skill gaps →",
+    "uz": "Ko'nikma bo'shliqlarimni ko'rish →",
+    "ru": "Посмотреть пробелы в навыках →",
+}
+
+ASSESS_LEVEL_BUTTON = {
+    "en": "Assess my level →",
+    "uz": "Darajamni baholash →",
+    "ru": "Оценить мой уровень →",
+}
+
+GET_ROADMAP_BUTTON = {
+    "en": "Get my roadmap →",
+    "uz": "Yo'l xaritamni olish →",
+    "ru": "Получить план действий →",
+}
+
 ROADMAP_WAIT_NOTE = {
     "en": "Usually takes about 15–20 seconds.",
     "uz": "Odatda 15–20 soniya vaqt oladi.",
@@ -227,6 +311,19 @@ STRINGS = {
     "waitlist_joined": WAITLIST_JOINED,
     "pilot_already": PILOT_ALREADY,
     "pilot_full": PILOT_FULL,
+    "reset_done": RESET_DONE,
+    "please_upload_pdf": PLEASE_UPLOAD_PDF,
+    "reading_cv": READING_CV,
+    "cv_read_error": CV_READ_ERROR,
+    "wrong_phase": WRONG_PHASE,
+    "jd_too_short": JD_TOO_SHORT,
+    "analysis_failed": ANALYSIS_FAILED,
+    "check_writing_button": CHECK_WRITING_BUTTON,
+    "roadmap_failed": ROADMAP_FAILED,
+    "session_expired": SESSION_EXPIRED,
+    "skill_gaps_button": SKILL_GAPS_BUTTON,
+    "assess_level_button": ASSESS_LEVEL_BUTTON,
+    "get_roadmap_button": GET_ROADMAP_BUTTON,
 }
 
 
@@ -235,6 +332,11 @@ def roadmap_loading(item: int, title: str, lang: str) -> str:
     desc = desc_map.get(lang) or desc_map.get("en") or "Building this section..."
     wait = t("roadmap_wait", lang)
     return f"<b>🗺 Step 5 — Action Item {item}: {title}</b>\n\n⏳ {desc}\n\n{wait}"
+
+
+def continue_button(title: str, lang: str) -> str:
+    template = CONTINUE_BUTTON.get(lang) or CONTINUE_BUTTON["en"]
+    return template.format(title=title)
 
 
 def pilot_enrolled(quota: int, lang: str) -> str:

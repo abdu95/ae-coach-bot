@@ -124,8 +124,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def reset_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    state.reset(update.effective_user.id)
-    await update.message.reply_text("🔄 Reset. Upload your CV to start again.")
+    user_id = update.effective_user.id
+    state.reset(user_id)
+    await update.message.reply_text(i18n.t("reset_done", state.get(user_id)["lang"]))
 
 
 async def language_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -191,11 +192,11 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     if not doc.file_name.lower().endswith(".pdf"):
-        await update.message.reply_text("Please upload a <b>PDF</b> file.", parse_mode=ParseMode.HTML)
+        await update.message.reply_text(i18n.t("please_upload_pdf", user["lang"]), parse_mode=ParseMode.HTML)
         return
 
     state.log_event(user_id, "cv_uploaded")
-    msg = await update.message.reply_text("📄 Reading your CV…")
+    msg = await update.message.reply_text(i18n.t("reading_cv", user["lang"]))
 
     try:
         file = await context.bot.get_file(doc.file_id)
@@ -205,7 +206,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         user["phase"] = "waiting_jd"
     except Exception as e:
         logger.error(f"CV read error: {e}")
-        await msg.edit_text("❌ Could not read your CV. Please try again.")
+        await msg.edit_text(i18n.t("cv_read_error", user["lang"]))
         return
 
     await msg.delete()
@@ -223,7 +224,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     text = update.message.text.strip()
 
     if user["phase"] != "waiting_jd":
-        await update.message.reply_text("Send /start to begin or /reset to start over.")
+        await update.message.reply_text(i18n.t("wrong_phase", user["lang"]))
         return
 
     if not can_run_check(user_id, user):
@@ -231,7 +232,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     if len(text) < 100:
-        await update.message.reply_text("That looks too short. Please paste the full job description.")
+        await update.message.reply_text(i18n.t("jd_too_short", user["lang"]))
         return
 
     user["jd"] = text
@@ -249,7 +250,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         state.log_event(user_id, "check_completed")
     except Exception as e:
         logger.error(f"Analysis error: {e}")
-        await msg.edit_text("❌ Analysis failed. Send /reset and try again.")
+        await msg.edit_text(i18n.t("analysis_failed", user["lang"]))
         return
 
     await msg.delete()
@@ -258,7 +259,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     await update.message.reply_text(
         formatter.step_ats(outputs["ats"]) + f"\n\n{i18n.checks_left(remaining, quota, user['lang'])}",
         parse_mode=ParseMode.HTML,
-        reply_markup=action_button("Check my CV writing →", "step_2"),
+        reply_markup=action_button(i18n.t("check_writing_button", user["lang"]), "step_2"),
     )
 
 
@@ -277,7 +278,7 @@ async def send_roadmap_item(message, user_id: int, item: int) -> None:
         text = await coach.generate_roadmap(level, item, user["jd"], user["cv_text"])
     except Exception as e:
         logger.error(f"Roadmap error (item {item}): {e}")
-        await loading.edit_text("❌ Roadmap generation failed. Send /reset to try again.")
+        await loading.edit_text(i18n.t("roadmap_failed", user["lang"]))
         return
 
     await loading.delete()
@@ -291,7 +292,7 @@ async def send_roadmap_item(message, user_id: int, item: int) -> None:
         await message.reply_text(
             chunks[-1],
             parse_mode=ParseMode.HTML,
-            reply_markup=action_button(f"Continue: {next_title} →", f"step_5_{item + 1}"),
+            reply_markup=action_button(i18n.continue_button(next_title, user["lang"]), f"step_5_{item + 1}"),
         )
     else:
         for chunk in formatter.split_long(formatted):
@@ -332,28 +333,28 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     if not user.get("outputs"):
-        await message.reply_text("Session expired. Send /reset to start over.")
+        await message.reply_text(i18n.t("session_expired", user["lang"]))
         return
 
     if action == "step_2":
         await message.reply_text(
             formatter.step_xyz(user["outputs"]["xyz"]),
             parse_mode=ParseMode.HTML,
-            reply_markup=action_button("See my skill gaps →", "step_3"),
+            reply_markup=action_button(i18n.t("skill_gaps_button", user["lang"]), "step_3"),
         )
 
     elif action == "step_3":
         await message.reply_text(
             formatter.step_tools(user["outputs"]["tools"]),
             parse_mode=ParseMode.HTML,
-            reply_markup=action_button("Assess my level →", "step_4"),
+            reply_markup=action_button(i18n.t("assess_level_button", user["lang"]), "step_4"),
         )
 
     elif action == "step_4":
         await message.reply_text(
             formatter.step_level(user["outputs"]["level"]),
             parse_mode=ParseMode.HTML,
-            reply_markup=action_button("Get my roadmap →", "step_5"),
+            reply_markup=action_button(i18n.t("get_roadmap_button", user["lang"]), "step_5"),
         )
 
     elif action == "step_5":
