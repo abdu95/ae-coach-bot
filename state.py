@@ -268,15 +268,23 @@ def waitlist_count() -> int:
 def get_or_create_order(telegram_id: int, amount: int, package: str) -> int:
     """Reuses an existing pending order for this user+package instead of
     creating a new row every time the limit-reached message is shown, so
-    repeated prompts don't pile up dead `orders` rows."""
+    repeated prompts don't pile up dead `orders` rows. Refreshes the amount
+    on reuse so a reused order always matches the currently-configured
+    price — otherwise a stale pending order from before a price change
+    would disagree with the checkout link built from the new PACKAGE_AMOUNT,
+    and Payme would reject the transaction as an amount mismatch."""
     conn = _pool.getconn()
     try:
         with conn, conn.cursor() as cur:
             cur.execute("""
-                SELECT id FROM orders
-                WHERE telegram_id = %s AND package = %s AND state = 'pending'
-                ORDER BY created_at DESC LIMIT 1
-            """, (telegram_id, package))
+                UPDATE orders SET amount = %s
+                WHERE id = (
+                    SELECT id FROM orders
+                    WHERE telegram_id = %s AND package = %s AND state = 'pending'
+                    ORDER BY created_at DESC LIMIT 1
+                )
+                RETURNING id
+            """, (amount, telegram_id, package))
             row = cur.fetchone()
             if row:
                 return row[0]

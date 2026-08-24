@@ -95,9 +95,9 @@ LIMIT_REACHED = {
 }
 
 PAY_BUTTON = {
-    "en": "💳 Pay 99,000 UZS — 10 checks",
-    "uz": "💳 To'lash — 99,000 so'm — 10 ta tekshiruv",
-    "ru": "💳 Оплатить 99,000 сум — 10 проверок",
+    "en": "💳 Pay {amount} UZS — 10 checks",
+    "uz": "💳 To'lash — {amount} so'm — 10 ta tekshiruv",
+    "ru": "💳 Оплатить {amount} сум — 10 проверок",
 }
 
 JOIN_WAITLIST_BUTTON = {
@@ -306,7 +306,6 @@ STRINGS = {
     "cv_received": CV_RECEIVED,
     "analyzing": ANALYZING,
     "roadmap_wait": ROADMAP_WAIT_NOTE,
-    "pay_button": PAY_BUTTON,
     "join_waitlist_button": JOIN_WAITLIST_BUTTON,
     "waitlist_joined": WAITLIST_JOINED,
     "pilot_already": PILOT_ALREADY,
@@ -332,6 +331,11 @@ def roadmap_loading(item: int, title: str, lang: str) -> str:
     desc = desc_map.get(lang) or desc_map.get("en") or "Building this section..."
     wait = t("roadmap_wait", lang)
     return f"<b>🗺 Step 5 — Action Item {item}: {title}</b>\n\n⏳ {desc}\n\n{wait}"
+
+
+def pay_button(amount_tiyin: int, lang: str) -> str:
+    template = PAY_BUTTON.get(lang) or PAY_BUTTON["en"]
+    return template.format(amount=f"{amount_tiyin // 100:,}")
 
 
 def continue_button(title: str, lang: str) -> str:

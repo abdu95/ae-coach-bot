@@ -33,7 +33,7 @@ PILOT_CODE = os.getenv("PILOT_CODE", "school21")
 PILOT_QUOTA = int(os.getenv("PILOT_QUOTA", "10"))
 PILOT_CAP = int(os.getenv("PILOT_CAP", "10"))
 PAYME_ID = os.getenv("PAYME_ID", "")
-PACKAGE_AMOUNT = 9_900_000  # 99,000 UZS in tiyin
+PACKAGE_AMOUNT = int(os.getenv("PACKAGE_AMOUNT_TIYIN", "9900000"))  # 99,000 UZS in tiyin
 PACKAGE_NAME = "10_checks"
 
 
@@ -79,7 +79,7 @@ def checkout_url_for(user_id: int, bot_username: str) -> str:
 
 def out_of_checks_markup(lang: str, checkout_url: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(i18n.t("pay_button", lang), url=checkout_url)],
+        [InlineKeyboardButton(i18n.pay_button(PACKAGE_AMOUNT, lang), url=checkout_url)],
         [InlineKeyboardButton(i18n.t("join_waitlist_button", lang), callback_data="join_waitlist")],
     ])
 
