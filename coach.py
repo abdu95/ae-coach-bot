@@ -91,6 +91,11 @@ def roadmap_block_title(level: str, item: int) -> str:
     return blocks[item]["title"]
 
 
+def roadmap_max_item(level: str) -> int:
+    blocks = ROADMAP_BLOCKS.get(level, ROADMAP_BLOCKS["Junior"])
+    return max(blocks.keys())
+
+
 async def generate_roadmap(level: str, item: int, jd: str, cv_text: str) -> str:
     """Generate one roadmap action item (1, 2, or 3) for the given level."""
     blocks = ROADMAP_BLOCKS.get(level, ROADMAP_BLOCKS["Junior"])

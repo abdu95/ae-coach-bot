@@ -342,7 +342,7 @@ async def send_roadmap_item(message, user_id: int, item: int) -> None:
     await loading.delete()
     formatted = formatter.step_roadmap_block(item, title, text)
 
-    if item < 3:
+    if item < coach.roadmap_max_item(level):
         next_title = coach.roadmap_block_title(level, item + 1)
         chunks = formatter.split_long(formatted)
         for chunk in chunks[:-1]:
@@ -372,7 +372,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     action = query.data
 
     # Guard: step actions need completed analysis
-    if action in ("step_2", "step_3", "step_4", "step_5", "step_5_2", "step_5_3") and not user.get("outputs"):
+    if action in ("step_2", "step_3", "step_4", "step_5", "step_5_2", "step_5_3", "step_5_4") and not user.get("outputs"):
         await query.message.reply_text("Session expired. Send /reset to start over.")
         return
     message = query.message
@@ -466,8 +466,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         log_event(user_id, "roadmap_requested")
         await send_roadmap_item(message, user_id, item=1)
 
-    elif action in ("step_5_2", "step_5_3"):
-        item = 2 if action == "step_5_2" else 3
+    elif action in ("step_5_2", "step_5_3", "step_5_4"):
+        item = int(action.rsplit("_", 1)[1])
         await send_roadmap_item(message, user_id, item=item)
 
 

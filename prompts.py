@@ -170,16 +170,24 @@ Write ONLY this section:
 ROADMAP_JUNIOR_ITEM2 = f"""
 The candidate's CV and the target job description (JD) are provided.
 {ROADMAP_JUNIOR_CONTEXT}
-DEPTH: foundational technical topics relevant to THIS role; help them tell a clear
-story about real work, even if limited.
 {NO_PREAMBLE}
 
-Write ONLY these two sections:
+Write ONLY this section:
 
 ### Phone Screen Strategy
 Opening line: [exact sentence to open "tell me about yourself" — referencing their strongest credential]
 Key project to lead with: [which CV project, and why it maps to this JD]
 How to handle gaps: [how to address missing JD requirements honestly without killing their chances]
+"""
+
+ROADMAP_JUNIOR_ITEM3 = f"""
+The candidate's CV and the target job description (JD) are provided.
+{ROADMAP_JUNIOR_CONTEXT}
+DEPTH: foundational technical topics relevant to THIS role; help them tell a clear
+story about real work, even if limited.
+{NO_PREAMBLE}
+
+Write ONLY this section:
 
 ### Technical Interview Prep
 Topics to study in priority order (based on JD requirements the CV is weakest on):
@@ -190,7 +198,7 @@ Topics to study in priority order (based on JD requirements the CV is weakest on
 5.
 """
 
-ROADMAP_JUNIOR_ITEM3 = f"""
+ROADMAP_JUNIOR_ITEM4 = f"""
 The candidate's CV and the target job description (JD) are provided.
 {ROADMAP_JUNIOR_CONTEXT}
 {NO_PREAMBLE}
@@ -238,16 +246,24 @@ Write ONLY this section:
 ROADMAP_MID_ITEM2 = f"""
 The candidate's CV and the target job description (JD) are provided.
 {ROADMAP_MID_CONTEXT}
-DEPTH: intermediate technical topics relevant to THIS role; help them show they can own
-work end to end, not just execute tickets.
 {NO_PREAMBLE}
 
-Write ONLY these two sections:
+Write ONLY this section:
 
 ### Phone Screen Strategy
 Opening line: [exact sentence to open "tell me about yourself" — signalling ownership and impact]
 Key project to lead with: [which project shows end-to-end ownership most relevant to this JD]
 How to position seniority: [how to show readiness to lead, not just contribute]
+"""
+
+ROADMAP_MID_ITEM3 = f"""
+The candidate's CV and the target job description (JD) are provided.
+{ROADMAP_MID_CONTEXT}
+DEPTH: intermediate technical topics relevant to THIS role; help them show they can own
+work end to end, not just execute tickets.
+{NO_PREAMBLE}
+
+Write ONLY this section:
 
 ### Technical Interview Prep
 Topics to study in priority order (based on JD requirements the CV is weakest on):
@@ -258,7 +274,7 @@ Topics to study in priority order (based on JD requirements the CV is weakest on
 5.
 """
 
-ROADMAP_MID_ITEM3 = f"""
+ROADMAP_MID_ITEM4 = f"""
 The candidate's CV and the target job description (JD) are provided.
 {ROADMAP_MID_CONTEXT}
 {NO_PREAMBLE}
@@ -307,16 +323,24 @@ Write ONLY this section:
 ROADMAP_SENIOR_ITEM2 = f"""
 The candidate's CV and the target job description (JD) are provided.
 {ROADMAP_SENIOR_CONTEXT}
-DEPTH: advanced technical topics relevant to THIS role, plus leadership and stakeholder
-alignment; help them lead with strategic impact, not implementation details.
 {NO_PREAMBLE}
 
-Write ONLY these two sections:
+Write ONLY this section:
 
 ### Phone Screen Strategy
 Opening line: [exact sentence to open "tell me about yourself" — signalling seniority and scope]
 Key story to lead with: [which initiative shows cross-team leadership most relevant to this JD]
 How to signal readiness for staff/lead: [specific language and framing tied to this JD]
+"""
+
+ROADMAP_SENIOR_ITEM3 = f"""
+The candidate's CV and the target job description (JD) are provided.
+{ROADMAP_SENIOR_CONTEXT}
+DEPTH: advanced technical topics relevant to THIS role, plus leadership and stakeholder
+alignment; help them lead with strategic impact, not implementation details.
+{NO_PREAMBLE}
+
+Write ONLY this section:
 
 ### Technical Interview Prep
 Topics to study in priority order (based on JD requirements the CV is weakest on):
@@ -327,7 +351,7 @@ Topics to study in priority order (based on JD requirements the CV is weakest on
 5.
 """
 
-ROADMAP_SENIOR_ITEM3 = f"""
+ROADMAP_SENIOR_ITEM4 = f"""
 The candidate's CV and the target job description (JD) are provided.
 {ROADMAP_SENIOR_CONTEXT}
 {NO_PREAMBLE}
@@ -397,17 +421,20 @@ ROADMAP_BLOCKS = {
     },
     "Junior": {
         1: {"title": "CV Fixes", "prompt": ROADMAP_JUNIOR_ITEM1},
-        2: {"title": "Interview Prep", "prompt": ROADMAP_JUNIOR_ITEM2},
-        3: {"title": "Target Companies", "prompt": ROADMAP_JUNIOR_ITEM3},
+        2: {"title": "Phone Screen Prep", "prompt": ROADMAP_JUNIOR_ITEM2},
+        3: {"title": "Technical Interview Prep", "prompt": ROADMAP_JUNIOR_ITEM3},
+        4: {"title": "Target Companies", "prompt": ROADMAP_JUNIOR_ITEM4},
     },
     "Mid": {
         1: {"title": "CV Fixes", "prompt": ROADMAP_MID_ITEM1},
-        2: {"title": "Interview Prep", "prompt": ROADMAP_MID_ITEM2},
-        3: {"title": "Target Companies", "prompt": ROADMAP_MID_ITEM3},
+        2: {"title": "Phone Screen Prep", "prompt": ROADMAP_MID_ITEM2},
+        3: {"title": "Technical Interview Prep", "prompt": ROADMAP_MID_ITEM3},
+        4: {"title": "Target Companies", "prompt": ROADMAP_MID_ITEM4},
     },
     "Senior": {
         1: {"title": "CV Fixes", "prompt": ROADMAP_SENIOR_ITEM1},
-        2: {"title": "Interview Prep", "prompt": ROADMAP_SENIOR_ITEM2},
-        3: {"title": "Target Companies", "prompt": ROADMAP_SENIOR_ITEM3},
+        2: {"title": "Phone Screen Prep", "prompt": ROADMAP_SENIOR_ITEM2},
+        3: {"title": "Technical Interview Prep", "prompt": ROADMAP_SENIOR_ITEM3},
+        4: {"title": "Target Companies", "prompt": ROADMAP_SENIOR_ITEM4},
     },
 }
