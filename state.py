@@ -23,21 +23,13 @@ def init_db() -> None:
     conn = _pool.getconn()
     try:
         with conn, conn.cursor() as cur:
-            # Legacy tables — kept only as the source for the one-time backfill
-            # below. Nothing writes to `waitlist` anymore; `user_state` still
-            # holds the session/flow fields (see _ACCOUNT_KEYS split in _save).
+            # user_state holds the session/flow fields (see _ACCOUNT_KEYS split
+            # in _save) — actively read/written on every request, not legacy.
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS user_state (
                     user_id BIGINT PRIMARY KEY,
                     data JSONB NOT NULL,
                     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-                )
-            """)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS waitlist (
-                    user_id BIGINT PRIMARY KEY,
-                    username TEXT,
-                    joined_at TIMESTAMPTZ NOT NULL DEFAULT now()
                 )
             """)
             cur.execute("""
@@ -71,10 +63,10 @@ def init_db() -> None:
 
 
 def _migrate_legacy_state(cur) -> None:
-    """Backfill users from the legacy user_state/waitlist tables. Safe to run
-    on every startup: ON CONFLICT DO NOTHING means an already-migrated user
-    (one with a `users` row) is left untouched, so this is a no-op once
-    every pre-existing user has been copied over exactly once."""
+    """Backfill users from the legacy user_state table. Safe to run on every
+    startup: ON CONFLICT DO NOTHING means an already-migrated user (one with
+    a `users` row) is left untouched, so this is a no-op once every
+    pre-existing user has been copied over exactly once."""
     cur.execute("""
         INSERT INTO users (telegram_id, language, checks_used, joined_waitlist, first_seen_at, last_seen_at)
         SELECT
@@ -86,15 +78,6 @@ def _migrate_legacy_state(cur) -> None:
             updated_at
         FROM user_state
         ON CONFLICT (telegram_id) DO NOTHING
-    """)
-    cur.execute("""
-        INSERT INTO users (telegram_id, username, joined_waitlist, waitlist_at)
-        SELECT user_id, username, true, joined_at
-        FROM waitlist
-        ON CONFLICT (telegram_id) DO UPDATE
-        SET username = COALESCE(users.username, EXCLUDED.username),
-            joined_waitlist = true,
-            waitlist_at = COALESCE(users.waitlist_at, EXCLUDED.waitlist_at)
     """)
 
 
