@@ -110,6 +110,19 @@ def step_roadmap_block(item: int, title: str, text: str, lang: str = "en") -> st
     return header + format_roadmap(text)
 
 
+def cv_fix_block(index: int, total: int, fix: dict, lang: str = "en") -> str:
+    header = i18n.cv_fix_header(index, total, lang)
+    issue = _esc(fix.get("issue", ""))
+    before = (fix.get("before") or "").strip()
+    after = _esc(fix.get("after", ""))
+
+    lines = [f"<b>{header}</b>\n", issue]
+    if before:
+        lines.append(f"\n<i>Before:</i> {_esc(before)}")
+    lines.append(f"\n<i>After:</i> {after}")
+    return "\n".join(lines)
+
+
 def format_roadmap(text: str) -> str:
     """
     Convert markdown-ish roadmap text from Claude into Telegram HTML.

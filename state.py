@@ -217,6 +217,7 @@ def _empty() -> dict:
         "chosen_vacancy": None,
         "outputs": None,
         "level": "",
+        "cv_fixes": [],             # parsed Top-5 CV fixes, shown one at a time
         "lang": "",                 # "uz" or "ru", empty until chosen
         "usage_count": 0,           # successful analyses run, lifetime
         "waitlisted": False,

@@ -96,6 +96,23 @@ def roadmap_max_item(level: str) -> int:
     return max(blocks.keys())
 
 
+async def generate_cv_fixes(level: str, jd: str, cv_text: str) -> list:
+    """Generate the Top-5 CV fixes as structured data (item 1 of the roadmap)."""
+    blocks = ROADMAP_BLOCKS.get(level, ROADMAP_BLOCKS["Junior"])
+    block = blocks[1]
+    response = await client.messages.create(
+        model=MODEL,
+        max_tokens=block.get("max_tokens", 900),
+        temperature=0.3,
+        messages=[{
+            "role": "user",
+            "content": f"CV:\n{cv_text}\n\nJOB DESCRIPTION:\n{jd}\n\n{block['prompt']}"
+        }]
+    )
+    text = "".join(b.text for b in response.content if b.type == "text")
+    return _extract_json(text, array=True)
+
+
 async def generate_roadmap(level: str, item: int, jd: str, cv_text: str) -> str:
     """Generate one roadmap action item for the given level."""
     blocks = ROADMAP_BLOCKS.get(level, ROADMAP_BLOCKS["Junior"])

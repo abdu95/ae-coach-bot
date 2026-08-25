@@ -155,16 +155,19 @@ ROADMAP_JUNIOR_ITEM1 = f"""
 The candidate's CV and the target job description (JD) are provided.
 {ROADMAP_JUNIOR_CONTEXT}
 DEPTH: focus on quantification and clarity, not leadership language.
-{NO_PREAMBLE}
+LENGTH: each field is ONE tightly worded sentence. No extra commentary.
 
-Write ONLY this section:
+Return ONLY a JSON array of exactly 5 objects, each with these exact keys:
+[
+  {{
+    "issue": "<one short sentence: which JD requirement this CV bullet understates or misses>",
+    "before": "<the exact original CV bullet — empty string \\"\\" if this fix adds something missing entirely, rather than rewriting>",
+    "after": "<the rewritten (or new) bullet, max 30 words>"
+  }},
+  ...
+]
 
-### CV Fixes (Top 5)
-1. [specific fix tied to a JD requirement the CV understates or misses — include before/after rewrite]
-2.
-3.
-4.
-5.
+No preamble, no markdown fences, no explanation — raw JSON array only.
 """
 
 ROADMAP_JUNIOR_ITEM2 = f"""
@@ -233,16 +236,19 @@ ROADMAP_MID_ITEM1 = f"""
 The candidate's CV and the target job description (JD) are provided.
 {ROADMAP_MID_CONTEXT}
 DEPTH: emphasise ownership, business impact, and cross-team work — not just task descriptions.
-{NO_PREAMBLE}
+LENGTH: each field is ONE tightly worded sentence. No extra commentary.
 
-Write ONLY this section:
+Return ONLY a JSON array of exactly 5 objects, each with these exact keys:
+[
+  {{
+    "issue": "<one short sentence: which JD requirement this CV bullet understates or misses>",
+    "before": "<the exact original CV bullet — empty string \\"\\" if this fix adds something missing entirely, rather than rewriting>",
+    "after": "<the rewritten (or new) bullet showing ownership language, max 30 words>"
+  }},
+  ...
+]
 
-### CV Fixes (Top 5)
-1. [specific fix tied to a JD requirement — include before/after rewrite showing ownership language]
-2.
-3.
-4.
-5.
+No preamble, no markdown fences, no explanation — raw JSON array only.
 """
 
 ROADMAP_MID_ITEM2 = f"""
@@ -312,16 +318,19 @@ ROADMAP_SENIOR_ITEM1 = f"""
 The candidate's CV and the target job description (JD) are provided.
 {ROADMAP_SENIOR_CONTEXT}
 DEPTH: every bullet must show scope, influence, and business outcome — not just execution.
-{NO_PREAMBLE}
+LENGTH: each field is ONE tightly worded sentence. No extra commentary.
 
-Write ONLY this section:
+Return ONLY a JSON array of exactly 5 objects, each with these exact keys:
+[
+  {{
+    "issue": "<one short sentence: which JD requirement this CV bullet understates or misses>",
+    "before": "<the exact original CV bullet — empty string \\"\\" if this fix adds something missing entirely, rather than rewriting>",
+    "after": "<the rewritten (or new) bullet focused on leadership scope and business outcome, max 30 words>"
+  }},
+  ...
+]
 
-### CV Fixes (Top 5)
-1. [specific fix focused on leadership scope and business impact — include before/after rewrite]
-2.
-3.
-4.
-5.
+No preamble, no markdown fences, no explanation — raw JSON array only.
 """
 
 ROADMAP_SENIOR_ITEM2 = f"""
@@ -426,19 +435,19 @@ ROADMAP_BLOCKS = {
         3: {"title": "Stepping-Stone Roles", "prompt": ROADMAP_PRE_JUNIOR_ITEM3},
     },
     "Junior": {
-        1: {"title": "CV Fixes", "prompt": ROADMAP_JUNIOR_ITEM1},
+        1: {"title": "CV Fixes", "prompt": ROADMAP_JUNIOR_ITEM1, "max_tokens": 900},
         2: {"title": "Phone Screen Prep", "prompt": ROADMAP_JUNIOR_ITEM2, "max_tokens": 350},
         3: {"title": "Technical Interview Prep", "prompt": ROADMAP_JUNIOR_ITEM3},
         4: {"title": "Target Companies", "prompt": ROADMAP_JUNIOR_ITEM4},
     },
     "Mid": {
-        1: {"title": "CV Fixes", "prompt": ROADMAP_MID_ITEM1},
+        1: {"title": "CV Fixes", "prompt": ROADMAP_MID_ITEM1, "max_tokens": 900},
         2: {"title": "Phone Screen Prep", "prompt": ROADMAP_MID_ITEM2, "max_tokens": 350},
         3: {"title": "Technical Interview Prep", "prompt": ROADMAP_MID_ITEM3},
         4: {"title": "Target Companies", "prompt": ROADMAP_MID_ITEM4},
     },
     "Senior": {
-        1: {"title": "CV Fixes", "prompt": ROADMAP_SENIOR_ITEM1},
+        1: {"title": "CV Fixes", "prompt": ROADMAP_SENIOR_ITEM1, "max_tokens": 900},
         2: {"title": "Phone Screen Prep", "prompt": ROADMAP_SENIOR_ITEM2, "max_tokens": 350},
         3: {"title": "Technical Interview Prep", "prompt": ROADMAP_SENIOR_ITEM3},
         4: {"title": "Target Companies", "prompt": ROADMAP_SENIOR_ITEM4},

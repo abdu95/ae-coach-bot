@@ -265,6 +265,27 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 # ── Step callbacks ────────────────────────────────────────────────────────────
 
+async def send_cv_fix(message, user_id: int, index: int) -> None:
+    user = state.get(user_id)
+    fixes = user["cv_fixes"]
+    total = len(fixes)
+    text = formatter.cv_fix_block(index, total, fixes[index - 1], user["lang"])
+
+    if index < total:
+        await message.reply_text(
+            text,
+            parse_mode=ParseMode.HTML,
+            reply_markup=action_button(i18n.t("next_fix_button", user["lang"]), f"cvfix_{index + 1}"),
+        )
+    else:
+        next_title = coach.roadmap_block_title(user["level"], 2)
+        await message.reply_text(
+            text,
+            parse_mode=ParseMode.HTML,
+            reply_markup=action_button(i18n.continue_button(next_title, user["lang"]), "step_5_2"),
+        )
+
+
 async def send_roadmap_item(message, user_id: int, item: int) -> None:
     user = state.get(user_id)
     level = user["level"]
@@ -274,6 +295,19 @@ async def send_roadmap_item(message, user_id: int, item: int) -> None:
         i18n.roadmap_loading(item, title, user["lang"]),
         parse_mode=ParseMode.HTML,
     )
+
+    if title == "CV Fixes":
+        try:
+            fixes = await coach.generate_cv_fixes(level, user["jd"], user["cv_text"])
+        except Exception as e:
+            logger.error(f"Roadmap error (item {item}): {e}")
+            await loading.edit_text(i18n.t("roadmap_failed", user["lang"]))
+            return
+        await loading.delete()
+        user["cv_fixes"] = fixes
+        await send_cv_fix(message, user_id, index=1)
+        return
+
     try:
         text = await coach.generate_roadmap(level, item, user["jd"], user["cv_text"])
     except Exception as e:
@@ -364,6 +398,10 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     elif action in ("step_5_2", "step_5_3", "step_5_4"):
         item = int(action.rsplit("_", 1)[1])
         await send_roadmap_item(message, user_id, item=item)
+
+    elif action.startswith("cvfix_"):
+        index = int(action.split("_")[1])
+        await send_cv_fix(message, user_id, index=index)
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:

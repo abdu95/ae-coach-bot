@@ -229,6 +229,12 @@ CONTINUE_BUTTON = {
     "ru": "Продолжить: {title} →",
 }
 
+NEXT_FIX_BUTTON = {
+    "en": "Next fix →",
+    "uz": "Keyingi tuzatish →",
+    "ru": "Следующая правка →",
+}
+
 SESSION_EXPIRED = {
     "en": "Session expired. Send /reset to start over.",
     "uz": "Sessiya muddati tugadi. Qaytadan boshlash uchun /reset yuboring.",
@@ -397,6 +403,7 @@ STRINGS = {
     "skill_gaps_button": SKILL_GAPS_BUTTON,
     "assess_level_button": ASSESS_LEVEL_BUTTON,
     "get_roadmap_button": GET_ROADMAP_BUTTON,
+    "next_fix_button": NEXT_FIX_BUTTON,
 }
 
 
@@ -414,6 +421,10 @@ def roadmap_header(item: int, title: str, lang: str) -> str:
     template = ROADMAP_STEP_LABEL.get(lang) or ROADMAP_STEP_LABEL["en"]
     label = template.format(item=item, title=roadmap_item_title(title, lang))
     return f"🗺 {label}"
+
+
+def cv_fix_header(index: int, total: int, lang: str) -> str:
+    return f"{roadmap_header(1, 'CV Fixes', lang)} ({index}/{total})"
 
 
 def roadmap_loading(item: int, title: str, lang: str) -> str:
