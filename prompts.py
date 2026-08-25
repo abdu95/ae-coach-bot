@@ -198,7 +198,7 @@ The candidate's CV and the target job description (JD) are provided.
 Write ONLY this section:
 
 ### Target Companies
-Suggest 6-8 companies or role types matching this candidate's profile and the target role.
+Suggest exactly 3 companies or role types matching this candidate's profile and the target role.
 For each: company or role type, location if relevant, one sentence why it fits.
 """
 
@@ -266,7 +266,7 @@ The candidate's CV and the target job description (JD) are provided.
 Write ONLY this section:
 
 ### Target Companies
-Suggest 6-8 companies or role types at this JD's level or one step above.
+Suggest exactly 3 companies or role types at this JD's level or one step above.
 For each: company or role type, location if relevant, one sentence why it fits.
 """
 
@@ -335,7 +335,7 @@ The candidate's CV and the target job description (JD) are provided.
 Write ONLY this section:
 
 ### Target Companies
-Suggest 6-8 companies or role types at Senior or Lead level.
+Suggest exactly 3 companies or role types at Senior or Lead level.
 For each: company or role type, location if relevant, one sentence why it fits.
 """
 
