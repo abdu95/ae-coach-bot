@@ -4,6 +4,8 @@ Telegram HTML supports: <b>, <i>, <code>, <pre>, <a>
 Max message length: 4096 chars. split_long() handles overflow.
 """
 
+import i18n
+
 TOOL_EMOJI = {
     "strong": "✅",
     "mentioned": "🟡",
@@ -20,7 +22,7 @@ TOOL_LABELS = {
 }
 
 
-def step_ats(ats: dict) -> str:
+def step_ats(ats: dict, lang: str = "en") -> str:
     score = ats["score"]
     bar = _score_bar(score)
     matched = ", ".join(ats.get("matched", [])) or "none"
@@ -28,7 +30,7 @@ def step_ats(ats: dict) -> str:
     verdict = ats.get("verdict", "")
 
     return (
-        f"<b>📊 Step 1 — ATS Score</b>\n\n"
+        f"<b>{i18n.step_header('ats', lang)}</b>\n\n"
         f"<b>Score: {score}/100</b>\n"
         f"{bar}\n\n"
         f"<b>Matched keywords:</b> {matched}\n\n"
@@ -37,12 +39,12 @@ def step_ats(ats: dict) -> str:
     )
 
 
-def step_xyz(xyz: dict) -> str:
+def step_xyz(xyz: dict, lang: str = "en") -> str:
     passing = xyz.get("passing", [])
     failing = xyz.get("failing", [])
     rewrites = xyz.get("rewrites", [])
 
-    lines = ["<b>✍️ Step 2 — XYZ Formula Check</b>"]
+    lines = [f"<b>{i18n.step_header('xyz', lang)}</b>"]
     lines.append("\nThe ideal bullet: <i>Accomplished X as measured by Y by doing Z</i>\n")
 
     if passing:
@@ -66,8 +68,8 @@ def step_xyz(xyz: dict) -> str:
     return "\n".join(lines)
 
 
-def step_tools(tools: dict) -> str:
-    lines = ["<b>🛠 Step 3 — Skill Radar</b>\n"]
+def step_tools(tools: dict, lang: str = "en") -> str:
+    lines = [f"<b>{i18n.step_header('tools', lang)}</b>\n"]
     for name, rating in tools.items():
         emoji = TOOL_EMOJI.get(rating, "❓")
         rating_text = rating.replace("_", " ").title()
@@ -77,7 +79,7 @@ def step_tools(tools: dict) -> str:
     return "\n".join(lines)
 
 
-def step_level(level: dict) -> str:
+def step_level(level: dict, lang: str = "en") -> str:
     assessment = level.get("assessment", "Unknown")
     reasoning = level.get("reasoning", "")
 
@@ -89,7 +91,7 @@ def step_level(level: dict) -> str:
     }.get(assessment, "📄")
 
     return (
-        f"<b>{level_emoji} Step 4 — Level Assessment</b>\n\n"
+        f"<b>{level_emoji} {i18n.step_header('level', lang)}</b>\n\n"
         f"<b>Level: {assessment}</b>\n\n"
         f"{reasoning}"
     )
@@ -99,12 +101,12 @@ def step_roadmap_header(level: str) -> str:
     return f"<b>🗺 Step 5 — Your Roadmap ({level})</b>\n\n⏳ Searching for live roles and building your plan..."
 
 
-def step_roadmap_loading(item: int, title: str) -> str:
-    return f"<b>🗺 Step 5 — Action Item {item}: {title}</b>\n\n⏳ Building this section..."
+def step_roadmap_loading(item: int, title: str, lang: str = "en") -> str:
+    return f"<b>{i18n.roadmap_header(item, title, lang)}</b>\n\n⏳ Building this section..."
 
 
-def step_roadmap_block(item: int, title: str, text: str) -> str:
-    header = f"<b>🗺 Step 5 — Action Item {item}: {title}</b>\n\n"
+def step_roadmap_block(item: int, title: str, text: str, lang: str = "en") -> str:
+    header = f"<b>{i18n.roadmap_header(item, title, lang)}</b>\n\n"
     return header + format_roadmap(text)
 
 

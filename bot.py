@@ -257,7 +257,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     quota = effective_quota(user_id)
     remaining = max(0, quota - user["usage_count"])
     await update.message.reply_text(
-        formatter.step_ats(outputs["ats"]) + f"\n\n{i18n.checks_left(remaining, quota, user['lang'])}",
+        formatter.step_ats(outputs["ats"], user["lang"]) + f"\n\n{i18n.checks_left(remaining, quota, user['lang'])}",
         parse_mode=ParseMode.HTML,
         reply_markup=action_button(i18n.t("check_writing_button", user["lang"]), "step_2"),
     )
@@ -282,9 +282,9 @@ async def send_roadmap_item(message, user_id: int, item: int) -> None:
         return
 
     await loading.delete()
-    formatted = formatter.step_roadmap_block(item, title, text)
+    formatted = formatter.step_roadmap_block(item, title, text, user["lang"])
 
-    if item < 3:
+    if item < coach.roadmap_max_item(level):
         next_title = coach.roadmap_block_title(level, item + 1)
         chunks = formatter.split_long(formatted)
         for chunk in chunks[:-1]:
@@ -338,21 +338,21 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if action == "step_2":
         await message.reply_text(
-            formatter.step_xyz(user["outputs"]["xyz"]),
+            formatter.step_xyz(user["outputs"]["xyz"], user["lang"]),
             parse_mode=ParseMode.HTML,
             reply_markup=action_button(i18n.t("skill_gaps_button", user["lang"]), "step_3"),
         )
 
     elif action == "step_3":
         await message.reply_text(
-            formatter.step_tools(user["outputs"]["tools"]),
+            formatter.step_tools(user["outputs"]["tools"], user["lang"]),
             parse_mode=ParseMode.HTML,
             reply_markup=action_button(i18n.t("assess_level_button", user["lang"]), "step_4"),
         )
 
     elif action == "step_4":
         await message.reply_text(
-            formatter.step_level(user["outputs"]["level"]),
+            formatter.step_level(user["outputs"]["level"], user["lang"]),
             parse_mode=ParseMode.HTML,
             reply_markup=action_button(i18n.t("get_roadmap_button", user["lang"]), "step_5"),
         )
@@ -361,8 +361,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         state.log_event(user_id, "roadmap_requested")
         await send_roadmap_item(message, user_id, item=1)
 
-    elif action in ("step_5_2", "step_5_3"):
-        item = 2 if action == "step_5_2" else 3
+    elif action in ("step_5_2", "step_5_3", "step_5_4"):
+        item = int(action.rsplit("_", 1)[1])
         await send_roadmap_item(message, user_id, item=item)
 
 

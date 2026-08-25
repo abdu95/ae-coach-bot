@@ -259,19 +259,93 @@ ROADMAP_WAIT_NOTE = {
     "ru": "Обычно занимает 15–20 секунд.",
 }
 
-# Keyed by the English block title from prompts.ROADMAP_BLOCKS — titles
-# themselves stay in English (the header), only the description below
-# them is translated.
+STEP_HEADERS = {
+    "ats": {
+        "en": "📊 Step 1 — ATS Score",
+        "uz": "📊 1-bosqich — ATS balli",
+        "ru": "📊 Шаг 1 — ATS-балл",
+    },
+    "xyz": {
+        "en": "✍️ Step 2 — XYZ Formula Check",
+        "uz": "✍️ 2-bosqich — XYZ formulasi tekshiruvi",
+        "ru": "✍️ Шаг 2 — Проверка по формуле XYZ",
+    },
+    "tools": {
+        "en": "🛠 Step 3 — Skill Radar",
+        "uz": "🛠 3-bosqich — Ko'nikmalar radari",
+        "ru": "🛠 Шаг 3 — Радар навыков",
+    },
+    "level": {
+        "en": "Step 4 — Level Assessment",
+        "uz": "4-bosqich — Daraja baholash",
+        "ru": "Шаг 4 — Оценка уровня",
+    },
+}
+
+ROADMAP_STEP_LABEL = {
+    "en": "Step 5 — Action Item {item}: {title}",
+    "uz": "5-bosqich — {item}-band: {title}",
+    "ru": "Шаг 5 — Пункт {item}: {title}",
+}
+
+# Translated display names for prompts.ROADMAP_BLOCKS titles. Keyed by the
+# English title (the stable identifier used throughout the code) — the
+# translation is only for what gets shown in the header.
+ROADMAP_ITEM_TITLE = {
+    "CV Fixes": {
+        "en": "CV Fixes",
+        "uz": "CV'dagi tuzatishlar",
+        "ru": "Правки резюме",
+    },
+    "Phone Screen Prep": {
+        "en": "Phone Screen Prep",
+        "uz": "Telefon suhbatiga tayyorgarlik",
+        "ru": "Подготовка к телефонному интервью",
+    },
+    "Technical Interview Prep": {
+        "en": "Technical Interview Prep",
+        "uz": "Texnik intervyuga tayyorgarlik",
+        "ru": "Подготовка к техническому интервью",
+    },
+    "Target Companies": {
+        "en": "Target Companies",
+        "uz": "Maqsadli kompaniyalar",
+        "ru": "Целевые компании",
+    },
+    "3-Month Plan": {
+        "en": "3-Month Plan",
+        "uz": "3 oylik reja",
+        "ru": "План на 3 месяца",
+    },
+    "Portfolio Project": {
+        "en": "Portfolio Project",
+        "uz": "Portfolio loyihasi",
+        "ru": "Проект для портфолио",
+    },
+    "Stepping-Stone Roles": {
+        "en": "Stepping-Stone Roles",
+        "uz": "Oraliq lavozimlar",
+        "ru": "Промежуточные роли",
+    },
+}
+
+# Keyed by the English block title from prompts.ROADMAP_BLOCKS — used to
+# look up the description shown under the (now-translatable) header.
 ROADMAP_ITEM_DESC = {
     "CV Fixes": {
         "en": "Finding the top 5 changes that will make your CV match this role better, with before/after rewrites.",
         "uz": "CV'ingizni ushbu lavozimga yaqinlashtiradigan eng muhim 5 ta o'zgarishni topyapman, oldin/keyin qayta yozilgan variantlar bilan.",
         "ru": "Ищу топ-5 изменений, которые приблизят ваше резюме к этой вакансии, с примерами «было / стало».",
     },
-    "Interview Prep": {
-        "en": "Building your phone-screen opening line and a prioritised list of technical topics to study, based on this role's requirements.",
-        "uz": "Telefon suhbati uchun ochilish gapini va ushbu lavozim talablariga asoslangan o'rganish mavzular ro'yxatini tayyorlayapman.",
-        "ru": "Готовлю фразу для открытия телефонного интервью и приоритетный список тем для подготовки, исходя из требований вакансии.",
+    "Phone Screen Prep": {
+        "en": "Building your phone-screen opening line and how to position yourself, based on this role's requirements.",
+        "uz": "Ushbu lavozim talablariga asoslanib, telefon suhbati uchun ochilish gapini va o'zingizni qanday taqdim etishni tayyorlayapman.",
+        "ru": "Готовлю фразу для открытия телефонного интервью и то, как себя позиционировать, исходя из требований вакансии.",
+    },
+    "Technical Interview Prep": {
+        "en": "Building a prioritised list of technical topics to study, based on this role's requirements.",
+        "uz": "Ushbu lavozim talablariga asoslangan holda o'rganish uchun ustuvor texnik mavzular ro'yxatini tayyorlayapman.",
+        "ru": "Составляю приоритетный список технических тем для подготовки, исходя из требований вакансии.",
     },
     "Target Companies": {
         "en": "Putting together a shortlist of companies and role types that fit your profile and this target role.",
@@ -326,11 +400,27 @@ STRINGS = {
 }
 
 
+def step_header(key: str, lang: str) -> str:
+    entry = STEP_HEADERS[key]
+    return entry.get(lang) or entry["en"]
+
+
+def roadmap_item_title(title: str, lang: str) -> str:
+    entry = ROADMAP_ITEM_TITLE.get(title, {})
+    return entry.get(lang) or entry.get("en") or title
+
+
+def roadmap_header(item: int, title: str, lang: str) -> str:
+    template = ROADMAP_STEP_LABEL.get(lang) or ROADMAP_STEP_LABEL["en"]
+    label = template.format(item=item, title=roadmap_item_title(title, lang))
+    return f"🗺 {label}"
+
+
 def roadmap_loading(item: int, title: str, lang: str) -> str:
     desc_map = ROADMAP_ITEM_DESC.get(title, {})
     desc = desc_map.get(lang) or desc_map.get("en") or "Building this section..."
     wait = t("roadmap_wait", lang)
-    return f"<b>🗺 Step 5 — Action Item {item}: {title}</b>\n\n⏳ {desc}\n\n{wait}"
+    return f"<b>{roadmap_header(item, title, lang)}</b>\n\n⏳ {desc}\n\n{wait}"
 
 
 def pay_button(amount_tiyin: int, lang: str) -> str:
