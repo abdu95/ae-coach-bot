@@ -170,14 +170,16 @@ Write ONLY this section:
 ROADMAP_JUNIOR_ITEM2 = f"""
 The candidate's CV and the target job description (JD) are provided.
 {ROADMAP_JUNIOR_CONTEXT}
+LENGTH: be terse. Each line below is ONE sentence, no sub-points, no extra
+paragraphs before or after. Total under 80 words.
 {NO_PREAMBLE}
 
-Write ONLY this section:
+Write ONLY this section, in exactly this format (one sentence per line):
 
 ### Phone Screen Strategy
-Opening line: [exact sentence to open "tell me about yourself" — referencing their strongest credential]
-Key project to lead with: [which CV project, and why it maps to this JD]
-How to handle gaps: [how to address missing JD requirements honestly without killing their chances]
+Opening line: [one exact sentence to open "tell me about yourself" — referencing their strongest credential]
+Key project to lead with: [one sentence naming the CV project and why it maps to this JD]
+How to handle gaps: [one sentence on how to address missing JD requirements honestly]
 """
 
 ROADMAP_JUNIOR_ITEM3 = f"""
@@ -246,14 +248,16 @@ Write ONLY this section:
 ROADMAP_MID_ITEM2 = f"""
 The candidate's CV and the target job description (JD) are provided.
 {ROADMAP_MID_CONTEXT}
+LENGTH: be terse. Each line below is ONE sentence, no sub-points, no extra
+paragraphs before or after. Total under 80 words.
 {NO_PREAMBLE}
 
-Write ONLY this section:
+Write ONLY this section, in exactly this format (one sentence per line):
 
 ### Phone Screen Strategy
-Opening line: [exact sentence to open "tell me about yourself" — signalling ownership and impact]
-Key project to lead with: [which project shows end-to-end ownership most relevant to this JD]
-How to position seniority: [how to show readiness to lead, not just contribute]
+Opening line: [one exact sentence to open "tell me about yourself" — signalling ownership and impact]
+Key project to lead with: [one sentence naming the project that shows end-to-end ownership most relevant to this JD]
+How to position seniority: [one sentence on how to show readiness to lead, not just contribute]
 """
 
 ROADMAP_MID_ITEM3 = f"""
@@ -323,14 +327,16 @@ Write ONLY this section:
 ROADMAP_SENIOR_ITEM2 = f"""
 The candidate's CV and the target job description (JD) are provided.
 {ROADMAP_SENIOR_CONTEXT}
+LENGTH: be terse. Each line below is ONE sentence, no sub-points, no extra
+paragraphs before or after. Total under 80 words.
 {NO_PREAMBLE}
 
-Write ONLY this section:
+Write ONLY this section, in exactly this format (one sentence per line):
 
 ### Phone Screen Strategy
-Opening line: [exact sentence to open "tell me about yourself" — signalling seniority and scope]
-Key story to lead with: [which initiative shows cross-team leadership most relevant to this JD]
-How to signal readiness for staff/lead: [specific language and framing tied to this JD]
+Opening line: [one exact sentence to open "tell me about yourself" — signalling seniority and scope]
+Key story to lead with: [one sentence naming the initiative that shows cross-team leadership most relevant to this JD]
+How to signal readiness for staff/lead: [one sentence with specific language and framing tied to this JD]
 """
 
 ROADMAP_SENIOR_ITEM3 = f"""
@@ -421,19 +427,19 @@ ROADMAP_BLOCKS = {
     },
     "Junior": {
         1: {"title": "CV Fixes", "prompt": ROADMAP_JUNIOR_ITEM1},
-        2: {"title": "Phone Screen Prep", "prompt": ROADMAP_JUNIOR_ITEM2},
+        2: {"title": "Phone Screen Prep", "prompt": ROADMAP_JUNIOR_ITEM2, "max_tokens": 350},
         3: {"title": "Technical Interview Prep", "prompt": ROADMAP_JUNIOR_ITEM3},
         4: {"title": "Target Companies", "prompt": ROADMAP_JUNIOR_ITEM4},
     },
     "Mid": {
         1: {"title": "CV Fixes", "prompt": ROADMAP_MID_ITEM1},
-        2: {"title": "Phone Screen Prep", "prompt": ROADMAP_MID_ITEM2},
+        2: {"title": "Phone Screen Prep", "prompt": ROADMAP_MID_ITEM2, "max_tokens": 350},
         3: {"title": "Technical Interview Prep", "prompt": ROADMAP_MID_ITEM3},
         4: {"title": "Target Companies", "prompt": ROADMAP_MID_ITEM4},
     },
     "Senior": {
         1: {"title": "CV Fixes", "prompt": ROADMAP_SENIOR_ITEM1},
-        2: {"title": "Phone Screen Prep", "prompt": ROADMAP_SENIOR_ITEM2},
+        2: {"title": "Phone Screen Prep", "prompt": ROADMAP_SENIOR_ITEM2, "max_tokens": 350},
         3: {"title": "Technical Interview Prep", "prompt": ROADMAP_SENIOR_ITEM3},
         4: {"title": "Target Companies", "prompt": ROADMAP_SENIOR_ITEM4},
     },

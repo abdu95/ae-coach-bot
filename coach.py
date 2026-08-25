@@ -97,12 +97,14 @@ def roadmap_max_item(level: str) -> int:
 
 
 async def generate_roadmap(level: str, item: int, jd: str, cv_text: str) -> str:
-    """Generate one roadmap action item (1, 2, or 3) for the given level."""
+    """Generate one roadmap action item for the given level."""
     blocks = ROADMAP_BLOCKS.get(level, ROADMAP_BLOCKS["Junior"])
-    prompt = blocks[item]["prompt"]
+    block = blocks[item]
+    prompt = block["prompt"]
     response = await client.messages.create(
         model=MODEL,
-        max_tokens=1800,
+        max_tokens=block.get("max_tokens", 1800),
+        temperature=0.3,
         messages=[{
             "role": "user",
             "content": f"CV:\n{cv_text}\n\nJOB DESCRIPTION:\n{jd}\n\n{prompt}"
