@@ -4,24 +4,77 @@
 WELCOME = {
     "en": (
         "👋 <b>Accepted AI</b>\n\n"
-        "1️⃣ Upload your CV as a PDF\n"
+        "1️⃣ Upload your CV as a PDF or Word (.docx) file\n"
         "2️⃣ Paste the job description you are targeting\n"
         "3️⃣ I analyse your CV against it step by step\n\n"
         "📄 <b>Upload your CV to begin.</b>"
     ),
     "uz": (
         "👋 <b>Accepted AI</b>\n\n"
-        "1️⃣ CV'ingizni PDF formatida yuklang\n"
+        "1️⃣ CV'ingizni PDF yoki Word (.docx) formatida yuklang\n"
         "2️⃣ Maqsad qilgan ish tavsifini (job description) joylashtiring\n"
         "3️⃣ Men CV'ingizni bosqichma-bosqich tahlil qilaman\n\n"
         "📄 <b>Boshlash uchun CV'ingizni yuklang.</b>"
     ),
     "ru": (
         "👋 <b>Accepted AI</b>\n\n"
-        "1️⃣ Загрузите своё резюме (CV) в формате PDF\n"
+        "1️⃣ Загрузите своё резюме (CV) в формате PDF или Word (.docx)\n"
         "2️⃣ Вставьте описание вакансии, на которую претендуете\n"
         "3️⃣ Я проанализирую ваше резюме по шагам\n\n"
         "📄 <b>Загрузите резюме, чтобы начать.</b>"
+    ),
+}
+
+ASK_NAME = {
+    "en": (
+        "Hi, my name is Accepted AI. I help you get accepted into your dream job — "
+        "just like others who've already used this bot and landed their first-ever "
+        "interview invite, or even a job offer! 🎉\n\n"
+        "But first, how should I call you?"
+    ),
+    "uz": (
+        "Salom, mening ismim Accepted AI. Men sizga orzuingizdagi ishga qabul qilinishda "
+        "yordam beraman — xuddi ushbu botdan foydalangan boshqalar birinchi marta "
+        "suhbatga (interview) taklif olgani, hattoki ish taklifini qabul qilgani kabi! 🎉\n\n"
+        "Ammo avval, sizni qanday deb chaqiray?"
+    ),
+    "ru": (
+        "Привет, меня зовут Accepted AI. Я помогаю получить работу мечты — как и другие, "
+        "кто уже пользовался этим ботом и получил своё первое приглашение на собеседование "
+        "или даже оффер! 🎉\n\n"
+        "Но для начала, как мне вас называть?"
+    ),
+}
+
+STATS_AND_PRIVACY = {
+    "en": (
+        "Alright {name}, we've got about 7 seconds — that's how much time recruiters "
+        "spend scanning a CV on average. Also, in a recent study, 43% of rejections came "
+        "from preventable issues — bad formatting, missing keywords, parsing errors — "
+        "not real experience gaps.\n\n"
+        "So as a first step, I need your CV.\n\n"
+        "🔒 Btw, don't worry about privacy: your CV is only used to generate your report. "
+        "It's never shared with recruiters or anyone else — wipe it anytime with /reset."
+    ),
+    "uz": (
+        "Xo'p, {name}, bizda taxminan 7 soniya bor — ish beruvchilar CV'ga o'rtacha shuncha "
+        "vaqt ajratishadi. Yana, so'nggi tadqiqotga ko'ra, rad javoblarining 43% aslida "
+        "tajriba yetishmasligidan emas — balki noto'g'ri formatlash, kalit so'zlar yo'qligi "
+        "va CV'ni tizim o'qiy olmasligidan kelib chiqadi.\n\n"
+        "Shuning uchun birinchi qadam sifatida menga CV'ingiz kerak.\n\n"
+        "🔒 Aytgancha, maxfiylik haqida xavotir olmang: CV'ingiz faqat hisobot tayyorlash "
+        "uchun ishlatiladi. U ish beruvchilarga yoki boshqa hech kimga berilmaydi — "
+        "xohlagan vaqtda /reset bilan o'chirib tashlashingiz mumkin."
+    ),
+    "ru": (
+        "Хорошо, {name}, у нас есть около 7 секунд — именно столько рекрутёры в среднем "
+        "тратят на просмотр резюме. Также, по данным недавнего исследования, 43% отказов "
+        "связаны не с нехваткой опыта, а с исправимыми проблемами — плохим форматированием, "
+        "отсутствием ключевых слов и ошибками при разборе резюме системой.\n\n"
+        "Поэтому первым делом мне нужно ваше резюме.\n\n"
+        "🔒 Кстати, не переживайте насчёт конфиденциальности: ваше резюме используется "
+        "только для подготовки отчёта. Оно не передаётся рекрутёрам и никому другому — "
+        "можете удалить его в любой момент командой /reset."
     ),
 }
 
@@ -175,10 +228,10 @@ RESET_DONE = {
     "ru": "🔄 Сброшено. Загрузите резюме, чтобы начать заново.",
 }
 
-PLEASE_UPLOAD_PDF = {
-    "en": "Please upload a <b>PDF</b> file.",
-    "uz": "Iltimos, <b>PDF</b> formatidagi faylni yuklang.",
-    "ru": "Пожалуйста, загрузите файл в формате <b>PDF</b>.",
+PLEASE_UPLOAD_CV = {
+    "en": "Please upload a <b>PDF</b> or <b>Word (.docx)</b> file.",
+    "uz": "Iltimos, <b>PDF</b> yoki <b>Word (.docx)</b> formatidagi faylni yuklang.",
+    "ru": "Пожалуйста, загрузите файл в формате <b>PDF</b> или <b>Word (.docx)</b>.",
 }
 
 READING_CV = {
@@ -391,7 +444,8 @@ STRINGS = {
     "pilot_already": PILOT_ALREADY,
     "pilot_full": PILOT_FULL,
     "reset_done": RESET_DONE,
-    "please_upload_pdf": PLEASE_UPLOAD_PDF,
+    "ask_name": ASK_NAME,
+    "please_upload_cv": PLEASE_UPLOAD_CV,
     "reading_cv": READING_CV,
     "cv_read_error": CV_READ_ERROR,
     "wrong_phase": WRONG_PHASE,
@@ -447,6 +501,11 @@ def continue_button(title: str, lang: str) -> str:
 def pilot_enrolled(quota: int, lang: str) -> str:
     template = PILOT_ENROLLED.get(lang) or PILOT_ENROLLED["en"]
     return template.format(quota=quota)
+
+
+def stats_and_privacy(name: str, lang: str) -> str:
+    template = STATS_AND_PRIVACY.get(lang) or STATS_AND_PRIVACY["en"]
+    return template.format(name=name)
 
 
 def limit_reached(limit: int, lang: str) -> str:

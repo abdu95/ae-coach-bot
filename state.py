@@ -36,6 +36,7 @@ def init_db() -> None:
                 CREATE TABLE IF NOT EXISTS users (
                     telegram_id     BIGINT PRIMARY KEY,
                     username        TEXT,
+                    name            TEXT,
                     language        TEXT,
                     source          TEXT DEFAULT 'organic',
                     checks_used     INT  NOT NULL DEFAULT 0,
@@ -46,6 +47,7 @@ def init_db() -> None:
                     last_seen_at    TIMESTAMPTZ NOT NULL DEFAULT now()
                 )
             """)
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS events (
                     id          BIGSERIAL PRIMARY KEY,
@@ -91,6 +93,7 @@ def get(user_id: int) -> dict:
         merged["lang"] = account["language"] or ""
         merged["usage_count"] = account["checks_used"]
         merged["waitlisted"] = account["joined_waitlist"]
+        merged["name"] = account["name"] or ""
         _users[user_id] = merged
     return _users[user_id]
 
@@ -101,6 +104,7 @@ def reset(user_id: int) -> None:
     fresh["lang"] = current.get("lang", "")
     fresh["usage_count"] = current.get("usage_count", 0)
     fresh["waitlisted"] = current.get("waitlisted", False)
+    fresh["name"] = current.get("name", "")
     _users[user_id] = fresh
     _save(user_id, fresh)
 
@@ -132,7 +136,7 @@ def _load(user_id: int) -> dict | None:
 
 
 # Fields sourced from `users`, not persisted into the user_state JSONB blob.
-_ACCOUNT_KEYS = {"lang", "usage_count", "waitlisted"}
+_ACCOUNT_KEYS = {"lang", "usage_count", "waitlisted", "name"}
 
 
 def _upsert_and_load_account(user_id: int) -> dict:
@@ -147,15 +151,15 @@ def _upsert_and_load_account(user_id: int) -> dict:
             cur.execute("""
                 INSERT INTO users (telegram_id) VALUES (%s)
                 ON CONFLICT (telegram_id) DO UPDATE SET last_seen_at = now()
-                RETURNING language, checks_used, joined_waitlist, (xmax = 0) AS is_new
+                RETURNING language, checks_used, joined_waitlist, name, (xmax = 0) AS is_new
             """, (user_id,))
-            language, checks_used, joined_waitlist, is_new = cur.fetchone()
+            language, checks_used, joined_waitlist, name, is_new = cur.fetchone()
             if is_new:
                 cur.execute(
                     "INSERT INTO events (telegram_id, event_type) VALUES (%s, 'user_seen')",
                     (user_id,),
                 )
-            return {"language": language, "checks_used": checks_used, "joined_waitlist": joined_waitlist}
+            return {"language": language, "checks_used": checks_used, "joined_waitlist": joined_waitlist, "name": name}
     finally:
         _pool.putconn(conn)
 
@@ -177,9 +181,10 @@ def _save(user_id: int, data: dict) -> None:
                     checks_used = %s,
                     joined_waitlist = %s,
                     waitlist_at = CASE WHEN %s AND waitlist_at IS NULL THEN now() ELSE waitlist_at END,
+                    name = %s,
                     last_seen_at = now()
                 WHERE telegram_id = %s
-            """, (data["lang"] or None, data["usage_count"], data["waitlisted"], data["waitlisted"], user_id))
+            """, (data["lang"] or None, data["usage_count"], data["waitlisted"], data["waitlisted"], data["name"] or None, user_id))
     finally:
         _pool.putconn(conn)
 
@@ -187,6 +192,7 @@ def _save(user_id: int, data: dict) -> None:
 def _empty() -> dict:
     return {
         "phase": "idle",
+        "name": "",
         "cv_b64": "",
         "cv_text": "",
         "job_title": "",
@@ -360,6 +366,22 @@ def event_stats(event_types: list[str]) -> dict[str, tuple[int, int]]:
     finally:
         _pool.putconn(conn)
     return {et: rows.get(et, (0, 0)) for et in event_types}
+
+
+def reset_with_cv_count() -> int:
+    """How many /reset invocations actually wiped a previously-stored CV
+    (as opposed to a no-op reset with nothing to lose) — a proxy for how
+    often people deliberately clear their CV data."""
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("""
+                SELECT count(*) FROM events
+                WHERE event_type = 'reset' AND metadata->>'had_cv' = 'true'
+            """)
+            return cur.fetchone()[0]
+    finally:
+        _pool.putconn(conn)
 
 
 def account_stats() -> dict:

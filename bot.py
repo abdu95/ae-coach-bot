@@ -11,6 +11,7 @@ from telegram.ext import (
 )
 from telegram.constants import ParseMode
 from pypdf import PdfReader
+from docx import Document as DocxDocument
 
 load_dotenv()
 
@@ -28,7 +29,7 @@ logger = logging.getLogger(__name__)
 ADMIN_IDS = {
     int(x) for x in os.getenv("ADMIN_IDS", os.getenv("ADMIN_USER_ID", "0")).split(",") if x.strip()
 }
-FREE_LIMIT = int(os.getenv("FREE_LIMIT", "3"))
+FREE_LIMIT = int(os.getenv("FREE_LIMIT", "2"))
 PILOT_CODE = os.getenv("PILOT_CODE", "school21")
 PILOT_QUOTA = int(os.getenv("PILOT_QUOTA", "10"))
 PILOT_CAP = int(os.getenv("PILOT_CAP", "10"))
@@ -119,13 +120,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     if not user["lang"]:
         await send_language_picker(update.message, update.effective_user.language_code)
+    elif not user["name"]:
+        user["phase"] = "waiting_name"
+        await update.message.reply_text(i18n.t("ask_name", user["lang"]))
     else:
         await update.message.reply_text(i18n.t("welcome", user["lang"]), parse_mode=ParseMode.HTML)
 
 
 async def reset_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
+    had_cv = bool(state.get(user_id).get("cv_text"))
     state.reset(user_id)
+    state.log_event(user_id, "reset", metadata={"had_cv": had_cv})
     await update.message.reply_text(i18n.t("reset_done", state.get(user_id)["lang"]))
 
 
@@ -139,8 +145,10 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     acct = state.account_stats()
     pilot = state.pilot_stats()
     ev = state.event_stats(
-        ["started", "cv_uploaded", "check_completed", "roadmap_requested", "limit_reached"]
+        ["started", "name_provided", "cv_uploaded", "check_completed",
+         "roadmap_requested", "limit_reached", "reset"]
     )
+    reset_with_cv = state.reset_with_cv_count()
 
     def line(label: str, key: str) -> str:
         total, unique = ev[key]
@@ -152,10 +160,12 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"Activated (≥1 check) — {acct['activated_users']}\n"
         f"Total checks run — {acct['total_checks']}\n\n"
         f"{line('Started', 'started')}\n"
+        f"{line('Name provided', 'name_provided')}\n"
         f"{line('CV uploaded', 'cv_uploaded')}\n"
         f"{line('Check completed', 'check_completed')}\n"
         f"{line('Roadmap requested', 'roadmap_requested')}\n"
-        f"{line('Limit reached', 'limit_reached')}\n\n"
+        f"{line('Limit reached', 'limit_reached')}\n"
+        f"{line('Reset', 'reset')} (wiped a stored CV — {reset_with_cv})\n\n"
         f"Waitlist — {acct['waitlist']}\n\n"
         f"🎓 School21 pilot — {pilot['users']} users · {pilot['checks']} checks · avg {pilot['avg']}/user",
         parse_mode=ParseMode.HTML,
@@ -191,8 +201,13 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await send_limit_reached(update.message, user_id, user["lang"])
         return
 
-    if not doc.file_name.lower().endswith(".pdf"):
-        await update.message.reply_text(i18n.t("please_upload_pdf", user["lang"]), parse_mode=ParseMode.HTML)
+    filename = doc.file_name.lower()
+    if filename.endswith(".pdf"):
+        file_kind = "pdf"
+    elif filename.endswith(".docx"):
+        file_kind = "docx"
+    else:
+        await update.message.reply_text(i18n.t("please_upload_cv", user["lang"]), parse_mode=ParseMode.HTML)
         return
 
     state.log_event(user_id, "cv_uploaded")
@@ -201,8 +216,16 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     try:
         file = await context.bot.get_file(doc.file_id)
         cv_bytes = await file.download_as_bytearray()
-        reader = PdfReader(io.BytesIO(bytes(cv_bytes)))
-        user["cv_text"] = "\n".join(page.extract_text() or "" for page in reader.pages)
+        if file_kind == "pdf":
+            reader = PdfReader(io.BytesIO(bytes(cv_bytes)))
+            user["cv_text"] = "\n".join(page.extract_text() or "" for page in reader.pages)
+        else:
+            docx_doc = DocxDocument(io.BytesIO(bytes(cv_bytes)))
+            paragraphs = [p.text for p in docx_doc.paragraphs]
+            for table in docx_doc.tables:
+                for row in table.rows:
+                    paragraphs.append("\t".join(cell.text for cell in row.cells))
+            user["cv_text"] = "\n".join(paragraphs)
         user["phase"] = "waiting_jd"
     except Exception as e:
         logger.error(f"CV read error: {e}")
@@ -222,6 +245,15 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     user_id = update.effective_user.id
     user = state.get(user_id)
     text = update.message.text.strip()
+
+    if user["phase"] == "waiting_name":
+        name = text[:50]
+        user["name"] = name
+        user["phase"] = "idle"
+        state.log_event(user_id, "name_provided")
+        await update.message.reply_text(i18n.stats_and_privacy(name, user["lang"]))
+        await update.message.reply_text(i18n.t("welcome", user["lang"]), parse_mode=ParseMode.HTML)
+        return
 
     if user["phase"] != "waiting_jd":
         await update.message.reply_text(i18n.t("wrong_phase", user["lang"]))
@@ -356,7 +388,11 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if action in ("lang_uz", "lang_ru"):
         user["lang"] = "uz" if action == "lang_uz" else "ru"
-        await message.reply_text(i18n.t("welcome", user["lang"]), parse_mode=ParseMode.HTML)
+        if user["name"]:
+            await message.reply_text(i18n.t("welcome", user["lang"]), parse_mode=ParseMode.HTML)
+        else:
+            user["phase"] = "waiting_name"
+            await message.reply_text(i18n.t("ask_name", user["lang"]))
         return
 
     if action == "join_waitlist":
@@ -421,7 +457,7 @@ def main() -> None:
     app.add_handler(CommandHandler("language", state.persisting(language_cmd)))
     app.add_handler(CommandHandler("stats", state.persisting(stats)))
     app.add_handler(CommandHandler("grant", state.persisting(grant_cmd)))
-    app.add_handler(MessageHandler(filters.Document.PDF, state.persisting(handle_document)))
+    app.add_handler(MessageHandler(filters.Document.ALL, state.persisting(handle_document)))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, state.persisting(handle_text)))
     app.add_handler(CallbackQueryHandler(state.persisting(handle_callback)))
     app.add_error_handler(error_handler)
