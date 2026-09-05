@@ -402,6 +402,7 @@ const state = {
   vacancies: [], vacancyIndex: -1, improveCount: 0,
   jd: "", analysisLevel: "", analysisRemaining: null, analysisQuota: null,
   hasCv: false, postUploadDestination: null,
+  roadmapItems: [], roadmapIndex: -1,
 };
 const MAX_SEARCHES = 3;
 const MAX_IMPROVES = 2;
@@ -1186,49 +1187,45 @@ function renderAnalysisResult(data) {
   scrollToBottom();
 }
 
+// Must match webapp/analysis_prompts.py's ROADMAP_BLOCKS (Pre-Junior has
+// 3 items, Junior/Mid/Senior have 4) - used only to show the carousel's
+// total up front; the authoritative "is this the last one" signal is
+// still the `is_last` flag the server returns with each item.
+const ROADMAP_LENGTH_BY_LEVEL = { "Pre-Junior": 3, "Junior": 4, "Mid": 4, "Senior": 4 };
+function roadmapTotalFor(level) {
+  return ROADMAP_LENGTH_BY_LEVEL[level] || 4;
+}
+
 function startRoadmap() {
+  state.roadmapItems = [];
+  state.roadmapIndex = -1;
   document.getElementById("roadmap-area").innerHTML = "";
   loadRoadmapItem(1);
 }
 
-// Each roadmap item gets appended as its own permanent block (like the
-// vacancy carousel keeps prior state around) instead of replacing the
-// previous item's content - so "Phone Screen Prep" stays visible above
-// "Technical Interview Prep" rather than vanishing when you continue.
+// Horizontal carousel, same pattern as the vacancy carousel: fetched
+// items are cached in state.roadmapItems so Prev (and re-visiting a
+// Next you've already seen) is instant, only genuinely new items hit
+// the API. Only the current item is ever shown - no accumulation.
 async function loadRoadmapItem(item) {
+  const cacheIndex = item - 1;
+  if (state.roadmapItems[cacheIndex]) {
+    state.roadmapIndex = cacheIndex;
+    renderRoadmapCarousel();
+    return;
+  }
+
   const areaEl = document.getElementById("roadmap-area");
-  const blockId = `roadmap-item-${item}`;
-  areaEl.insertAdjacentHTML("beforeend", `<div id="${blockId}"><div class="hint">${escapeHtml(t("analyzing_message_web"))}</div></div>`);
-  scrollToBottom();
-  const blockEl = document.getElementById(blockId);
+  areaEl.innerHTML = `<div class="hint">${escapeHtml(t("analyzing_message_web"))}</div>`;
   try {
     const data = await callApi("/api/roadmap-item", { jd: state.jd, level: state.analysisLevel, item });
-    if (data.fixes) {
-      renderRoadmapFixes(blockEl, data, item);
-    } else {
-      renderRoadmapText(blockEl, data, item);
-    }
+    state.roadmapItems[cacheIndex] = data;
+    state.roadmapIndex = cacheIndex;
+    renderRoadmapCarousel();
   } catch (err) {
     console.error("Roadmap item failed:", err);
-    blockEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("roadmap_failed_web")))}</div>`;
+    areaEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("roadmap_failed_web")))}</div>`;
   }
-}
-
-function renderRoadmapFixes(blockEl, data, item) {
-  const cards = (data.fixes || []).map(f => `
-    <div class="card" style="margin-top:8px;">
-      <p><b>${escapeHtml(t("issue_label"))}</b> ${escapeHtml(f.issue)}</p>
-      ${f.before ? `<p><i>${escapeHtml(t("before_label"))}</i> ${escapeHtml(f.before)}</p>` : ""}
-      <p><i>${escapeHtml(t("after_label"))}</i> ${escapeHtml(f.after)}</p>
-    </div>
-  `).join("");
-  blockEl.innerHTML = `
-    <h3 style="margin-top:16px;">${escapeHtml(data.title)}</h3>
-    ${cards}
-    <div id="roadmap-next-${item}"></div>
-  `;
-  renderRoadmapNext(document.getElementById(`roadmap-next-${item}`), data.is_last, item);
-  scrollToBottom();
 }
 
 function formatRoadmapText(raw) {
@@ -1240,24 +1237,39 @@ function formatRoadmapText(raw) {
   }).join("\n");
 }
 
-function renderRoadmapText(blockEl, data, item) {
-  blockEl.innerHTML = `
-    <div class="card" style="margin-top:16px;">
-      <h3>${escapeHtml(data.title)}</h3>
-      <div class="roadmap-body">${formatRoadmapText(data.text)}</div>
-    </div>
-    <div id="roadmap-next-${item}"></div>
-  `;
-  renderRoadmapNext(document.getElementById(`roadmap-next-${item}`), data.is_last, item);
-  scrollToBottom();
-}
+function renderRoadmapCarousel() {
+  const areaEl = document.getElementById("roadmap-area");
+  const idx = state.roadmapIndex;
+  const data = state.roadmapItems[idx];
+  const item = idx + 1;
+  const total = roadmapTotalFor(state.analysisLevel);
+  const canPrev = idx > 0;
+  const canNext = !data.is_last;
 
-function renderRoadmapNext(nextEl, isLast, item) {
-  if (!isLast) {
-    nextEl.innerHTML = `<button onclick="loadRoadmapItem(${item + 1})">${escapeHtml(t("roadmap_continue_btn"))}</button>`;
-    return;
+  const bodyHtml = data.fixes
+    ? (data.fixes || []).map(f => `
+        <div class="card" style="margin-top:8px;">
+          <p><b>${escapeHtml(t("issue_label"))}</b> ${escapeHtml(f.issue)}</p>
+          ${f.before ? `<p><i>${escapeHtml(t("before_label"))}</i> ${escapeHtml(f.before)}</p>` : ""}
+          <p><i>${escapeHtml(t("after_label"))}</i> ${escapeHtml(f.after)}</p>
+        </div>
+      `).join("")
+    : `<div class="card" style="margin-top:8px;"><div class="roadmap-body">${formatRoadmapText(data.text)}</div></div>`;
+
+  areaEl.innerHTML = `
+    <h3 style="margin-top:16px;">${escapeHtml(data.title)}</h3>
+    ${bodyHtml}
+    <div class="nav-row">
+      <button class="secondary" onclick="loadRoadmapItem(${item - 1})" ${canPrev ? '' : 'disabled'}>${escapeHtml(t("carousel_prev"))}</button>
+      <span class="nav-counter">${item} / ${total}</span>
+      <button class="secondary" onclick="loadRoadmapItem(${item + 1})" ${canNext ? '' : 'disabled'}>${escapeHtml(t("carousel_next"))}</button>
+    </div>
+    <div id="roadmap-done-area"></div>
+  `;
+  if (data.is_last) {
+    renderRoadmapDone(document.getElementById("roadmap-done-area"));
   }
-  renderRoadmapDone(nextEl);
+  scrollToBottom();
 }
 
 // The real next-step flow after finishing a roadmap: no dead end - tell

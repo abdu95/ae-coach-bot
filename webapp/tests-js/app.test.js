@@ -257,21 +257,28 @@ async function runAnalysis(window, document) {
   await window.analyzeCV();
 }
 
-test("roadmap items accumulate in the DOM instead of replacing the previous one", async () => {
-  const roadmapResponses = {
-    1: { title: "CV Fixes", fixes: [{ issue: "x", before: "", after: "y" }], is_last: false },
-    2: { title: "Phone Screen Prep", text: "### Phone Screen Strategy\nSay hi.", is_last: false },
-    3: { title: "Technical Interview Prep", text: "### Technical Interview Prep\nStudy SQL.", is_last: false },
-    4: { title: "Target Companies", text: "### Target Companies\nAcme.", is_last: true },
-  };
+const ROADMAP_RESPONSES = {
+  1: { title: "CV Fixes", fixes: [{ issue: "x", before: "", after: "y" }], is_last: false },
+  2: { title: "Phone Screen Prep", text: "### Phone Screen Strategy\nSay hi.", is_last: false },
+  3: { title: "Technical Interview Prep", text: "### Technical Interview Prep\nStudy SQL.", is_last: false },
+  4: { title: "Target Companies", text: "### Target Companies\nAcme.", is_last: true },
+};
+
+function loadRoadmapDom() {
+  let fetchCount = 0;
   const dom = loadApp({
     fetchImpl: defaultFetchMock({
       "/api/cv-status": () => ({ has_cv: true, lang: "en" }),
       "/api/cv-jd-analysis": () => FAKE_ANALYSIS,
-      "/api/roadmap-item": (body) => roadmapResponses[body.item],
+      "/api/roadmap-item": (body) => { fetchCount += 1; return ROADMAP_RESPONSES[body.item]; },
       "/api/quota-status": () => ({ remaining: 1, quota: 3, price_per_check_tiyin: 1000000 }),
     }),
   });
+  return { dom, getFetchCount: () => fetchCount };
+}
+
+test("the roadmap shows one item at a time (carousel), not all of them stacked", async () => {
+  const { dom } = loadRoadmapDom();
   await flush();
   const { document, window } = dom.window;
   window.goToAnalysis();
@@ -279,21 +286,74 @@ test("roadmap items accumulate in the DOM instead of replacing the previous one"
 
   window.startRoadmap();
   await flush();
+  const area = document.getElementById("roadmap-area");
+  assert.match(area.innerHTML, /CV Fixes/);
+  assert.ok(!area.innerHTML.includes("Phone Screen Strategy"), "later items must not be visible yet");
+  assert.match(area.innerHTML, /1 \/ 4/, "counter should show step 1 of 4 for a Junior roadmap");
+});
+
+test("clicking Next fetches and shows the next item, replacing the previous one", async () => {
+  const { dom } = loadRoadmapDom();
+  await flush();
+  const { document, window } = dom.window;
+  window.goToAnalysis();
+  await runAnalysis(window, document);
+  window.startRoadmap();
+  await flush();
+
+  window.loadRoadmapItem(2);
+  await flush();
+  const area = document.getElementById("roadmap-area");
+  assert.match(area.innerHTML, /Phone Screen Strategy/);
+  assert.ok(!area.innerHTML.includes("CV Fixes"), "item 1 should no longer be shown once on item 2");
+  assert.match(area.innerHTML, /2 \/ 4/);
+});
+
+test("Prev returns to an already-fetched item instantly, without a new API call", async () => {
+  const { dom, getFetchCount } = loadRoadmapDom();
+  await flush();
+  const { document, window } = dom.window;
+  window.goToAnalysis();
+  await runAnalysis(window, document);
+  window.startRoadmap();
+  await flush();
+  window.loadRoadmapItem(2);
+  await flush();
+  assert.equal(getFetchCount(), 2, "items 1 and 2 should each have been fetched once");
+
+  window.loadRoadmapItem(1); // Prev
+  await flush();
+  const area = document.getElementById("roadmap-area");
+  assert.match(area.innerHTML, /CV Fixes/);
+  assert.match(area.innerHTML, /1 \/ 4/);
+  assert.equal(getFetchCount(), 2, "going back to item 1 must be served from cache, not re-fetched");
+
+  window.loadRoadmapItem(2); // forward again - also cached
+  await flush();
+  assert.equal(getFetchCount(), 2, "revisiting item 2 must also be served from cache");
+});
+
+test("Prev is disabled on the first item; Next is disabled on the last", async () => {
+  const { dom } = loadRoadmapDom();
+  await flush();
+  const { document, window } = dom.window;
+  window.goToAnalysis();
+  await runAnalysis(window, document);
+  window.startRoadmap();
+  await flush();
+
+  const navButtons = () => document.getElementById("roadmap-area").querySelectorAll(".nav-row button");
+  assert.equal(navButtons()[0].disabled, true, "Prev must be disabled on item 1");
+  assert.equal(navButtons()[1].disabled, false);
+
   window.loadRoadmapItem(2);
   await flush();
   window.loadRoadmapItem(3);
   await flush();
   window.loadRoadmapItem(4);
-  await flush();
-
-  const area = document.getElementById("roadmap-area");
-  for (const item of [1, 2, 3, 4]) {
-    const block = document.getElementById(`roadmap-item-${item}`);
-    assert.ok(block, `roadmap-item-${item} should exist in the DOM`);
-    assert.ok(area.contains(block), `roadmap-item-${item} should still be a child of roadmap-area`);
-  }
-  assert.match(area.innerHTML, /Phone Screen Strategy/, "item 2's content must still be present");
-  assert.match(area.innerHTML, /Technical Interview Prep/, "item 3's content must still be present");
+  await flush(5);
+  assert.equal(navButtons()[0].disabled, false, "Prev must be enabled once past item 1");
+  assert.equal(navButtons()[1].disabled, true, "Next must be disabled on the last item");
 });
 
 // ── Post-roadmap flow: no more dead end ──────────────────────────────────
