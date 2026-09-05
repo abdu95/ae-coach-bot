@@ -233,6 +233,37 @@ async def list_applications(req: ApplicationsRequest):
     return {"applications": applications}
 
 
+class UpdateApplicationStatusRequest(BaseModel):
+    init_data: str
+    application_id: int
+    status: str
+
+
+@app.post("/api/applications/update-status")
+async def update_application_status(req: UpdateApplicationStatusRequest):
+    user = authenticate(req.init_data)
+    if req.status not in db.VALID_STATUSES:
+        raise HTTPException(400, "Invalid status")
+    found = db.update_application_status(user["id"], req.application_id, req.status)
+    if not found:
+        raise HTTPException(404, "Application not found")
+    return {"updated": True}
+
+
+class DeleteApplicationRequest(BaseModel):
+    init_data: str
+    application_id: int
+
+
+@app.post("/api/applications/delete")
+async def delete_application(req: DeleteApplicationRequest):
+    user = authenticate(req.init_data)
+    found = db.delete_application(user["id"], req.application_id)
+    if not found:
+        raise HTTPException(404, "Application not found")
+    return {"deleted": True}
+
+
 @app.get("/api/health")
 async def health():
     try:

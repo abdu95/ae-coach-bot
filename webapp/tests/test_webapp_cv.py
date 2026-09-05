@@ -205,4 +205,48 @@ resp = client.post("/api/applications", json={"init_data": tampered})
 assert resp.status_code == 401, resp.text
 print("PASS: applications list rejects tampered signature")
 
+# --- Test 17: update-status succeeds for the owning user ---
+with mock.patch.object(db, "ensure_user"), \
+     mock.patch.object(db, "update_application_status", return_value=True) as m_upd:
+    resp = client.post("/api/applications/update-status", json={
+        "init_data": init_data, "application_id": 42, "status": "phone_screen",
+    })
+    assert resp.status_code == 200, resp.text
+    m_upd.assert_called_once_with(777, 42, "phone_screen")
+print("PASS: update-status updates when the application belongs to the caller")
+
+# --- Test 18: update-status rejects an invalid status value ---
+with mock.patch.object(db, "ensure_user"):
+    resp = client.post("/api/applications/update-status", json={
+        "init_data": init_data, "application_id": 42, "status": "made_up_status",
+    })
+    assert resp.status_code == 400, resp.text
+print("PASS: update-status rejects a status value outside the whitelist")
+
+# --- Test 19: update-status on someone else's (or nonexistent) application -> 404 ---
+# db.update_application_status filters by telegram_id itself, so a mismatched
+# owner looks identical to "doesn't exist" here - never leaks which is true.
+with mock.patch.object(db, "ensure_user"), \
+     mock.patch.object(db, "update_application_status", return_value=False):
+    resp = client.post("/api/applications/update-status", json={
+        "init_data": init_data, "application_id": 999, "status": "offer",
+    })
+    assert resp.status_code == 404, resp.text
+print("PASS: update-status on a not-owned/nonexistent application returns 404, not a leak")
+
+# --- Test 20: delete succeeds for the owning user ---
+with mock.patch.object(db, "ensure_user"), \
+     mock.patch.object(db, "delete_application", return_value=True) as m_del:
+    resp = client.post("/api/applications/delete", json={"init_data": init_data, "application_id": 42})
+    assert resp.status_code == 200, resp.text
+    m_del.assert_called_once_with(777, 42)
+print("PASS: delete removes an application the caller owns")
+
+# --- Test 21: delete on a not-owned/nonexistent application -> 404 ---
+with mock.patch.object(db, "ensure_user"), \
+     mock.patch.object(db, "delete_application", return_value=False):
+    resp = client.post("/api/applications/delete", json={"init_data": init_data, "application_id": 999})
+    assert resp.status_code == 404, resp.text
+print("PASS: delete on a not-owned/nonexistent application returns 404")
+
 print("\nALL CV-UPLOAD FLOW CHECKS PASSED")

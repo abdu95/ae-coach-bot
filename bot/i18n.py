@@ -318,6 +318,22 @@ ROADMAP_WAIT_NOTE = {
     "ru": "Обычно занимает 15–20 секунд.",
 }
 
+APP_INTRO = {
+    "en": "🔍 Search live vacancies matching a job title and location.",
+    "uz": "🔍 Lavozim va joylashuvga mos vakansiyalarni qidiring.",
+    "ru": "🔍 Ищите вакансии по должности и локации.",
+}
+
+APP_OPEN_BUTTON = {
+    "en": "Open search", "uz": "Qidiruvni ochish", "ru": "Открыть поиск",
+}
+
+APP_NOT_CONFIGURED = {
+    "en": "Mini App isn't configured yet.",
+    "uz": "Mini ilova hali sozlanmagan.",
+    "ru": "Мини-приложение ещё не настроено.",
+}
+
 JOBS_NEED_CV = {
     "en": "Please upload your CV first so I can suggest matching roles. 📄",
     "uz": "Mos lavozimlarni taklif qilishim uchun avval CV'ingizni yuklang. 📄",
@@ -564,6 +580,9 @@ STRINGS = {
     "assess_level_button": ASSESS_LEVEL_BUTTON,
     "get_roadmap_button": GET_ROADMAP_BUTTON,
     "next_fix_button": NEXT_FIX_BUTTON,
+    "app_intro": APP_INTRO,
+    "app_open_button": APP_OPEN_BUTTON,
+    "app_not_configured": APP_NOT_CONFIGURED,
     "jobs_need_cv": JOBS_NEED_CV,
     "jobs_finding_titles": JOBS_FINDING_TITLES,
     "jobs_titles_failed": JOBS_TITLES_FAILED,

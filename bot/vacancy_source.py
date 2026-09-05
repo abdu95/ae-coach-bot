@@ -15,10 +15,10 @@ import greenhouse_source
 
 async def search_vacancies(job_title: str, location: str, work_setup: str,
                             industry: str, seen_companies=None) -> list:
-    """Returns 0 or 1 matching vacancy as a list - the contract callers
-    depend on. greenhouse_source can surface more than one match
-    internally; this only ever returns the single best one for now (see
-    the "how many vacancies to show" backlog item for revisiting that)."""
+    """Returns 0-3 matches (greenhouse_source's default), one per company.
+    The /jobs chat flow only ever consumes vacancies[0] - a linear chat
+    message flow doesn't lend itself to browsing multiple results the way
+    the Mini App now does. Revisit if /jobs gets a richer UI later."""
     return await greenhouse_source.search_vacancies(
         job_title, location, work_setup, industry, seen_companies=seen_companies
     )

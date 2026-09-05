@@ -16,7 +16,7 @@
   h2 { font-size: 18px; margin-bottom: 4px; }
   .hint { color: var(--tg-theme-hint-color, #999999); font-size: 13px; margin-bottom: 16px; }
   label { display: block; font-size: 13px; margin: 12px 0 4px; }
-  input {
+  input, select {
     width: 100%;
     box-sizing: border-box;
     padding: 10px;
@@ -38,11 +38,12 @@
     font-weight: 600;
     cursor: pointer;
   }
-  button:disabled { opacity: 0.6; }
+  button:disabled { opacity: 0.5; cursor: default; }
   button.secondary {
     background: var(--tg-theme-secondary-bg-color, #f0f0f0);
     color: var(--tg-theme-text-color, #000000);
   }
+  button.danger { background: #d33; color: #ffffff; }
   button.link {
     width: auto;
     background: none;
@@ -52,7 +53,18 @@
     font-weight: 400;
     text-align: left;
   }
-  .row { display: flex; gap: 8px; }
+  /* A real, noticeable back/close affordance - not a small text link */
+  button.back-btn {
+    width: auto;
+    background: var(--tg-theme-secondary-bg-color, #ececec);
+    color: var(--tg-theme-text-color, #000000);
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 0;
+  }
+  .row { display: flex; gap: 8px; margin-top: 16px; }
   .row button { margin-top: 0; }
   #result { margin-top: 20px; }
   .card {
@@ -60,6 +72,7 @@
     border-radius: 10px;
     padding: 14px;
   }
+  .card.clickable { cursor: pointer; }
   .card h3 { margin: 0 0 4px; font-size: 16px; }
   .card .company { color: var(--tg-theme-hint-color, #999999); font-size: 13px; margin-bottom: 8px; }
   .card a { color: var(--tg-theme-link-color, #2481cc); }
@@ -84,6 +97,33 @@
     margin-bottom: 12px;
   }
   .selected-title b { font-size: 15px; }
+  /* A visually distinct, more noticeable block for questions/prompts -
+     these were plain small .hint text before and easy to miss */
+  .prompt-block {
+    background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 16px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .nav-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+  }
+  .nav-row button { width: auto; margin-top: 0; padding: 8px 14px; font-size: 14px; }
+  .nav-counter { color: var(--tg-theme-hint-color, #999999); font-size: 13px; }
+  .screen-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .screen-header .hint { margin: 0; }
+  .controls-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .controls-row select { font-size: 13px; padding: 8px; }
   [hidden] { display: none !important; }
   input[type="file"] { border: none; padding: 8px 0; background: none; }
 </style>
@@ -128,7 +168,7 @@
   <div id="search-screen" hidden>
     <div class="selected-title">
       <span id="searching-for-label">Searching for <b id="chosen-title-label"></b></span>
-      <button id="btn-change-title" class="link" onclick="backToTitleScreen()" style="margin:0;"></button>
+      <button id="btn-change-title" class="back-btn" onclick="backToTitleScreen()"></button>
     </div>
 
     <label for="location" id="location-label"></label>
@@ -140,11 +180,16 @@
   </div>
 
   <div id="applications-screen" hidden>
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <div class="hint" id="applications-title" style="margin:0;"></div>
-      <button id="btn-applications-back" class="link" onclick="showScreen('title-screen')" style="margin:0;"></button>
+    <div class="screen-header">
+      <div class="hint" id="applications-title"></div>
+      <button id="btn-applications-back" class="back-btn" onclick="showScreen('title-screen')"></button>
+    </div>
+    <div class="controls-row" id="applications-controls">
+      <select id="applications-filter" onchange="renderApplications()"></select>
+      <select id="applications-sort" onchange="renderApplications()"></select>
     </div>
     <div id="applications-list"></div>
+    <div id="application-detail" hidden></div>
   </div>
 
   <script>
@@ -176,7 +221,7 @@
         en: "🔄 Suggest different titles", uz: "🔄 Boshqa lavozimlarni taklif qilish", ru: "🔄 Предложить другие варианты",
       },
       searching_for_prefix: { en: "Searching for", uz: "Qidirilmoqda:", ru: "Ищу:" },
-      change_link: { en: "change", uz: "o'zgartirish", ru: "изменить" },
+      change_link: { en: "← change", uz: "← o'zgartirish", ru: "← изменить" },
       location_label: { en: "Location", uz: "Joylashuv", ru: "Локация" },
       location_placeholder: {
         en: "e.g. Tashkent, Remote, Europe", uz: "masalan: Toshkent, Remote, Yevropa", ru: "например: Ташкент, Remote, Европа",
@@ -217,6 +262,12 @@
         uz: "Hali hech narsa yo'q — vakansiyani yoqtiring va ariza bering, shunda u shu yerda ko'rinadi.",
         ru: "Пока пусто — отметьте вакансию как понравившуюся и подайте заявку, чтобы увидеть её здесь.",
       },
+      no_applications_match_filter: {
+        en: "No applications match this filter.", uz: "Bu filtrga mos ariza yo'q.", ru: "Нет заявок, соответствующих фильтру.",
+      },
+      filter_all: { en: "All statuses", uz: "Barcha holatlar", ru: "Все статусы" },
+      sort_date: { en: "Newest first", uz: "Avval yangilari", ru: "Сначала новые" },
+      sort_score: { en: "Highest match first", uz: "Avval eng mosi", ru: "Сначала с высоким совпадением" },
       status_label_prefix: { en: "Status:", uz: "Holat:", ru: "Статус:" },
       match_suffix: { en: "% match", uz: "% moslik", ru: "% совпадение" },
       view_posting: { en: "View posting →", uz: "E'lonni ko'rish →", ru: "Посмотреть вакансию →" },
@@ -240,10 +291,10 @@
         uz: "Mos e'lon topilmadi — boshqa mezonlar bilan urinib ko'ring.",
         ru: "Подходящая вакансия не найдена — попробуйте другие критерии.",
       },
-      link_disclaimer: {
-        en: "⚠️ This link is AI-found and may occasionally be outdated or already filled.",
-        uz: "⚠️ Bu havola AI tomonidan topilgan va ba'zan eskirgan yoki allaqachon yopilgan bo'lishi mumkin.",
-        ru: "⚠️ Эта ссылка найдена ИИ и иногда может быть устаревшей или вакансия уже закрыта.",
+      no_more_new_matches: {
+        en: "No new postings found this time — here's what you already had.",
+        uz: "Bu safar yangi e'lon topilmadi — avval topilganlar shu yerda.",
+        ru: "На этот раз новых вакансий не найдено — вот то, что уже было найдено.",
       },
       like_this_one: { en: "Like this one?", uz: "Shu yoqdimi?", ru: "Нравится эта вакансия?" },
       yes_like_it: { en: "👍 Yes, I like it", uz: "👍 Ha, yoqdi", ru: "👍 Да, нравится" },
@@ -253,6 +304,8 @@
         uz: "Ushbu lavozim uchun qidiruv chegarasiga yetdingiz — qayta qidirish uchun uni yuqorida o'zgartiring.",
         ru: "Достигнут лимит поиска для этой должности — измените её выше, чтобы искать снова.",
       },
+      carousel_prev: { en: "← Previous", uz: "← Oldingi", ru: "← Предыдущая" },
+      carousel_next: { en: "Next →", uz: "Keyingi →", ru: "Следующая →" },
       how_proceed: { en: "How do you want to proceed?", uz: "Qanday davom etishni xohlaysiz?", ru: "Как хотите продолжить?" },
       apply_directly: { en: "✅ Apply directly", uz: "✅ To'g'ridan-to'g'ri ariza berish", ru: "✅ Подать заявку сразу" },
       check_cv_fit: { en: "📊 Check my CV fit", uz: "📊 CV moslikni tekshirish", ru: "📊 Проверить соответствие резюме" },
@@ -314,6 +367,22 @@
         en: "✅ Saved to your tracked applications.", uz: "✅ Kuzatilayotgan arizalaringizga saqlandi.", ru: "✅ Сохранено в отслеживаемых заявках.",
       },
       view_my_applications: { en: "📋 View my applications", uz: "📋 Arizalarimni ko'rish", ru: "📋 Посмотреть мои заявки" },
+      update_status_prompt: { en: "Update status:", uz: "Holatni yangilash:", ru: "Обновить статус:" },
+      delete_application_btn: { en: "🗑 Delete application", uz: "🗑 Arizani o'chirish", ru: "🗑 Удалить заявку" },
+      status_updated: { en: "✅ Status updated.", uz: "✅ Holat yangilandi.", ru: "✅ Статус обновлён." },
+      status_update_failed: {
+        en: "Couldn't update status, try again.", uz: "Holatni yangilab bo'lmadi, qaytadan urinib ko'ring.", ru: "Не удалось обновить статус, попробуйте снова.",
+      },
+      delete_confirm: {
+        en: "Delete this application? This can't be undone.",
+        uz: "Ushbu arizani o'chirasizmi? Buni qaytarib bo'lmaydi.",
+        ru: "Удалить эту заявку? Это действие нельзя отменить.",
+      },
+      delete_confirm_yes: { en: "Yes, delete", uz: "Ha, o'chirish", ru: "Да, удалить" },
+      delete_confirm_no: { en: "Cancel", uz: "Bekor qilish", ru: "Отмена" },
+      delete_failed: {
+        en: "Couldn't delete, try again.", uz: "O'chirib bo'lmadi, qaytadan urinib ko'ring.", ru: "Не удалось удалить, попробуйте снова.",
+      },
       err_timeout: {
         en: "That took too long and timed out — please try again.",
         uz: "Bu juda uzoq davom etdi va vaqt tugadi — qaytadan urinib ko'ring.",
@@ -364,6 +433,12 @@
       document.getElementById("search_btn").textContent = t("search_btn");
       document.getElementById("applications-title").textContent = t("applications_title");
       document.getElementById("btn-applications-back").textContent = t("back_link");
+
+      const filterEl = document.getElementById("applications-filter");
+      filterEl.innerHTML = ['all', 'applied', 'phone_screen', 'tech_interview', 'offer', 'rejected', 'ghosted']
+        .map(s => `<option value="${s}">${escapeHtml(s === 'all' ? t('filter_all') : statusLabel(s))}</option>`).join("");
+      const sortEl = document.getElementById("applications-sort");
+      sortEl.innerHTML = `<option value="date">${escapeHtml(t('sort_date'))}</option><option value="score">${escapeHtml(t('sort_score'))}</option>`;
     }
 
     // ── app ──────────────────────────────────────────────────────────────
@@ -373,7 +448,10 @@
       tg.expand();
     }
 
-    const state = { jobTitle: "", seenCompanies: [], searchCount: 0 };
+    const state = {
+      jobTitle: "", seenCompanies: [], searchCount: 0,
+      vacancies: [], vacancyIndex: -1, improveCount: 0,
+    };
     const MAX_SEARCHES = 3;
     const MAX_IMPROVES = 2;
 
@@ -381,6 +459,12 @@
       for (const s of ["loading-gate", "cv-gate", "title-screen", "search-screen", "applications-screen"]) {
         document.getElementById(s).hidden = (s !== id);
       }
+    }
+
+    function scrollToBottom() {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+      });
     }
 
     async function checkCVAndRoute() {
@@ -493,6 +577,9 @@
       state.jobTitle = title;
       state.seenCompanies = [];
       state.searchCount = 0;
+      state.vacancies = [];
+      state.vacancyIndex = -1;
+      state.improveCount = 0;
       document.getElementById("chosen-title-label").textContent = title;
       document.getElementById("result").innerHTML = "";
       showScreen("search-screen");
@@ -507,43 +594,143 @@
       return I18N[key] ? t(key) : status;
     }
 
+    // ── Applications ─────────────────────────────────────────────────────
+    let allApplications = [];
+
     async function showApplications() {
       showScreen("applications-screen");
+      document.getElementById("application-detail").hidden = true;
+      document.getElementById("applications-list").hidden = false;
+      document.getElementById("applications-controls").hidden = false;
       const listEl = document.getElementById("applications-list");
       listEl.innerHTML = '<div class="hint">…</div>';
 
       try {
         const data = await callApi("/api/applications", {});
-        renderApplications(data.applications);
+        allApplications = data.applications || [];
+        renderApplications();
       } catch (err) {
         console.error("Loading applications failed:", err);
         listEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("applications_load_failed")))}</div>`;
       }
     }
 
-    function renderApplications(applications) {
+    function renderApplications() {
       const listEl = document.getElementById("applications-list");
-      if (!applications || applications.length === 0) {
+      if (allApplications.length === 0) {
         listEl.innerHTML = `<div class="hint">${escapeHtml(t("no_applications"))}</div>`;
         return;
       }
-      listEl.innerHTML = applications.map(a => {
+
+      const filterVal = document.getElementById("applications-filter").value;
+      const sortVal = document.getElementById("applications-sort").value;
+
+      let apps = allApplications.slice();
+      if (filterVal && filterVal !== "all") apps = apps.filter(a => a.status === filterVal);
+      if (sortVal === "score") {
+        apps.sort((a, b) => (b.match_score ?? -1) - (a.match_score ?? -1));
+      } else {
+        apps.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      }
+
+      if (apps.length === 0) {
+        listEl.innerHTML = `<div class="hint">${escapeHtml(t("no_applications_match_filter"))}</div>`;
+        return;
+      }
+
+      listEl.innerHTML = apps.map(a => {
         const date = new Date(a.created_at).toLocaleDateString();
         const status = statusLabel(a.status);
         const scoreLine = (a.match_score !== null && a.match_score !== undefined)
           ? `<div>${a.match_score}${escapeHtml(t("match_suffix"))}</div>` : "";
         return `
-          <div class="card" style="margin-bottom:8px;">
+          <div class="card clickable" style="margin-bottom:8px;" onclick="openApplicationDetail(${a.id})">
             <h3>${escapeHtml(a.title)}</h3>
             <div class="company">${escapeHtml(a.company)}${a.location ? " · " + escapeHtml(a.location) : ""}</div>
             ${scoreLine}
             <div>${escapeHtml(t("status_label_prefix"))} <b>${escapeHtml(status)}</b> · ${escapeHtml(date)}</div>
-            ${a.url ? `<a href="${a.url}" target="_blank">${escapeHtml(t("view_posting"))}</a>` : ""}
           </div>
         `;
       }).join("");
     }
 
+    function openApplicationDetail(id) {
+      const app = allApplications.find(a => a.id === id);
+      if (!app) return;
+      document.getElementById("applications-list").hidden = true;
+      document.getElementById("applications-controls").hidden = true;
+      const detailEl = document.getElementById("application-detail");
+      detailEl.hidden = false;
+
+      const statusOrder = ["applied", "phone_screen", "tech_interview", "offer", "rejected", "ghosted"];
+      detailEl.innerHTML = `
+        <button class="back-btn" onclick="closeApplicationDetail()">${escapeHtml(t("back_link"))}</button>
+        <div class="card" style="margin-top:12px;">
+          <h3>${escapeHtml(app.title)}</h3>
+          <div class="company">${escapeHtml(app.company)}${app.location ? " · " + escapeHtml(app.location) : ""}</div>
+          ${(app.match_score !== null && app.match_score !== undefined) ? `<div>${app.match_score}${escapeHtml(t("match_suffix"))}</div>` : ""}
+          ${app.url ? `<a href="${app.url}" target="_blank">${escapeHtml(t("view_posting"))}</a>` : ""}
+        </div>
+        <div class="prompt-block">${escapeHtml(t("update_status_prompt"))}</div>
+        <div id="status-buttons">
+          ${statusOrder.map(s => `
+            <button class="${s === app.status ? '' : 'secondary'}" style="margin-top:8px;" onclick="setApplicationStatus(${app.id}, '${s}')">${escapeHtml(statusLabel(s))}</button>
+          `).join("")}
+        </div>
+        <button class="danger" onclick="confirmDeleteApplication(${app.id})">${escapeHtml(t("delete_application_btn"))}</button>
+        <div id="detail-action-result"></div>
+      `;
+      scrollToBottom();
+    }
+
+    function closeApplicationDetail() {
+      document.getElementById("application-detail").hidden = true;
+      document.getElementById("applications-list").hidden = false;
+      document.getElementById("applications-controls").hidden = false;
+    }
+
+    async function setApplicationStatus(id, status) {
+      const resultEl = document.getElementById("detail-action-result");
+      resultEl.innerHTML = `<div class="hint">${escapeHtml(t("saving"))}</div>`;
+      try {
+        await callApi("/api/applications/update-status", { application_id: id, status });
+        const app = allApplications.find(a => a.id === id);
+        if (app) app.status = status;
+        openApplicationDetail(id);
+        document.getElementById("detail-action-result").innerHTML = `<div class="hint">${escapeHtml(t("status_updated"))}</div>`;
+      } catch (err) {
+        console.error("Status update failed:", err);
+        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("status_update_failed")))}</div>`;
+      }
+    }
+
+    function confirmDeleteApplication(id) {
+      const resultEl = document.getElementById("detail-action-result");
+      resultEl.innerHTML = `
+        <div class="prompt-block">${escapeHtml(t("delete_confirm"))}</div>
+        <div class="row">
+          <button class="danger" onclick="deleteApplicationNow(${id})">${escapeHtml(t("delete_confirm_yes"))}</button>
+          <button class="secondary" onclick="document.getElementById('detail-action-result').innerHTML=''">${escapeHtml(t("delete_confirm_no"))}</button>
+        </div>
+      `;
+      scrollToBottom();
+    }
+
+    async function deleteApplicationNow(id) {
+      const resultEl = document.getElementById("detail-action-result");
+      resultEl.innerHTML = `<div class="hint">${escapeHtml(t("saving"))}</div>`;
+      try {
+        await callApi("/api/applications/delete", { application_id: id });
+        allApplications = allApplications.filter(a => a.id !== id);
+        closeApplicationDetail();
+        renderApplications();
+      } catch (err) {
+        console.error("Delete failed:", err);
+        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("delete_failed")))}</div>`;
+      }
+    }
+
+    // ── Search / vacancy carousel ────────────────────────────────────────
     async function search() {
       const location = document.getElementById("location").value.trim() || "Any";
       const resultEl = document.getElementById("result");
@@ -568,7 +755,23 @@
           seen_companies: state.seenCompanies,
         });
         state.searchCount += 1;
-        renderResult(data.vacancies);
+        const newVacancies = data.vacancies || [];
+
+        if (newVacancies.length === 0 && state.vacancies.length === 0) {
+          resultEl.innerHTML = `<div class="hint">${escapeHtml(t("no_match_found"))}</div>`;
+          return;
+        }
+
+        if (newVacancies.length > 0) {
+          const startIndex = state.vacancies.length;
+          state.vacancies.push(...newVacancies);
+          for (const v of newVacancies) state.seenCompanies.push(v.company);
+          state.vacancyIndex = startIndex;
+        } else {
+          resultEl.innerHTML = `<div class="hint">${escapeHtml(t("no_more_new_matches"))}</div>`;
+        }
+        state.improveCount = 0;
+        renderVacancyCard();
       } catch (err) {
         console.error("Search error:", err);
         resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("search_failed")))}</div>`;
@@ -577,17 +780,28 @@
       }
     }
 
-    function renderResult(vacancies) {
+    function currentVacancy() {
+      return state.vacancies[state.vacancyIndex];
+    }
+
+    function showVacancy(index) {
+      if (index < 0 || index >= state.vacancies.length) return;
+      state.vacancyIndex = index;
+      state.improveCount = 0;
+      renderVacancyCard();
+    }
+
+    function renderVacancyCard() {
       const resultEl = document.getElementById("result");
-      if (!vacancies || vacancies.length === 0) {
+      const total = state.vacancies.length;
+      if (total === 0) {
         resultEl.innerHTML = `<div class="hint">${escapeHtml(t("no_match_found"))}</div>`;
         return;
       }
-      const v = vacancies[0];
-      state.currentVacancy = v;
-      state.improveCount = 0;
-      state.seenCompanies.push(v.company);
+      const v = currentVacancy();
       const canSearchAgain = state.searchCount < MAX_SEARCHES;
+      const canPrev = state.vacancyIndex > 0;
+      const canNext = state.vacancyIndex < total - 1;
 
       resultEl.innerHTML = `
         <div class="card">
@@ -596,8 +810,14 @@
           <p>${escapeHtml(v.summary)}</p>
           <a href="${v.url}" target="_blank">${escapeHtml(t("view_posting"))}</a>
         </div>
-        <div class="hint" style="margin-top:4px;">${escapeHtml(t("link_disclaimer"))}</div>
-        <div class="hint" style="margin-top:12px;">${escapeHtml(t("like_this_one"))}</div>
+        ${total > 1 ? `
+          <div class="nav-row">
+            <button class="secondary" onclick="showVacancy(${state.vacancyIndex - 1})" ${canPrev ? '' : 'disabled'}>${escapeHtml(t("carousel_prev"))}</button>
+            <span class="nav-counter">${state.vacancyIndex + 1} / ${total}</span>
+            <button class="secondary" onclick="showVacancy(${state.vacancyIndex + 1})" ${canNext ? '' : 'disabled'}>${escapeHtml(t("carousel_next"))}</button>
+          </div>
+        ` : ''}
+        <div class="prompt-block">${escapeHtml(t("like_this_one"))}</div>
         <div class="row">
           <button onclick="likeVacancy()">${escapeHtml(t("yes_like_it"))}</button>
           ${canSearchAgain ? `<button class="secondary" onclick="search()">${escapeHtml(t("search_again_btn"))}</button>` : ''}
@@ -605,6 +825,7 @@
         ${!canSearchAgain ? `<div class="hint" style="margin-top:8px;">${escapeHtml(t("search_limit_title"))}</div>` : ''}
         <div id="action-area"></div>
       `;
+      scrollToBottom();
     }
 
     function actionArea() {
@@ -612,13 +833,15 @@
     }
 
     function likeVacancy() {
+      state.improveCount = 0;
       actionArea().innerHTML = `
-        <div class="hint" style="margin-top:12px;">${escapeHtml(t("how_proceed"))}</div>
+        <div class="prompt-block">${escapeHtml(t("how_proceed"))}</div>
         <div class="row">
           <button onclick="applyDirectly()">${escapeHtml(t("apply_directly"))}</button>
           <button class="secondary" onclick="checkFit()">${escapeHtml(t("check_cv_fit"))}</button>
         </div>
       `;
+      scrollToBottom();
     }
 
     async function callApi(path, body, btn) {
@@ -661,31 +884,33 @@
     async function applyDirectly() {
       actionArea().innerHTML = `<div class="hint">${escapeHtml(t("saving"))}</div>`;
       try {
-        await callApi("/api/apply", { vacancy: state.currentVacancy, score: null });
+        await callApi("/api/apply", { vacancy: currentVacancy(), score: null });
         renderSaved();
       } catch (err) {
         console.error("Apply failed:", err);
         actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("apply_failed")))}</div>`;
       }
+      scrollToBottom();
     }
 
     async function checkFit() {
       actionArea().innerHTML = `<div class="hint">${escapeHtml(t("checking_fit"))}</div>`;
       try {
-        const score = await callApi("/api/score-vacancy", { vacancy: state.currentVacancy });
+        const score = await callApi("/api/score-vacancy", { vacancy: currentVacancy() });
         state.lastScore = score;
         renderScoreResult(score);
       } catch (err) {
         console.error("Scoring failed:", err);
         actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("scoring_failed")))}</div>`;
       }
+      scrollToBottom();
     }
 
     function renderScoreResult(score) {
       const matched = (score.matched || []).join(", ") || "—";
       const missing = (score.missing || []).join(", ") || "—";
       actionArea().innerHTML = `
-        <div class="card" style="margin-top:12px;">
+        <div class="card" style="margin-top:16px;">
           <h3>${escapeHtml(t("match_heading", { score: score.score }))}</h3>
           <p>${escapeHtml(score.verdict || "")}</p>
           <div>✅ <b>${escapeHtml(t("matched_label"))}</b> ${escapeHtml(matched)}</div>
@@ -696,28 +921,31 @@
           ${state.improveCount < MAX_IMPROVES ? `<button class="secondary" onclick="showLevelPicker()">${escapeHtml(t("get_recommendations"))}</button>` : ''}
         </div>
       `;
+      scrollToBottom();
     }
 
     function showLevelPicker() {
       actionArea().insertAdjacentHTML("beforeend", `
-        <div class="hint" style="margin-top:12px;">${escapeHtml(t("level_question"))}</div>
+        <div class="prompt-block">${escapeHtml(t("level_question"))}</div>
         <div class="row">
           <button onclick="getRecommendations('Junior')">Junior</button>
           <button onclick="getRecommendations('Mid')">Mid</button>
           <button onclick="getRecommendations('Senior')">Senior</button>
         </div>
       `);
+      scrollToBottom();
     }
 
     async function getRecommendations(level) {
       actionArea().innerHTML = `<div class="hint">${escapeHtml(t("working_out_fixes"))}</div>`;
       try {
-        const data = await callApi("/api/cv-recommendations", { vacancy: state.currentVacancy, level });
+        const data = await callApi("/api/cv-recommendations", { vacancy: currentVacancy(), level });
         renderRecommendations(data.fixes);
       } catch (err) {
         console.error("Recommendations failed:", err);
         actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("recommendations_failed")))}</div>`;
       }
+      scrollToBottom();
     }
 
     function renderRecommendations(fixes) {
@@ -731,12 +959,13 @@
 
       actionArea().innerHTML = `
         ${cards}
-        <div class="hint" style="margin-top:12px;">${escapeHtml(t("ready_to_apply"))}</div>
+        <div class="prompt-block">${escapeHtml(t("ready_to_apply"))}</div>
         <div class="row">
           <button onclick="applyDirectly()">${escapeHtml(t("apply_now"))}</button>
           ${state.improveCount < MAX_IMPROVES ? `<button class="secondary" onclick="showImproveUpload()">${escapeHtml(t("improve_cv_btn"))}</button>` : ''}
         </div>
       `;
+      scrollToBottom();
     }
 
     function showImproveUpload() {
@@ -746,6 +975,7 @@
         <button onclick="uploadImprovedCV()">${escapeHtml(t("upload_improved_btn"))}</button>
         <div id="improve_result"></div>
       `;
+      scrollToBottom();
     }
 
     async function uploadImprovedCV() {
@@ -789,15 +1019,17 @@
           <div class="hint">${escapeHtml(t("improve_limit_reached"))}</div>
           <button onclick="applyDirectly()">${escapeHtml(t("apply_now"))}</button>
         `;
+        scrollToBottom();
         return;
       }
       actionArea().innerHTML = `
-        <div class="hint">${escapeHtml(t("improve_choice"))}</div>
+        <div class="prompt-block">${escapeHtml(t("improve_choice"))}</div>
         <div class="row">
           <button onclick="applyDirectly()">${escapeHtml(t("apply_now"))}</button>
           <button class="secondary" onclick="checkFit()">${escapeHtml(t("check_match_again"))}</button>
         </div>
       `;
+      scrollToBottom();
     }
 
     function renderSaved() {
@@ -805,6 +1037,7 @@
         <div class="hint">${escapeHtml(t("saved_confirmation"))}</div>
         <button class="secondary" onclick="showApplications()">${escapeHtml(t("view_my_applications"))}</button>
       `;
+      scrollToBottom();
     }
 
     function escapeHtml(text) {

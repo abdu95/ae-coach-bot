@@ -12,8 +12,9 @@ import greenhouse_source
 
 async def search_vacancies(job_title: str, location: str, work_setup: str,
                             industry: str, seen_companies=None) -> list:
-    """Returns 0 or 1 matching vacancy as a list - the contract callers
-    depend on."""
+    """Returns 0-3 matches (greenhouse_source's default), one per company -
+    the Mini App shows these as a browsable carousel rather than forcing
+    one-at-a-time "search again" round trips for variety."""
     return await greenhouse_source.search_vacancies(
         job_title, location, work_setup, industry, seen_companies=seen_companies
     )

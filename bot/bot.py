@@ -170,15 +170,15 @@ async def app_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     Without it, a user who only ever taps /app (never /start) would have
     no `users` row, and saving an application later would fail - the
     applications table has telegram_id REFERENCES users(telegram_id)."""
-    state.get(update.effective_user.id)
+    user = state.get(update.effective_user.id)
 
     if not MINI_APP_URL:
-        await update.message.reply_text("Mini App isn't configured yet.")
+        await update.message.reply_text(i18n.t("app_not_configured", user["lang"]))
         return
     await update.message.reply_text(
-        "🔍 Search live vacancies matching a job title and location.",
+        i18n.t("app_intro", user["lang"]),
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("Open search", web_app=WebAppInfo(url=MINI_APP_URL))
+            InlineKeyboardButton(i18n.t("app_open_button", user["lang"]), web_app=WebAppInfo(url=MINI_APP_URL))
         ]]),
     )
 

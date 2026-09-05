@@ -4,7 +4,7 @@ Vacancy search backed by Greenhouse's public per-company job board API
 returned link points at a posting Greenhouse itself currently serves, so
 it can't go stale/dead the way an LLM-found link occasionally did.
 
-COMPANIES is a hand-verified list (103 companies across 16 domains,
+COMPANIES is a hand-verified list (128 companies across 22 domains,
 each individually confirmed live via a real API call before being
 hardcoded here - not guessed from memory, and not assumed just because
 a company is well-known or Fortune-500-scale). That verification step
@@ -68,8 +68,21 @@ COMPANIES = [
     "lyft", "waymo", "samsara", "motive", "project44",
     # Consumer / social (3)
     "airbnb", "pinterest", "reddit",
-    # One-off domains (proptech, media, climate, marketplace)
-    "pacaso", "masterclass", "watershed", "scout24",
+    # Manufacturing / industrial / robotics (9)
+    "freeformfuturecorp", "formlabs", "markforged", "tulip", "fictiv", "xometry",
+    "pathrobotics", "apptronik", "figureai",
+    # Aerospace / defense (3)
+    "vardaspace", "astranis", "planetlabs",
+    # Energy / cleantech (4)
+    "sunnova", "oklo", "quaise", "fervoenergy",
+    # Automotive / EV (2)
+    "lucidmotors", "nuro",
+    # Agriculture / agtech (2)
+    "carbonrobotics", "pivotbio",
+    # Insurance (2)
+    "coalition", "pieinsurance",
+    # One-off domains (proptech, media, climate, marketplace, construction, telecom, food)
+    "pacaso", "masterclass", "watershed", "scout24", "hover", "tucows", "misfitsmarket",
 ]
 
 _DISPLAY_NAMES = {
@@ -80,6 +93,10 @@ _DISPLAY_NAMES = {
     "generalassembly": "General Assembly", "hubspotjobs": "HubSpot",
     "doordashusa": "DoorDash", "togetherai": "Together AI", "planetscale": "PlanetScale",
     "newrelic": "New Relic", "customerio": "Customer.io", "project44": "project44",
+    "freeformfuturecorp": "Freeform", "pathrobotics": "Path Robotics", "figureai": "Figure AI",
+    "vardaspace": "Varda Space", "planetlabs": "Planet Labs", "lucidmotors": "Lucid Motors",
+    "carbonrobotics": "Carbon Robotics", "pivotbio": "Pivot Bio", "pieinsurance": "Pie Insurance",
+    "fervoenergy": "Fervo Energy", "misfitsmarket": "Misfits Market",
 }
 
 
@@ -147,7 +164,11 @@ def _work_setup_matches(work_setup: str, posting_location: str) -> bool:
 
 
 async def search_vacancies(job_title: str, location: str, work_setup: str,
-                            industry: str, seen_companies=None) -> list:
+                            industry: str, seen_companies=None, max_results: int = 3) -> list:
+    """Returns up to `max_results` matches, at most one per company (so a
+    single search doesn't hand back 3 postings from the same employer),
+    preferring the strongest title-match tier available and, within a
+    tier, the most recently updated posting."""
     seen = {c.lower() for c in (seen_companies or [])}
     slugs = [s for s in COMPANIES if _display_name(s).lower() not in seen]
 
@@ -178,7 +199,16 @@ async def search_vacancies(job_title: str, location: str, work_setup: str,
     best_tier = max(c["_tier"] for c in candidates)
     candidates = [c for c in candidates if c["_tier"] == best_tier]
     candidates.sort(key=lambda c: c["updated_at"], reverse=True)
-    best = candidates[0]
-    del best["updated_at"]
-    del best["_tier"]
-    return [best]
+
+    picked = []
+    seen_this_call = set()
+    for c in candidates:
+        if c["company"] in seen_this_call:
+            continue
+        seen_this_call.add(c["company"])
+        del c["updated_at"]
+        del c["_tier"]
+        picked.append(c)
+        if len(picked) >= max_results:
+            break
+    return picked

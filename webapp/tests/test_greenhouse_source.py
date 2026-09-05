@@ -21,6 +21,16 @@ FAKE_JOBS_BY_COMPANY = {
          "location": {"name": "Dublin, Ireland"}, "content": "&lt;p&gt;Analyze trust data.&lt;/p&gt;",
          "updated_at": "2026-09-02T00:00:00Z"},
     ],
+    "reddit": [
+        {"title": "Senior Analytics Engineer", "absolute_url": "https://reddit.com/jobs/1",
+         "location": {"name": "Remote"}, "content": "Reddit role.", "updated_at": "2026-09-03T00:00:00Z"},
+        {"title": "Analytics Engineer II", "absolute_url": "https://reddit.com/jobs/2",
+         "location": {"name": "SF"}, "content": "Reddit role 2.", "updated_at": "2026-09-06T00:00:00Z"},
+    ],
+    "coinbase": [
+        {"title": "Staff Analytics Engineer", "absolute_url": "https://coinbase.com/jobs/1",
+         "location": {"name": "Remote"}, "content": "Coinbase role.", "updated_at": "2026-09-04T00:00:00Z"},
+    ],
 }
 
 
@@ -75,6 +85,22 @@ async def main():
         result7 = await gs.search_vacancies("Nonexistent Zzzrole", "Any", "Any", "Any")
         assert result7 == [], result7
         print("PASS: no match returns an empty list")
+
+    # Test 8: multi-result - up to max_results, one per company, most-recent-first within tier
+    with mock.patch.object(gs, "COMPANIES", ["stripe", "airbnb", "reddit", "coinbase"]), \
+         mock.patch.object(gs, "_fetch_company_jobs", new=fake_fetch):
+        result8 = await gs.search_vacancies("Analytics Engineer", "Any", "Any", "Any")
+        assert len(result8) == 3, result8  # capped at default max_results=3
+        companies = [r["company"] for r in result8]
+        assert len(companies) == len(set(companies)), result8  # one per company, no dupes
+        # Reddit has 2 matching jobs (2026-09-03 and 2026-09-06) - the newer one should win
+        reddit_result = next(r for r in result8 if r["company"] == "Reddit")
+        assert reddit_result["title"] == "Analytics Engineer II", result8
+        print("PASS: multi-result search returns up to max_results, one per company, newest-per-company")
+
+        result8b = await gs.search_vacancies("Analytics Engineer", "Any", "Any", "Any", max_results=2)
+        assert len(result8b) == 2, result8b
+        print("PASS: max_results is respected when lower than the available match count")
 
     print("\nALL GREENHOUSE SOURCE CHECKS PASSED")
 

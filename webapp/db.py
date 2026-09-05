@@ -118,6 +118,41 @@ def save_application(telegram_id: int, vacancy: dict, cv_snapshot: str,
         pool.putconn(conn)
 
 
+VALID_STATUSES = {"applied", "phone_screen", "tech_interview", "offer", "rejected", "ghosted"}
+
+
+def update_application_status(telegram_id: int, application_id: int, status: str) -> bool:
+    """Returns False if the application doesn't exist or doesn't belong to
+    this telegram_id - callers must treat that as "not found", never
+    leak whether some other user's application_id exists."""
+    if status not in VALID_STATUSES:
+        raise ValueError(f"Invalid status: {status}")
+    pool = get_pool()
+    conn = pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("""
+                UPDATE applications SET status = %s, updated_at = now()
+                WHERE id = %s AND telegram_id = %s
+            """, (status, application_id, telegram_id))
+            return cur.rowcount > 0
+    finally:
+        pool.putconn(conn)
+
+
+def delete_application(telegram_id: int, application_id: int) -> bool:
+    pool = get_pool()
+    conn = pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("""
+                DELETE FROM applications WHERE id = %s AND telegram_id = %s
+            """, (application_id, telegram_id))
+            return cur.rowcount > 0
+    finally:
+        pool.putconn(conn)
+
+
 def list_applications(telegram_id: int) -> list[dict]:
     pool = get_pool()
     conn = pool.getconn()
