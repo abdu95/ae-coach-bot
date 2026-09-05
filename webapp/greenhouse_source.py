@@ -4,13 +4,23 @@ Vacancy search backed by Greenhouse's public per-company job board API
 returned link points at a posting Greenhouse itself currently serves, so
 it can't go stale/dead the way an LLM-found link occasionally did.
 
-COMPANIES is a small, hand-verified starter list (~30 companies, each
-confirmed live via a real API call before being hardcoded here - not
-guessed from memory). Scaling this to hundreds/thousands of companies
-is real ingestion infrastructure (deduping, refresh jobs, maybe
-scraping other job boards' company lists the way RealtimeJobsBot did -
-see the backlog doc) - deliberately out of scope for this first swap.
-The goal here is reliability of what we already show, not coverage.
+COMPANIES is a hand-verified list (103 companies across 16 domains,
+each individually confirmed live via a real API call before being
+hardcoded here - not guessed from memory, and not assumed just because
+a company is well-known or Fortune-500-scale). That verification step
+matters: most old-economy enterprises (banks, retailers, industrials)
+run on Workday/SAP SuccessFactors/Oracle/iCIMS, not Greenhouse -
+Greenhouse skews toward VC-backed tech (per landbase.com's 2026 count,
+~11.5k companies on Greenhouse, plurality "Software Development",
+median company size 51-200 employees). So "find 100 Fortune 500s on
+Greenhouse" isn't a realistic bar for most domains; this list reflects
+real, verified coverage rather than a target headcount.
+
+Scaling further (hundreds/thousands more companies) is real ingestion
+infrastructure (deduping, refresh jobs, maybe scraping other job
+boards' company lists the way RealtimeJobsBot did - see the backlog
+doc) - a good follow-up now that the approach itself is proven, not
+done here.
 
 Known simplifications: `industry` is accepted for interface
 compatibility but not filtered on (no per-company industry tags yet).
@@ -26,16 +36,50 @@ import re
 import httpx
 
 COMPANIES = [
-    "stripe", "airbnb", "pinterest", "coinbase", "asana", "figma", "discord",
-    "reddit", "duolingo", "squarespace", "instacart", "lyft", "doximity",
-    "robinhood", "affirm", "brex", "webflow", "vercel", "scaleai", "anthropic",
-    "gusto", "gitlab", "databricks", "mixpanel", "amplitude", "fivetran",
-    "braze", "klaviyo", "postman", "elastic", "mongodb", "cockroachlabs",
+    # Fintech (14)
+    "stripe", "coinbase", "robinhood", "affirm", "brex", "chime", "sofi", "wise",
+    "block", "mercury", "gemini", "betterment", "carta", "current",
+    # Data / AI / Analytics tooling (14)
+    "databricks", "scaleai", "anthropic", "mixpanel", "amplitude", "fivetran",
+    "datadog", "newrelic", "elastic", "mongodb", "starburst", "sigmacomputing",
+    "collibra", "togetherai",
+    # Dev tools / infra (14)
+    "gitlab", "vercel", "postman", "circleci", "pagerduty", "twilio", "cloudflare",
+    "fastly", "launchdarkly", "warp", "planetscale", "cockroachlabs", "webflow",
+    "chainguard",
+    # E-commerce / retail (10)
+    "instacart", "faire", "stockx", "glossier", "bombas", "carvana", "doordashusa",
+    "flexport", "narvar", "squarespace",
+    # Productivity / HR tech (9)
+    "asana", "figma", "calendly", "gusto", "airtable", "remote", "lattice",
+    "cultureamp", "dropbox",
+    # Healthtech / biotech (7)
+    "doximity", "oscar", "calm", "forward", "komodohealth", "truveta", "suki",
+    # Marketing / CRM (7)
+    "klaviyo", "braze", "attentive", "iterable", "customerio", "salesloft",
+    "hubspotjobs",
+    # EdTech (6)
+    "duolingo", "coursera", "udemy", "generalassembly", "springboard", "outschool",
+    # Gaming (5)
+    "discord", "roblox", "riotgames", "scopely", "epicgames",
+    # Security (5)
+    "okta", "tanium", "netskope", "orcasecurity", "abnormalsecurity",
+    # Transportation (5)
+    "lyft", "waymo", "samsara", "motive", "project44",
+    # Consumer / social (3)
+    "airbnb", "pinterest", "reddit",
+    # One-off domains (proptech, media, climate, marketplace)
+    "pacaso", "masterclass", "watershed", "scout24",
 ]
 
 _DISPLAY_NAMES = {
     "scaleai": "Scale AI", "cockroachlabs": "Cockroach Labs", "mongodb": "MongoDB",
-    "gitlab": "GitLab",
+    "gitlab": "GitLab", "sigmacomputing": "Sigma Computing", "komodohealth": "Komodo Health",
+    "abnormalsecurity": "Abnormal Security", "orcasecurity": "Orca Security",
+    "launchdarkly": "LaunchDarkly", "cultureamp": "Culture Amp",
+    "generalassembly": "General Assembly", "hubspotjobs": "HubSpot",
+    "doordashusa": "DoorDash", "togetherai": "Together AI", "planetscale": "PlanetScale",
+    "newrelic": "New Relic", "customerio": "Customer.io", "project44": "project44",
 }
 
 
