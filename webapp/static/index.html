@@ -16,7 +16,7 @@
   h2 { font-size: 18px; margin-bottom: 4px; }
   .hint { color: var(--tg-theme-hint-color, #999999); font-size: 13px; margin-bottom: 16px; }
   label { display: block; font-size: 13px; margin: 12px 0 4px; }
-  input, select {
+  input, select, textarea {
     width: 100%;
     box-sizing: border-box;
     padding: 10px;
@@ -26,6 +26,31 @@
     color: var(--tg-theme-text-color, #000000);
     font-size: 15px;
   }
+  textarea { font-family: inherit; resize: vertical; min-height: 120px; }
+  .menu-option {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+    color: var(--tg-theme-text-color, #000000);
+    border: 1px solid var(--tg-theme-hint-color, #dddddd);
+    border-radius: 10px;
+    padding: 14px;
+    margin-top: 12px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .menu-option .hint { margin: 4px 0 0; font-weight: 400; }
+  .score-bar {
+    background: var(--tg-theme-hint-color, #dddddd);
+    border-radius: 6px;
+    height: 8px;
+    overflow: hidden;
+    margin: 6px 0 10px;
+  }
+  .score-bar-fill { background: var(--tg-theme-button-color, #2481cc); height: 100%; }
+  .tool-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--tg-theme-hint-color, #eeeeee); }
+  .roadmap-body { white-space: pre-wrap; }
   button {
     width: 100%;
     margin-top: 16px;
@@ -144,8 +169,36 @@
     <div id="upload_result"></div>
   </div>
 
+  <div id="home-screen" hidden>
+    <div class="hint" id="home-hint"></div>
+    <button class="menu-option" onclick="goToAnalysis()">
+      <div id="home-analyze-option"></div>
+      <div class="hint" id="home-analyze-hint"></div>
+    </button>
+    <button class="menu-option" onclick="goToVacancySearch()">
+      <div id="home-vacancy-option"></div>
+      <div class="hint" id="home-vacancy-hint"></div>
+    </button>
+  </div>
+
+  <div id="analysis-screen" hidden>
+    <div class="screen-header">
+      <div class="hint" id="analysis-title"></div>
+      <button id="btn-analysis-back" class="back-btn" onclick="goHome()"></button>
+    </div>
+    <div id="jd-input-box">
+      <label for="jd_text" id="jd-label"></label>
+      <textarea id="jd_text"></textarea>
+      <button id="analyze_btn" onclick="analyzeCV()"></button>
+    </div>
+    <div id="analysis-result"></div>
+  </div>
+
   <div id="title-screen" hidden>
-    <div class="hint" id="title-screen-hint"></div>
+    <div class="screen-header">
+      <div class="hint" id="title-screen-hint"></div>
+      <button id="btn-title-back" class="back-btn" onclick="goHome()"></button>
+    </div>
     <div class="row">
       <button id="btn-type-own" onclick="showManualTitle()"></button>
       <button id="btn-suggest-cv" class="secondary" onclick="suggestTitles()"></button>
@@ -182,7 +235,7 @@
   <div id="applications-screen" hidden>
     <div class="screen-header">
       <div class="hint" id="applications-title"></div>
-      <button id="btn-applications-back" class="back-btn" onclick="showScreen('title-screen')"></button>
+      <button id="btn-applications-back" class="back-btn" onclick="goHome()"></button>
     </div>
     <div class="controls-row" id="applications-controls">
       <select id="applications-filter" onchange="renderApplications()"></select>
@@ -401,6 +454,92 @@
       err_generic: {
         en: "Something went wrong. Please try again.", uz: "Nimadir xato ketdi. Qaytadan urinib ko'ring.", ru: "Что-то пошло не так. Попробуйте снова.",
       },
+      home_hint: {
+        en: "What would you like to do?", uz: "Nima qilmoqchisiz?", ru: "Что вы хотите сделать?",
+      },
+      home_analyze_option: {
+        en: "📊 Analyze my CV against a job", uz: "📊 CV'imni ish e'loniga solishtirish", ru: "📊 Сравнить резюме с вакансией",
+      },
+      home_analyze_hint: {
+        en: "Get an ATS score, bullet-point fixes, and a step-by-step roadmap.",
+        uz: "ATS bali, tuzatishlar va bosqichma-bosqich reja oling.",
+        ru: "Получите ATS-балл, исправления и пошаговый план.",
+      },
+      home_vacancy_option: {
+        en: "🔍 Find & track vacancies", uz: "🔍 Vakansiya topish va kuzatish", ru: "🔍 Найти и отслеживать вакансии",
+      },
+      home_vacancy_hint: {
+        en: "Search live postings and keep track of where you've applied.",
+        uz: "Joriy e'lonlarni qidiring va qayerga ariza berganingizni kuzating.",
+        ru: "Ищите актуальные вакансии и отслеживайте, куда вы откликнулись.",
+      },
+      analysis_title: {
+        en: "CV vs Job Analysis", uz: "CV va ish e'loni tahlili", ru: "Анализ резюме и вакансии",
+      },
+      jd_label: {
+        en: "Paste the job description", uz: "Ish e'loni matnini joylashtiring", ru: "Вставьте текст вакансии",
+      },
+      jd_placeholder: {
+        en: "Paste the full job posting text here…", uz: "To'liq ish e'loni matnini shu yerga joylashtiring…", ru: "Вставьте сюда полный текст вакансии…",
+      },
+      analyze_btn: { en: "🤖 Analyze", uz: "🤖 Tahlil qilish", ru: "🤖 Анализировать" },
+      jd_too_short_web: {
+        en: "Paste a fuller job description (at least 100 characters).",
+        uz: "To'liqroq ish e'loni matnini joylashtiring (kamida 100 belgi).",
+        ru: "Вставьте более полный текст вакансии (не менее 100 символов).",
+      },
+      analyzing_message_web: {
+        en: "🤖 Analyzing your CV against this job… usually takes 15–30 seconds.",
+        uz: "🤖 CV'ingiz ushbu ish e'loni bilan tahlil qilinmoqda… odatda 15–30 soniya vaqt oladi.",
+        ru: "🤖 Анализирую ваше резюме по этой вакансии… обычно занимает 15–30 секунд.",
+      },
+      analysis_failed_web: {
+        en: "Analysis failed on our end. Please try again in a moment.",
+        uz: "Tahlil bizning tomonda amalga oshmadi. Birozdan keyin qayta urinib ko'ring.",
+        ru: "Анализ не удался на нашей стороне. Попробуйте ещё раз через некоторое время.",
+      },
+      ats_heading: { en: "ATS Score", uz: "ATS Bali", ru: "ATS-балл" },
+      xyz_heading: { en: "Bullet Point Check", uz: "Band tekshiruvi", ru: "Проверка формулировок" },
+      xyz_passing_label: { en: "✅ Passing:", uz: "✅ O'tgan:", ru: "✅ Хорошо:" },
+      xyz_failing_label: { en: "❌ Needs work:", uz: "❌ Yaxshilash kerak:", ru: "❌ Нужна доработка:" },
+      xyz_rewrites_label: { en: "Suggested rewrites:", uz: "Tavsiya etilgan tahrirlar:", ru: "Предлагаемые правки:" },
+      tools_heading: { en: "Tool Radar", uz: "Vositalar radari", ru: "Радар инструментов" },
+      tool_strong: { en: "Strong", uz: "Kuchli", ru: "Сильно" },
+      tool_mentioned: { en: "Mentioned", uz: "Tilga olingan", ru: "Упомянуто" },
+      tool_not_found: { en: "Not found", uz: "Topilmadi", ru: "Не найдено" },
+      level_heading: { en: "Your Level", uz: "Sizning darajangiz", ru: "Ваш уровень" },
+      get_roadmap_btn: { en: "🗺 Get My Roadmap", uz: "🗺 Rejamni olish", ru: "🗺 Получить план" },
+      roadmap_continue_btn: { en: "Continue →", uz: "Davom etish →", ru: "Продолжить →" },
+      roadmap_failed_web: {
+        en: "Couldn't build this section, try again.", uz: "Bu bo'limni tayyorlab bo'lmadi, qaytadan urinib ko'ring.", ru: "Не удалось подготовить этот раздел, попробуйте снова.",
+      },
+      roadmap_done: {
+        en: "✅ That's the end of your roadmap. Good luck!", uz: "✅ Rejangiz shu bilan tugaydi. Omad tilaymiz!", ru: "✅ На этом ваш план завершён. Удачи!",
+      },
+      analysis_limit_reached: {
+        en: "🚦 You've used all your free checks.", uz: "🚦 Siz barcha bepul tekshiruvlaringizdan foydalandingiz.", ru: "🚦 Вы использовали все бесплатные проверки.",
+      },
+      buy_checks_intro: {
+        en: "Buy more — {price} UZS per check. Choose how many:",
+        uz: "Ko'proq sotib oling — har biri {price} so'm. Nechtasini xohlaysiz?",
+        ru: "Купите ещё — по {price} сум за проверку. Выберите количество:",
+      },
+      buy_custom_btn: { en: "🔢 Custom amount", uz: "🔢 Boshqa miqdor", ru: "🔢 Другое количество" },
+      buy_custom_prompt: {
+        en: "How many checks? Enter a number from 1 to 100.",
+        uz: "Nechta tekshiruv? 1 dan 100 gacha son kiriting.",
+        ru: "Сколько проверок? Введите число от 1 до 100.",
+      },
+      buy_custom_confirm: { en: "Confirm", uz: "Tasdiqlash", ru: "Подтвердить" },
+      buy_custom_invalid: {
+        en: "Enter a whole number from 1 to 100.", uz: "1 dan 100 gacha butun son kiriting.", ru: "Введите целое число от 1 до 100.",
+      },
+      checkout_opening: { en: "Opening checkout…", uz: "To'lov ochilmoqda…", ru: "Открываю оплату…" },
+      checkout_failed: {
+        en: "Couldn't start checkout, try again.", uz: "To'lovni boshlab bo'lmadi, qaytadan urinib ko'ring.", ru: "Не удалось начать оплату, попробуйте снова.",
+      },
+      checks_word: { en: "checks", uz: "ta tekshiruv", ru: "проверок" },
+      check_word_one: { en: "check", uz: "ta tekshiruv", ru: "проверка" },
     };
 
     let currentLang = "en";
@@ -419,6 +558,17 @@
       document.getElementById("cv-gate-hint").textContent = t("cv_gate_hint");
       document.getElementById("cv-file-label").textContent = t("cv_file_label");
       document.getElementById("upload_btn").textContent = t("upload_cv_btn");
+      document.getElementById("home-hint").textContent = t("home_hint");
+      document.getElementById("home-analyze-option").textContent = t("home_analyze_option");
+      document.getElementById("home-analyze-hint").textContent = t("home_analyze_hint");
+      document.getElementById("home-vacancy-option").textContent = t("home_vacancy_option");
+      document.getElementById("home-vacancy-hint").textContent = t("home_vacancy_hint");
+      document.getElementById("analysis-title").textContent = t("analysis_title");
+      document.getElementById("btn-analysis-back").textContent = t("back_link");
+      document.getElementById("jd-label").textContent = t("jd_label");
+      document.getElementById("jd_text").placeholder = t("jd_placeholder");
+      document.getElementById("analyze_btn").textContent = t("analyze_btn");
+      document.getElementById("btn-title-back").textContent = t("back_link");
       document.getElementById("title-screen-hint").textContent = t("title_screen_hint");
       document.getElementById("btn-type-own").textContent = t("type_own");
       document.getElementById("btn-suggest-cv").textContent = t("suggest_from_cv");
@@ -451,14 +601,27 @@
     const state = {
       jobTitle: "", seenCompanies: [], searchCount: 0,
       vacancies: [], vacancyIndex: -1, improveCount: 0,
+      jd: "", analysisLevel: "", analysisRemaining: null, analysisQuota: null,
     };
     const MAX_SEARCHES = 3;
     const MAX_IMPROVES = 2;
+    const CHECK_QUANTITY_PRESETS = [1, 5, 10, 20, 50];
+    const MIN_CHECKS_PURCHASE = 1;
+    const MAX_CHECKS_PURCHASE = 100;
 
     function showScreen(id) {
-      for (const s of ["loading-gate", "cv-gate", "title-screen", "search-screen", "applications-screen"]) {
+      for (const s of ["loading-gate", "cv-gate", "home-screen", "analysis-screen", "title-screen", "search-screen", "applications-screen"]) {
         document.getElementById(s).hidden = (s !== id);
       }
+    }
+
+    function goHome() { showScreen("home-screen"); }
+    function goToVacancySearch() { showScreen("title-screen"); }
+
+    function goToAnalysis() {
+      document.getElementById("jd-input-box").hidden = false;
+      document.getElementById("analysis-result").innerHTML = "";
+      showScreen("analysis-screen");
     }
 
     function scrollToBottom() {
@@ -489,7 +652,7 @@
           document.getElementById("greeting").textContent = t("greeting", { name: userInfo.first_name });
         }
 
-        showScreen(data.has_cv ? "title-screen" : "cv-gate");
+        showScreen(data.has_cv ? "home-screen" : "cv-gate");
         document.getElementById("nav-applications").hidden = false;
       } catch (err) {
         console.error("CV status check failed:", err);
@@ -528,7 +691,7 @@
           if (res.status === 401) err.sessionExpired = true;
           throw err;
         }
-        showScreen("title-screen");
+        showScreen("home-screen");
       } catch (err) {
         console.error("CV upload failed:", err);
         resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("upload_failed")))}</div>`;
@@ -1038,6 +1201,226 @@
         <button class="secondary" onclick="showApplications()">${escapeHtml(t("view_my_applications"))}</button>
       `;
       scrollToBottom();
+    }
+
+    // ── CV vs JD analysis + roadmap ──────────────────────────────────────
+    async function analyzeCV() {
+      const jd = document.getElementById("jd_text").value.trim();
+      const btn = document.getElementById("analyze_btn");
+      const resultEl = document.getElementById("analysis-result");
+
+      if (jd.length < 100) {
+        resultEl.innerHTML = `<div class="error">${escapeHtml(t("jd_too_short_web"))}</div>`;
+        return;
+      }
+
+      btn.disabled = true;
+      resultEl.innerHTML = `<div class="hint">${escapeHtml(t("analyzing_message_web"))}</div>`;
+
+      try {
+        const data = await callApi("/api/cv-jd-analysis", { jd });
+        if (data.limit_reached) {
+          document.getElementById("jd-input-box").hidden = true;
+          resultEl.innerHTML = `<div class="prompt-block">${escapeHtml(t("analysis_limit_reached"))}</div>`;
+          const buyBox = document.createElement("div");
+          resultEl.appendChild(buyBox);
+          await renderBuyChecks(buyBox);
+          return;
+        }
+        state.jd = jd;
+        state.analysisLevel = data.level.assessment;
+        state.analysisRemaining = data.remaining;
+        state.analysisQuota = data.quota;
+        document.getElementById("jd-input-box").hidden = true;
+        renderAnalysisResult(data);
+      } catch (err) {
+        console.error("Analysis failed:", err);
+        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("analysis_failed_web")))}</div>`;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function renderAnalysisResult(data) {
+      const el = document.getElementById("analysis-result");
+      const ats = data.ats, xyz = data.xyz, tools = data.tools, level = data.level;
+
+      const toolEmoji = { strong: "✅", mentioned: "🟡", not_found: "❌" };
+      const toolLabelKey = { strong: "tool_strong", mentioned: "tool_mentioned", not_found: "tool_not_found" };
+
+      const rewritesHtml = (xyz.rewrites || []).slice(0, 2).map(r => `
+        <div class="card" style="margin-top:8px;">
+          <p><i>${escapeHtml(t("before_label"))}</i> ${escapeHtml(r.original)}</p>
+          <p><i>${escapeHtml(t("after_label"))}</i> ${escapeHtml(r.improved)}</p>
+        </div>
+      `).join("");
+
+      const toolsHtml = Object.entries(tools || {}).map(([name, rating]) => `
+        <div class="tool-row">
+          <span>${toolEmoji[rating] || "•"} ${escapeHtml(name)}</span>
+          <span>${escapeHtml(t(toolLabelKey[rating] || "tool_not_found"))}</span>
+        </div>
+      `).join("");
+
+      el.innerHTML = `
+        <div class="card">
+          <h3>${escapeHtml(t("ats_heading"))} — ${ats.score}/100</h3>
+          <div class="score-bar"><div class="score-bar-fill" style="width:${ats.score}%;"></div></div>
+          <div>✅ <b>${escapeHtml(t("matched_label"))}</b> ${escapeHtml((ats.matched || []).join(", ") || "—")}</div>
+          <div>❌ <b>${escapeHtml(t("missing_label"))}</b> ${escapeHtml((ats.missing || []).join(", ") || "—")}</div>
+          <p>${escapeHtml(ats.verdict || "")}</p>
+        </div>
+        <div class="card" style="margin-top:12px;">
+          <h3>${escapeHtml(t("xyz_heading"))}</h3>
+          <div>${escapeHtml(t("xyz_passing_label"))} ${(xyz.passing || []).length}</div>
+          <div>${escapeHtml(t("xyz_failing_label"))} ${(xyz.failing || []).length}</div>
+          ${rewritesHtml ? `<p style="margin-top:8px;"><b>${escapeHtml(t("xyz_rewrites_label"))}</b></p>${rewritesHtml}` : ""}
+        </div>
+        <div class="card" style="margin-top:12px;">
+          <h3>${escapeHtml(t("tools_heading"))}</h3>
+          ${toolsHtml}
+        </div>
+        <div class="card" style="margin-top:12px;">
+          <h3>${escapeHtml(t("level_heading"))} — ${escapeHtml(level.assessment)}</h3>
+          <p>${escapeHtml(level.reasoning || "")}</p>
+        </div>
+        <button onclick="startRoadmap()">${escapeHtml(t("get_roadmap_btn"))}</button>
+        <div id="roadmap-area"></div>
+      `;
+      scrollToBottom();
+    }
+
+    function startRoadmap() {
+      loadRoadmapItem(1);
+    }
+
+    async function loadRoadmapItem(item) {
+      const areaEl = document.getElementById("roadmap-area");
+      areaEl.innerHTML = `<div class="hint">${escapeHtml(t("analyzing_message_web"))}</div>`;
+      try {
+        const data = await callApi("/api/roadmap-item", { jd: state.jd, level: state.analysisLevel, item });
+        if (data.fixes) {
+          renderRoadmapFixes(data, item);
+        } else {
+          renderRoadmapText(data, item);
+        }
+      } catch (err) {
+        console.error("Roadmap item failed:", err);
+        areaEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("roadmap_failed_web")))}</div>`;
+      }
+    }
+
+    function renderRoadmapFixes(data, item) {
+      const areaEl = document.getElementById("roadmap-area");
+      const cards = (data.fixes || []).map(f => `
+        <div class="card" style="margin-top:8px;">
+          <p><b>${escapeHtml(t("issue_label"))}</b> ${escapeHtml(f.issue)}</p>
+          ${f.before ? `<p><i>${escapeHtml(t("before_label"))}</i> ${escapeHtml(f.before)}</p>` : ""}
+          <p><i>${escapeHtml(t("after_label"))}</i> ${escapeHtml(f.after)}</p>
+        </div>
+      `).join("");
+      areaEl.innerHTML = `
+        <h3 style="margin-top:16px;">${escapeHtml(data.title)}</h3>
+        ${cards}
+        <div id="roadmap-next"></div>
+      `;
+      renderRoadmapNext(data.is_last, item);
+      scrollToBottom();
+    }
+
+    function formatRoadmapText(raw) {
+      const escaped = escapeHtml(raw || "");
+      return escaped.split("\n").map(line => {
+        const headerMatch = line.match(/^#{2,3}\s+(.*)/);
+        if (headerMatch) return `<b>${headerMatch[1]}</b>`;
+        return line.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+      }).join("\n");
+    }
+
+    function renderRoadmapText(data, item) {
+      const areaEl = document.getElementById("roadmap-area");
+      areaEl.innerHTML = `
+        <div class="card" style="margin-top:16px;">
+          <h3>${escapeHtml(data.title)}</h3>
+          <div class="roadmap-body">${formatRoadmapText(data.text)}</div>
+        </div>
+        <div id="roadmap-next"></div>
+      `;
+      renderRoadmapNext(data.is_last, item);
+      scrollToBottom();
+    }
+
+    function renderRoadmapNext(isLast, item) {
+      const nextEl = document.getElementById("roadmap-next");
+      if (!isLast) {
+        nextEl.innerHTML = `<button onclick="loadRoadmapItem(${item + 1})">${escapeHtml(t("roadmap_continue_btn"))}</button>`;
+        return;
+      }
+      nextEl.innerHTML = `<div class="hint" style="margin-top:8px;">${escapeHtml(t("roadmap_done"))}</div><div id="post-roadmap-buy"></div>`;
+      if (state.analysisRemaining !== null && state.analysisRemaining <= 0) {
+        renderBuyChecks(document.getElementById("post-roadmap-buy"));
+      }
+    }
+
+    // ── Buy checks (flexible pay-per-check pricing) ──────────────────────
+    function checksLabel(n) {
+      return n === 1 ? `1 ${t("check_word_one")}` : `${n} ${t("checks_word")}`;
+    }
+
+    async function renderBuyChecks(containerEl) {
+      containerEl.innerHTML = `<div id="buy-checks-box"><div class="hint">…</div></div>`;
+      const box = document.getElementById("buy-checks-box");
+      let price = 1000000;
+      try {
+        const q = await callApi("/api/quota-status", {});
+        price = q.price_per_check_tiyin;
+      } catch (err) {
+        console.error("Couldn't load price, using fallback:", err);
+      }
+      const amountFor = n => Math.round(n * price / 100).toLocaleString();
+      box.innerHTML = `
+        <div class="prompt-block">${escapeHtml(t("buy_checks_intro", { price: (price / 100).toLocaleString() }))}</div>
+        ${CHECK_QUANTITY_PRESETS.map(n => `<button onclick="buyChecks(${n})">${escapeHtml(checksLabel(n))} — ${amountFor(n)} UZS</button>`).join("")}
+        <button class="secondary" onclick="showCustomChecksInput()">${escapeHtml(t("buy_custom_btn"))}</button>
+        <div id="buy-checks-extra"></div>
+      `;
+      scrollToBottom();
+    }
+
+    function showCustomChecksInput() {
+      document.getElementById("buy-checks-extra").innerHTML = `
+        <div class="hint">${escapeHtml(t("buy_custom_prompt"))}</div>
+        <input type="number" id="custom_checks_input" min="${MIN_CHECKS_PURCHASE}" max="${MAX_CHECKS_PURCHASE}" />
+        <button onclick="submitCustomChecks()">${escapeHtml(t("buy_custom_confirm"))}</button>
+        <div id="custom-checks-error"></div>
+      `;
+      scrollToBottom();
+    }
+
+    function submitCustomChecks() {
+      const val = parseInt(document.getElementById("custom_checks_input").value, 10);
+      const errEl = document.getElementById("custom-checks-error");
+      if (!Number.isInteger(val) || val < MIN_CHECKS_PURCHASE || val > MAX_CHECKS_PURCHASE) {
+        errEl.innerHTML = `<div class="error">${escapeHtml(t("buy_custom_invalid"))}</div>`;
+        return;
+      }
+      buyChecks(val);
+    }
+
+    async function buyChecks(checks) {
+      const box = document.getElementById("buy-checks-box");
+      box.innerHTML = `<div class="hint">${escapeHtml(t("checkout_opening"))}</div>`;
+      try {
+        const data = await callApi("/api/checkout", { checks });
+        if (tg && tg.openLink) {
+          tg.openLink(data.checkout_url);
+        } else {
+          window.open(data.checkout_url, "_blank");
+        }
+      } catch (err) {
+        console.error("Checkout failed:", err);
+        box.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("checkout_failed")))}</div>`;
+      }
     }
 
     function escapeHtml(text) {
