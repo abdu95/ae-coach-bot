@@ -34,6 +34,9 @@ ADMIN_IDS = {
 }
 FREE_LIMIT = int(os.getenv("FREE_LIMIT", "2"))
 PILOT_CODE = os.getenv("PILOT_CODE", "school21")
+# /start deep-link tags for tracking marketing campaigns -> users.source.
+# e.g. t.me/<bot>?start=chashma for the chashma.uz half-marathon link.
+MARKETING_SOURCES = {"chashma": "chashma_marathon"}
 PILOT_QUOTA = int(os.getenv("PILOT_QUOTA", "10"))
 PILOT_CAP = int(os.getenv("PILOT_CAP", "10"))
 PAYME_ID = os.getenv("PAYME_ID", "")
@@ -133,6 +136,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     if context.args and context.args[0] == PILOT_CODE:
         await enroll_pilot(update.message, user_id, user["lang"])
+    elif context.args and context.args[0] in MARKETING_SOURCES:
+        state.set_source(user_id, MARKETING_SOURCES[context.args[0]])
+        state.log_event(user_id, "marketing_source_start", metadata={"source": context.args[0]})
 
     if not user["lang"]:
         await send_language_picker(update.message, update.effective_user.language_code)
@@ -200,6 +206,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
          "roadmap_requested", "limit_reached", "reset"]
     )
     reset_with_cv = state.reset_with_cv_count()
+    chashma_count = state.source_count("chashma_marathon")
 
     def line(label: str, key: str) -> str:
         total, unique = ev[key]
@@ -218,7 +225,8 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"{line('Limit reached', 'limit_reached')}\n"
         f"{line('Reset', 'reset')} (wiped a stored CV — {reset_with_cv})\n\n"
         f"Waitlist — {acct['waitlist']}\n\n"
-        f"🎓 School21 pilot — {pilot['users']} users · {pilot['checks']} checks · avg {pilot['avg']}/user",
+        f"🎓 School21 pilot — {pilot['users']} users · {pilot['checks']} checks · avg {pilot['avg']}/user\n"
+        f"🏃 Chashma marathon — {chashma_count} users",
         parse_mode=ParseMode.HTML,
     )
 

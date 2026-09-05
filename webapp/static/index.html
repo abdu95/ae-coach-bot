@@ -174,7 +174,7 @@
       } catch (err) {
         console.error("CV status check failed:", err);
         document.getElementById("loading-gate").innerHTML =
-          '<div class="error">⚠️ Couldn\'t load your profile. Please try reopening from the bot.</div>';
+          `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Couldn't load your profile."))}</div>`;
       }
     }
     checkCVAndRoute();
@@ -197,17 +197,23 @@
       formData.append("init_data", tg.initData);
       formData.append("file", file);
 
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 45000);
       try {
-        const res = await fetch("/api/upload-cv", { method: "POST", body: formData });
+        const res = await fetch("/api/upload-cv", { method: "POST", body: formData, signal: controller.signal });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw new Error(body.detail || "Upload failed");
+          console.error("Upload failed:", res.status, body);
+          const err = new Error(body.detail || "");
+          if (res.status === 401) err.sessionExpired = true;
+          throw err;
         }
         showScreen("title-screen");
       } catch (err) {
         console.error("CV upload failed:", err);
-        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(err.message || "Upload failed, try again.")}</div>`;
+        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Upload failed, try again."))}</div>`;
       } finally {
+        clearTimeout(timeout);
         btn.disabled = false;
       }
     }
@@ -227,13 +233,7 @@
       chipsEl.innerHTML = '<div class="hint">🤖 Analyzing your CV…</div>';
 
       try {
-        const res = await fetch("/api/suggest-titles", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ init_data: tg.initData }),
-        });
-        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || "Couldn't get suggestions");
-        const data = await res.json();
+        const data = await callApi("/api/suggest-titles", {});
         chipsEl.innerHTML = "";
         for (const title of data.titles) {
           const chip = document.createElement("span");
@@ -245,7 +245,7 @@
       } catch (err) {
         console.error("Suggest titles failed:", err);
         chipsEl.innerHTML = "";
-        errEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(err.message || "Something went wrong.")}</div>`;
+        errEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Couldn't get suggestions, try again."))}</div>`;
       }
     }
 
@@ -283,45 +283,18 @@
       btn.disabled = true;
       resultEl.innerHTML = `<div class="hint">🔎 Searching for <b>${escapeHtml(state.jobTitle)}</b> in <b>${escapeHtml(location)}</b>… usually takes 15–30 seconds.</div>`;
 
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 45000);
-
       try {
-        const res = await fetch("/api/search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            init_data: tg.initData,
-            job_title: state.jobTitle,
-            location: location,
-            seen_companies: state.seenCompanies,
-          }),
-          signal: controller.signal,
+        const data = await callApi("/api/search", {
+          job_title: state.jobTitle,
+          location: location,
+          seen_companies: state.seenCompanies,
         });
-
-        if (!res.ok) {
-          console.error("Search request failed:", res.status, await res.text().catch(() => ""));
-          if (res.status === 401) {
-            throw new Error("FRIENDLY:Your session expired — close this and reopen it from the bot.");
-          }
-          throw new Error("FRIENDLY:Something went wrong on our end. Please try again in a moment.");
-        }
-
-        const data = await res.json();
         state.searchCount += 1;
         renderResult(data.vacancies);
       } catch (err) {
-        let friendly = "Something went wrong. Please try again.";
-        if (err.name === "AbortError") {
-          friendly = "That took too long and timed out. Please try again.";
-        } else if (typeof err.message === "string" && err.message.startsWith("FRIENDLY:")) {
-          friendly = err.message.slice("FRIENDLY:".length);
-        } else {
-          console.error("Search error:", err);
-        }
-        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendly)}</div>`;
+        console.error("Search error:", err);
+        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Search failed on our end. Please try again in a moment."))}</div>`;
       } finally {
-        clearTimeout(timeout);
         btn.disabled = false;
       }
     }
@@ -347,6 +320,7 @@
           <p>${escapeHtml(v.summary)}</p>
           <a href="${v.url}" target="_blank">View posting →</a>
         </div>
+        <div class="hint" style="margin-top:4px;">⚠️ This link is AI-found and may occasionally be outdated or already filled.</div>
         <div class="hint" style="margin-top:12px;">Like this one?</div>
         <div class="row">
           <button onclick="likeVacancy()">👍 Yes, I like it</button>
@@ -373,20 +347,45 @@
 
     async function callApi(path, body, btn) {
       if (btn) btn.disabled = true;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 45000);
       try {
         const res = await fetch(path, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ init_data: tg.initData, ...body }),
+          signal: controller.signal,
         });
         if (!res.ok) {
           const errBody = await res.json().catch(() => ({}));
-          throw new Error(errBody.detail || "Request failed");
+          console.error("API call failed:", path, res.status, errBody);
+          const err = new Error(errBody.detail || "");
+          if (res.status === 401) err.sessionExpired = true;
+          throw err;
         }
         return await res.json();
       } finally {
+        clearTimeout(timeout);
         if (btn) btn.disabled = false;
       }
+    }
+
+    // Maps any thrown error into a specific, non-technical message. Never
+    // shows raw server/network text to the user (that goes to console only).
+    function friendlyError(err, fallback) {
+      if (err && err.name === "AbortError") {
+        return "That took too long and timed out — please try again.";
+      }
+      if (err instanceof TypeError) {
+        return "Couldn't connect — check your internet connection and try again.";
+      }
+      if (err && err.sessionExpired) {
+        return "Your session expired — close this and reopen it from the bot.";
+      }
+      if (err && typeof err.message === "string" && err.message.trim()) {
+        return err.message;
+      }
+      return fallback || "Something went wrong. Please try again.";
     }
 
     async function applyDirectly() {
@@ -396,7 +395,7 @@
         renderSaved();
       } catch (err) {
         console.error("Apply failed:", err);
-        actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(err.message || "Couldn't save, try again.")}</div>`;
+        actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Couldn't save your application, try again."))}</div>`;
       }
     }
 
@@ -408,7 +407,7 @@
         renderScoreResult(score);
       } catch (err) {
         console.error("Scoring failed:", err);
-        actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(err.message || "Couldn't score your CV, try again.")}</div>`;
+        actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Couldn't score your CV, try again."))}</div>`;
       }
     }
 
@@ -447,7 +446,7 @@
         renderRecommendations(data.fixes);
       } catch (err) {
         console.error("Recommendations failed:", err);
-        actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(err.message || "Couldn't get recommendations, try again.")}</div>`;
+        actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Couldn't get recommendations, try again."))}</div>`;
       }
     }
 
@@ -493,17 +492,24 @@
       formData.append("init_data", tg.initData);
       formData.append("file", file);
 
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 45000);
       try {
-        const res = await fetch("/api/upload-cv", { method: "POST", body: formData });
+        const res = await fetch("/api/upload-cv", { method: "POST", body: formData, signal: controller.signal });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw new Error(body.detail || "Upload failed");
+          console.error("Improved CV upload failed:", res.status, body);
+          const err = new Error(body.detail || "");
+          if (res.status === 401) err.sessionExpired = true;
+          throw err;
         }
         state.improveCount += 1;
         renderPostImproveChoice();
       } catch (err) {
         console.error("Improved CV upload failed:", err);
-        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(err.message || "Upload failed, try again.")}</div>`;
+        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Upload failed, try again."))}</div>`;
+      } finally {
+        clearTimeout(timeout);
       }
     }
 

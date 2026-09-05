@@ -330,6 +330,15 @@ def set_quota_override(user_id: int, quota: int, source: str | None = None) -> b
         _pool.putconn(conn)
 
 
+def set_source(user_id: int, source: str) -> None:
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("UPDATE users SET source = %s WHERE telegram_id = %s", (source, user_id))
+    finally:
+        _pool.putconn(conn)
+
+
 def get_source(user_id: int) -> str | None:
     conn = _pool.getconn()
     try:
@@ -337,6 +346,16 @@ def get_source(user_id: int) -> str | None:
             cur.execute("SELECT source FROM users WHERE telegram_id = %s", (user_id,))
             row = cur.fetchone()
             return row[0] if row else None
+    finally:
+        _pool.putconn(conn)
+
+
+def source_count(source: str) -> int:
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT count(*) FROM users WHERE source = %s", (source,))
+            return cur.fetchone()[0]
     finally:
         _pool.putconn(conn)
 
