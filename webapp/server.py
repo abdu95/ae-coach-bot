@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import hmac
 import json
@@ -14,6 +15,7 @@ from pydantic import BaseModel
 
 load_dotenv()
 
+import cv_analysis  # local to this folder
 import cv_fixes  # local to this folder
 import cv_parser  # local to this folder
 import db  # local to this folder
@@ -26,6 +28,14 @@ logger = logging.getLogger(__name__)
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+# Payment - must match ae-coach-bot's values exactly (same Payme merchant,
+# same per-check price, same `orders` table payme-webhook reads from).
+PAYME_ID = os.getenv("PAYME_ID", "")
+PRICE_PER_CHECK_TIYIN = int(os.getenv("PRICE_PER_CHECK_TIYIN", "1000000"))
+BOT_USERNAME = os.getenv("BOT_USERNAME", "")
+MIN_CHECKS_PURCHASE = 1
+MAX_CHECKS_PURCHASE = 100
 
 app = FastAPI()
 
@@ -262,6 +272,99 @@ async def delete_application(req: DeleteApplicationRequest):
     if not found:
         raise HTTPException(404, "Application not found")
     return {"deleted": True}
+
+
+class AnalyzeRequest(BaseModel):
+    init_data: str
+    jd: str
+
+
+@app.post("/api/cv-jd-analysis")
+async def cv_jd_analysis(req: AnalyzeRequest):
+    user = authenticate(req.init_data)
+    cv_text = db.get_cv_text(user["id"])
+    if not cv_text:
+        raise HTTPException(400, "No CV on file - upload one first")
+    if len(req.jd.strip()) < 100:
+        raise HTTPException(400, "Job description looks too short")
+
+    usage_count, quota = db.get_quota_status(user["id"])
+    if usage_count >= quota:
+        return {"limit_reached": True, "remaining": 0, "quota": quota}
+
+    try:
+        outputs = await cv_analysis.analyze_cv(req.jd, cv_text)
+    except Exception:
+        logger.exception("CV/JD analysis failed")
+        raise HTTPException(502, "Analysis failed, try again")
+
+    db.increment_usage_count(user["id"])
+    usage_count, quota = db.get_quota_status(user["id"])
+    remaining = max(0, quota - usage_count)
+    return {"limit_reached": False, "remaining": remaining, "quota": quota, **outputs}
+
+
+class RoadmapItemRequest(BaseModel):
+    init_data: str
+    jd: str
+    level: str
+    item: int
+
+
+@app.post("/api/roadmap-item")
+async def roadmap_item(req: RoadmapItemRequest):
+    user = authenticate(req.init_data)
+    cv_text = db.get_cv_text(user["id"])
+    if not cv_text:
+        raise HTTPException(400, "No CV on file - upload one first")
+
+    title = cv_analysis.roadmap_block_title(req.level, req.item)
+    max_item = cv_analysis.roadmap_max_item(req.level)
+
+    try:
+        if title == "CV Fixes":
+            fixes = await cv_analysis.generate_cv_fixes(req.level, req.jd, cv_text)
+            return {"title": title, "fixes": fixes, "is_last": req.item >= max_item}
+        text = await cv_analysis.generate_roadmap_item(req.level, req.item, req.jd, cv_text)
+        return {"title": title, "text": text, "is_last": req.item >= max_item}
+    except Exception:
+        logger.exception("Roadmap item generation failed")
+        raise HTTPException(502, "Couldn't generate this section, try again")
+
+
+class QuotaStatusRequest(BaseModel):
+    init_data: str
+
+
+@app.post("/api/quota-status")
+async def quota_status(req: QuotaStatusRequest):
+    user = authenticate(req.init_data)
+    usage_count, quota = db.get_quota_status(user["id"])
+    return {
+        "remaining": max(0, quota - usage_count),
+        "quota": quota,
+        "price_per_check_tiyin": PRICE_PER_CHECK_TIYIN,
+    }
+
+
+class CheckoutRequest(BaseModel):
+    init_data: str
+    checks: int
+
+
+@app.post("/api/checkout")
+async def checkout(req: CheckoutRequest):
+    user = authenticate(req.init_data)
+    if not (MIN_CHECKS_PURCHASE <= req.checks <= MAX_CHECKS_PURCHASE):
+        raise HTTPException(400, f"Choose between {MIN_CHECKS_PURCHASE} and {MAX_CHECKS_PURCHASE} checks")
+    if not PAYME_ID:
+        raise HTTPException(500, "Payment is not configured")
+
+    amount = req.checks * PRICE_PER_CHECK_TIYIN
+    order_id = db.get_or_create_order(user["id"], amount, f"{req.checks}_checks")
+    raw = f"m={PAYME_ID};ac.order_id={order_id};a={amount};c=https://t.me/{BOT_USERNAME}"
+    checkout_url = "https://checkout.paycom.uz/" + base64.b64encode(raw.encode()).decode()
+    return {"checkout_url": checkout_url, "amount": amount, "checks": req.checks}
 
 
 @app.get("/api/health")

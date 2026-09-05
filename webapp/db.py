@@ -178,6 +178,72 @@ def list_applications(telegram_id: int) -> list[dict]:
         pool.putconn(conn)
 
 
+# Must match ae-coach-bot's FREE_LIMIT (bot/bot.py) - same quota pool,
+# shared `users.checks_used`/`quota_override` columns.
+FREE_LIMIT = int(os.getenv("FREE_LIMIT", "2"))
+
+
+def get_quota_status(telegram_id: int) -> tuple[int, int]:
+    """Returns (usage_count, effective_quota), mirroring bot/state.py's
+    get_quota_override + bot/bot.py's effective_quota exactly - a real
+    quota_override (set by an admin /grant or a Payme purchase, from
+    either service) always wins over FREE_LIMIT."""
+    pool = get_pool()
+    conn = pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT checks_used, quota_override FROM users WHERE telegram_id = %s", (telegram_id,))
+            row = cur.fetchone()
+            if not row:
+                return 0, FREE_LIMIT
+            checks_used, quota_override = row
+            return checks_used, (quota_override if quota_override is not None else FREE_LIMIT)
+    finally:
+        pool.putconn(conn)
+
+
+def increment_usage_count(telegram_id: int) -> None:
+    """Called once, only after a successful analyze_cv - matches the bot's
+    exact quota semantics (roadmap/CV-fix follow-ons stay free)."""
+    pool = get_pool()
+    conn = pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("UPDATE users SET checks_used = checks_used + 1 WHERE telegram_id = %s", (telegram_id,))
+    finally:
+        pool.putconn(conn)
+
+
+def get_or_create_order(telegram_id: int, amount: int, package: str) -> int:
+    """Same `orders` table and reuse-pending-order logic as
+    bot/state.py's get_or_create_order - orders created here are
+    indistinguishable to payme-webhook from ones created by the bot."""
+    pool = get_pool()
+    conn = pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("""
+                UPDATE orders SET amount = %s
+                WHERE id = (
+                    SELECT id FROM orders
+                    WHERE telegram_id = %s AND package = %s AND state = 'pending'
+                    ORDER BY created_at DESC LIMIT 1
+                )
+                RETURNING id
+            """, (amount, telegram_id, package))
+            row = cur.fetchone()
+            if row:
+                return row[0]
+            cur.execute("""
+                INSERT INTO orders (telegram_id, amount, package)
+                VALUES (%s, %s, %s)
+                RETURNING id
+            """, (telegram_id, amount, package))
+            return cur.fetchone()[0]
+    finally:
+        pool.putconn(conn)
+
+
 def check_connection() -> dict:
     """Health check: confirms we can reach Postgres and that the
     applications table (created by the bot) is visible from here."""
