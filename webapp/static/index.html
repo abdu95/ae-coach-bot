@@ -94,6 +94,9 @@
       btn.disabled = true;
       resultEl.innerHTML = `<div class="hint">🔎 Searching for <b>${escapeHtml(jobTitle)}</b> in <b>${escapeHtml(location)}</b>… usually takes 15–30 seconds.</div>`;
 
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 45000);
+
       try {
         const res = await fetch("/api/search", {
           method: "POST",
@@ -103,13 +106,32 @@
             job_title: jobTitle,
             location: location,
           }),
+          signal: controller.signal,
         });
-        if (!res.ok) throw new Error(await res.text());
+
+        if (!res.ok) {
+          const rawText = await res.text().catch(() => "");
+          console.error("Search request failed:", res.status, rawText);
+          if (res.status === 401) {
+            throw new Error("FRIENDLY:Your session expired — close this and reopen it from the bot.");
+          }
+          throw new Error("FRIENDLY:Something went wrong on our end. Please try again in a moment.");
+        }
+
         const data = await res.json();
         renderResult(data.vacancies);
       } catch (err) {
-        resultEl.innerHTML = `<div class="error">Search failed: ${err.message}</div>`;
+        let friendly = "Something went wrong. Please try again.";
+        if (err.name === "AbortError") {
+          friendly = "That took too long and timed out. Please try again.";
+        } else if (typeof err.message === "string" && err.message.startsWith("FRIENDLY:")) {
+          friendly = err.message.slice("FRIENDLY:".length);
+        } else {
+          console.error("Search error:", err);
+        }
+        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendly)}</div>`;
       } finally {
+        clearTimeout(timeout);
         btn.disabled = false;
       }
     }
