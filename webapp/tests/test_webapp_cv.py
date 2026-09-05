@@ -183,4 +183,24 @@ with mock.patch.object(db, "ensure_user"), \
     m_save.assert_called_once_with(777, TEST_VACANCY, "cv", None)
 print("PASS: apply works with score=None (direct-apply path)")
 
+# --- Test 15: applications list returns the current user's rows ---
+fake_rows = [{
+    "id": 1, "title": "Data Analyst", "company": "Acme", "location": "Remote",
+    "url": "https://example.com", "match_score": 80, "status": "applied",
+    "created_at": "2026-09-05T12:00:00+00:00",
+}]
+with mock.patch.object(db, "ensure_user") as m_ensure, \
+     mock.patch.object(db, "list_applications", return_value=fake_rows) as m_list:
+    resp = client.post("/api/applications", json={"init_data": init_data})
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"applications": fake_rows}
+    m_ensure.assert_called_once_with(777, "testuser", "Test")
+    m_list.assert_called_once_with(777)
+print("PASS: applications list returns the current user's tracked rows")
+
+# --- Test 16: applications list rejects tampered signature (same as every other endpoint) ---
+resp = client.post("/api/applications", json={"init_data": tampered})
+assert resp.status_code == 401, resp.text
+print("PASS: applications list rejects tampered signature")
+
 print("\nALL CV-UPLOAD FLOW CHECKS PASSED")

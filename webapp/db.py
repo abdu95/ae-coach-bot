@@ -101,6 +101,31 @@ def save_application(telegram_id: int, vacancy: dict, cv_snapshot: str,
         pool.putconn(conn)
 
 
+def list_applications(telegram_id: int) -> list[dict]:
+    pool = get_pool()
+    conn = pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("""
+                SELECT id, vacancy_title, vacancy_company, vacancy_location, vacancy_url,
+                       match_score, status, created_at
+                FROM applications
+                WHERE telegram_id = %s
+                ORDER BY created_at DESC
+            """, (telegram_id,))
+            rows = cur.fetchall()
+        return [
+            {
+                "id": r[0], "title": r[1], "company": r[2], "location": r[3],
+                "url": r[4], "match_score": r[5], "status": r[6],
+                "created_at": r[7].isoformat(),
+            }
+            for r in rows
+        ]
+    finally:
+        pool.putconn(conn)
+
+
 def check_connection() -> dict:
     """Health check: confirms we can reach Postgres and that the
     applications table (created by the bot) is visible from here."""

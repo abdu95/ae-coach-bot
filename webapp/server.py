@@ -217,6 +217,21 @@ async def apply(req: ApplyRequest):
     return {"saved": True}
 
 
+class ApplicationsRequest(BaseModel):
+    init_data: str
+
+
+@app.post("/api/applications")
+async def list_applications(req: ApplicationsRequest):
+    user = authenticate(req.init_data)
+    try:
+        applications = db.list_applications(user["id"])
+    except Exception:
+        logger.exception("Listing applications failed")
+        raise HTTPException(500, "Couldn't load your applications, try again")
+    return {"applications": applications}
+
+
 @app.get("/api/health")
 async def health():
     try:

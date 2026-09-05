@@ -89,7 +89,10 @@
 </style>
 </head>
 <body>
-  <h2 id="greeting">AcceptedAI</h2>
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h2 id="greeting">AcceptedAI</h2>
+    <button id="nav-applications" class="link" onclick="showApplications()" hidden style="margin:0;">📋 My Applications</button>
+  </div>
 
   <div id="loading-gate" class="hint">Loading…</div>
 
@@ -136,6 +139,14 @@
     <div id="result"></div>
   </div>
 
+  <div id="applications-screen" hidden>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div class="hint" style="margin:0;">Your tracked applications</div>
+      <button class="link" onclick="showScreen('title-screen')" style="margin:0;">← back</button>
+    </div>
+    <div id="applications-list"></div>
+  </div>
+
   <script>
     const tg = window.Telegram?.WebApp;
     if (tg) {
@@ -151,7 +162,7 @@
     const MAX_SEARCHES = 3;
 
     function showScreen(id) {
-      for (const s of ["loading-gate", "cv-gate", "title-screen", "search-screen"]) {
+      for (const s of ["loading-gate", "cv-gate", "title-screen", "search-screen", "applications-screen"]) {
         document.getElementById(s).hidden = (s !== id);
       }
     }
@@ -171,6 +182,7 @@
         if (!res.ok) throw new Error("status check failed");
         const data = await res.json();
         showScreen(data.has_cv ? "title-screen" : "cv-gate");
+        document.getElementById("nav-applications").hidden = false;
       } catch (err) {
         console.error("CV status check failed:", err);
         document.getElementById("loading-gate").innerHTML =
@@ -264,6 +276,48 @@
 
     function backToTitleScreen() {
       showScreen("title-screen");
+    }
+
+    const STATUS_LABELS = {
+      applied: "Applied", phone_screen: "Phone screen", tech_interview: "Tech interview",
+      offer: "Offer 🎉", rejected: "Rejected", ghosted: "Ghosted",
+    };
+
+    async function showApplications() {
+      showScreen("applications-screen");
+      const listEl = document.getElementById("applications-list");
+      listEl.innerHTML = '<div class="hint">Loading…</div>';
+
+      try {
+        const data = await callApi("/api/applications", {});
+        renderApplications(data.applications);
+      } catch (err) {
+        console.error("Loading applications failed:", err);
+        listEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Couldn't load your applications."))}</div>`;
+      }
+    }
+
+    function renderApplications(applications) {
+      const listEl = document.getElementById("applications-list");
+      if (!applications || applications.length === 0) {
+        listEl.innerHTML = '<div class="hint">Nothing tracked yet — like a vacancy and apply to see it here.</div>';
+        return;
+      }
+      listEl.innerHTML = applications.map(a => {
+        const date = new Date(a.created_at).toLocaleDateString();
+        const status = STATUS_LABELS[a.status] || a.status;
+        const scoreLine = (a.match_score !== null && a.match_score !== undefined)
+          ? `<div>${a.match_score}% match</div>` : "";
+        return `
+          <div class="card" style="margin-bottom:8px;">
+            <h3>${escapeHtml(a.title)}</h3>
+            <div class="company">${escapeHtml(a.company)}${a.location ? " · " + escapeHtml(a.location) : ""}</div>
+            ${scoreLine}
+            <div>Status: <b>${escapeHtml(status)}</b> · ${escapeHtml(date)}</div>
+            ${a.url ? `<a href="${a.url}" target="_blank">View posting →</a>` : ""}
+          </div>
+        `;
+      }).join("");
     }
 
     async function search() {
@@ -531,7 +585,10 @@
     }
 
     function renderSaved() {
-      actionArea().innerHTML = '<div class="hint">✅ Saved to your tracked applications.</div>';
+      actionArea().innerHTML = `
+        <div class="hint">✅ Saved to your tracked applications.</div>
+        <button class="secondary" onclick="showApplications()">📋 View my applications</button>
+      `;
     }
 
     function escapeHtml(text) {
