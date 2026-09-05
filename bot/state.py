@@ -59,6 +59,32 @@ def init_db() -> None:
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_events_type_time ON events (event_type, created_at)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_events_user ON events (telegram_id)")
+            # One row per tracked application. cv_snapshot/match_score/matched_keywords/
+            # missing_keywords capture which CV version was used and how it scored
+            # against this vacancy at the moment of applying - the exact link a
+            # spreadsheet can't give you (see backlog doc §5, Application Tracking).
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS applications (
+                    id                 BIGSERIAL PRIMARY KEY,
+                    telegram_id        BIGINT NOT NULL REFERENCES users(telegram_id),
+                    vacancy_title      TEXT NOT NULL,
+                    vacancy_company    TEXT NOT NULL,
+                    vacancy_location   TEXT,
+                    vacancy_url        TEXT,
+                    vacancy_summary    TEXT,
+                    cv_snapshot        TEXT,
+                    match_score        INT,
+                    matched_keywords   JSONB,
+                    missing_keywords   JSONB,
+                    status             TEXT NOT NULL DEFAULT 'applied',
+                    recruiter_contacted BOOLEAN NOT NULL DEFAULT FALSE,
+                    notes              TEXT,
+                    source             TEXT,
+                    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_applications_telegram_id ON applications (telegram_id)")
             _migrate_legacy_state(cur)
     finally:
         _pool.putconn(conn)
