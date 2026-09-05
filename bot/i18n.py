@@ -318,6 +318,112 @@ ROADMAP_WAIT_NOTE = {
     "ru": "Обычно занимает 15–20 секунд.",
 }
 
+JOBS_NEED_CV = {
+    "en": "Please upload your CV first so I can suggest matching roles. 📄",
+    "uz": "Mos lavozimlarni taklif qilishim uchun avval CV'ingizni yuklang. 📄",
+    "ru": "Пожалуйста, сначала загрузите резюме, чтобы я мог предложить подходящие вакансии. 📄",
+}
+
+JOBS_FINDING_TITLES = {
+    "en": "🔍 Analyzing your CV to find matching job titles…",
+    "uz": "🔍 Mos lavozimlarni topish uchun CV'ingiz tahlil qilinmoqda…",
+    "ru": "🔍 Анализирую резюме, чтобы подобрать подходящие должности…",
+}
+
+JOBS_TITLES_FAILED = {
+    "en": "❌ Couldn't generate job title suggestions. Send /jobs to try again.",
+    "uz": "❌ Lavozim takliflarini yaratib bo'lmadi. Qaytadan urinish uchun /jobs yuboring.",
+    "ru": "❌ Не удалось подобрать варианты должностей. Отправьте /jobs, чтобы попробовать снова.",
+}
+
+JOBS_PICK_TITLE = {
+    "en": "Which of these fits what you're looking for?",
+    "uz": "Ulardan qaysi biri sizga mos keladi?",
+    "ru": "Какой из вариантов вам подходит?",
+}
+
+JOBS_REGENERATE_BUTTON = {
+    "en": "🔄 Suggest different titles",
+    "uz": "🔄 Boshqa lavozimlarni taklif qilish",
+    "ru": "🔄 Предложить другие варианты",
+}
+
+JOBS_ASK_LOCATION = {
+    "en": "Which location? (e.g. Tashkent, Remote, Europe)",
+    "uz": "Qaysi joylashuv? (masalan: Toshkent, Remote, Yevropa)",
+    "ru": "Какая локация? (например: Ташкент, Remote, Европа)",
+}
+
+JOBS_ASK_WORK_SETUP = {
+    "en": "What work setup do you want?",
+    "uz": "Qanday ish formatini xohlaysiz?",
+    "ru": "Какой формат работы вам нужен?",
+}
+
+WORK_SETUP_REMOTE = {"en": "🏠 Remote", "uz": "🏠 Masofaviy", "ru": "🏠 Удалённо"}
+WORK_SETUP_HYBRID = {"en": "🔀 Hybrid", "uz": "🔀 Gibrid", "ru": "🔀 Гибрид"}
+WORK_SETUP_ONSITE = {"en": "🏢 Onsite", "uz": "🏢 Ofisda", "ru": "🏢 В офисе"}
+
+JOBS_ASK_INDUSTRY = {
+    "en": "Any specific industry? (or tap Skip)",
+    "uz": "Ma'lum bir soha bormi? (yoki O'tkazib yuborish tugmasini bosing)",
+    "ru": "Есть предпочтения по отрасли? (или нажмите «Пропустить»)",
+}
+
+JOBS_INDUSTRY_SKIP_BUTTON = {
+    "en": "Skip →",
+    "uz": "O'tkazib yuborish →",
+    "ru": "Пропустить →",
+}
+
+JOBS_SEARCHING = {
+    "en": "🔎 Searching for a matching vacancy… usually takes 15–30 seconds.",
+    "uz": "🔎 Mos vakansiya qidirilmoqda… odatda 15–30 soniya vaqt oladi.",
+    "ru": "🔎 Ищу подходящую вакансию… обычно занимает 15–30 секунд.",
+}
+
+JOBS_SEARCH_FAILED = {
+    "en": "❌ Search failed. Try again in a moment.",
+    "uz": "❌ Qidiruv amalga oshmadi. Birozdan keyin qayta urinib ko'ring.",
+    "ru": "❌ Поиск не удался. Попробуйте ещё раз через некоторое время.",
+}
+
+JOBS_NO_MATCH = {
+    "en": "No matching posting found — try different criteria with /jobs.",
+    "uz": "Mos e'lon topilmadi — /jobs orqali boshqa mezonlar bilan urinib ko'ring.",
+    "ru": "Подходящая вакансия не найдена — попробуйте другие критерии через /jobs.",
+}
+
+JOBS_SEARCH_AGAIN_BUTTON = {
+    "en": "🔄 Search again",
+    "uz": "🔄 Qayta qidirish",
+    "ru": "🔄 Искать снова",
+}
+
+JOBS_PICK_BUTTON = {
+    "en": "✅ Pick this one",
+    "uz": "✅ Shuni tanlash",
+    "ru": "✅ Выбрать эту",
+}
+
+JOBS_SEARCH_CAP_REACHED = {
+    "en": "You've reached the search limit for this session — pick one of the postings above, or send /jobs again later.",
+    "uz": "Ushbu sessiya uchun qidiruv chegarasiga yetdingiz — yuqoridagi e'lonlardan birini tanlang yoki keyinroq qaytadan /jobs yuboring.",
+    "ru": "Вы достигли лимита поиска на эту сессию — выберите одну из показанных вакансий или отправьте /jobs позже снова.",
+}
+
+JOBS_PICKED = {
+    "en": "✅ Saved. This is now your target vacancy.",
+    "uz": "✅ Saqlandi. Bu endi sizning maqsadli vakansiyangiz.",
+    "ru": "✅ Сохранено. Это теперь ваша целевая вакансия.",
+}
+
+VACANCY_SEARCH_LABEL = {"en": "Search", "uz": "Qidiruv", "ru": "Поиск"}
+VACANCY_MATCH_LABEL = {"en": "Match", "uz": "Moslik", "ru": "Соответствие"}
+VACANCY_MATCHED_LABEL = {"en": "Matched", "uz": "Mos keldi", "ru": "Совпало"}
+VACANCY_MISSING_LABEL = {"en": "Missing", "uz": "Yetishmayapti", "ru": "Отсутствует"}
+VACANCY_VIEW_POSTING = {"en": "View job posting", "uz": "E'lonni ko'rish", "ru": "Посмотреть вакансию"}
+
 STEP_HEADERS = {
     "ats": {
         "en": "📊 Step 1 — ATS Score",
@@ -458,6 +564,30 @@ STRINGS = {
     "assess_level_button": ASSESS_LEVEL_BUTTON,
     "get_roadmap_button": GET_ROADMAP_BUTTON,
     "next_fix_button": NEXT_FIX_BUTTON,
+    "jobs_need_cv": JOBS_NEED_CV,
+    "jobs_finding_titles": JOBS_FINDING_TITLES,
+    "jobs_titles_failed": JOBS_TITLES_FAILED,
+    "jobs_pick_title": JOBS_PICK_TITLE,
+    "jobs_regenerate_button": JOBS_REGENERATE_BUTTON,
+    "jobs_ask_location": JOBS_ASK_LOCATION,
+    "jobs_ask_work_setup": JOBS_ASK_WORK_SETUP,
+    "work_setup_remote": WORK_SETUP_REMOTE,
+    "work_setup_hybrid": WORK_SETUP_HYBRID,
+    "work_setup_onsite": WORK_SETUP_ONSITE,
+    "jobs_ask_industry": JOBS_ASK_INDUSTRY,
+    "jobs_industry_skip_button": JOBS_INDUSTRY_SKIP_BUTTON,
+    "jobs_searching": JOBS_SEARCHING,
+    "jobs_search_failed": JOBS_SEARCH_FAILED,
+    "jobs_no_match": JOBS_NO_MATCH,
+    "jobs_search_again_button": JOBS_SEARCH_AGAIN_BUTTON,
+    "jobs_pick_button": JOBS_PICK_BUTTON,
+    "jobs_search_cap_reached": JOBS_SEARCH_CAP_REACHED,
+    "jobs_picked": JOBS_PICKED,
+    "vacancy_search_label": VACANCY_SEARCH_LABEL,
+    "vacancy_match_label": VACANCY_MATCH_LABEL,
+    "vacancy_matched_label": VACANCY_MATCHED_LABEL,
+    "vacancy_missing_label": VACANCY_MISSING_LABEL,
+    "vacancy_view_posting": VACANCY_VIEW_POSTING,
 }
 
 

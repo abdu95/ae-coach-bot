@@ -19,6 +19,7 @@ import state
 import coach
 import formatter
 import i18n
+import vacancy_source
 
 logging.basicConfig(
     format="%(asctime)s — %(name)s — %(levelname)s — %(message)s",
@@ -154,6 +155,19 @@ async def app_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
+async def jobs_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = update.effective_user.id
+    user = state.get(user_id)
+    state.log_event(user_id, "jobs_started")
+
+    if not user.get("cv_text"):
+        user["phase"] = "waiting_cv_for_jobs"
+        await update.message.reply_text(i18n.t("jobs_need_cv", user["lang"]), parse_mode=ParseMode.HTML)
+        return
+
+    await start_job_title_suggestion(update.message, user_id)
+
+
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_user.id not in ADMIN_IDS:
         return
@@ -241,17 +255,105 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 for row in table.rows:
                     paragraphs.append("\t".join(cell.text for cell in row.cells))
             user["cv_text"] = "\n".join(paragraphs)
-        user["phase"] = "waiting_jd"
+        came_from_jobs = user["phase"] == "waiting_cv_for_jobs"
+        user["phase"] = "waiting_jd" if not came_from_jobs else "idle"
     except Exception as e:
         logger.error(f"CV read error: {e}")
         await msg.edit_text(i18n.t("cv_read_error", user["lang"]))
         return
 
     await msg.delete()
+
+    if came_from_jobs:
+        await start_job_title_suggestion(update.message, user_id)
+        return
+
     await update.message.reply_text(
         i18n.t("cv_received", user["lang"]),
         parse_mode=ParseMode.HTML,
     )
+
+
+# ── Vacancy suggestion flow (/jobs) ───────────────────────────────────────────
+
+def work_setup_markup(lang: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(i18n.t("work_setup_remote", lang), callback_data="worksetup_remote")],
+        [InlineKeyboardButton(i18n.t("work_setup_hybrid", lang), callback_data="worksetup_hybrid")],
+        [InlineKeyboardButton(i18n.t("work_setup_onsite", lang), callback_data="worksetup_onsite")],
+    ])
+
+
+async def start_job_title_suggestion(message, user_id: int) -> None:
+    user = state.get(user_id)
+    user["suggested_titles"] = []
+    user["seen_companies"] = []
+    user["search_count"] = 0
+    user["current_vacancy"] = None
+    user["chosen_vacancy"] = None
+    user["job_title"] = ""
+    user["location"] = ""
+    user["work_setup"] = ""
+    user["industry"] = ""
+
+    loading = await message.reply_text(i18n.t("jobs_finding_titles", user["lang"]))
+    try:
+        titles = await coach.suggest_job_titles(user["cv_text"])
+    except Exception as e:
+        logger.error(f"Job title suggestion error: {e}")
+        await loading.edit_text(i18n.t("jobs_titles_failed", user["lang"]))
+        return
+
+    user["suggested_titles"] = titles
+    user["phase"] = "waiting_job_title"
+    await loading.delete()
+
+    buttons = [[InlineKeyboardButton(title, callback_data=f"jobtitle_{i}")] for i, title in enumerate(titles)]
+    buttons.append([InlineKeyboardButton(i18n.t("jobs_regenerate_button", user["lang"]), callback_data="jobtitle_regenerate")])
+    await message.reply_text(
+        i18n.t("jobs_pick_title", user["lang"]),
+        reply_markup=InlineKeyboardMarkup(buttons),
+    )
+
+
+async def run_vacancy_search(message, user_id: int) -> None:
+    user = state.get(user_id)
+    loading = await message.reply_text(i18n.t("jobs_searching", user["lang"]))
+
+    try:
+        vacancies = await vacancy_source.search_vacancies(
+            user["job_title"], user["location"] or "Any",
+            user["work_setup"] or "Any", user["industry"] or "Any",
+            seen_companies=user["seen_companies"],
+        )
+    except Exception as e:
+        logger.error(f"Vacancy search error: {e}")
+        await loading.edit_text(i18n.t("jobs_search_failed", user["lang"]))
+        return
+
+    user["search_count"] += 1
+
+    if not vacancies:
+        await loading.edit_text(i18n.t("jobs_no_match", user["lang"]))
+        return
+
+    vacancy = vacancies[0]
+    try:
+        score = await coach.score_vacancy(user["cv_text"], vacancy)
+    except Exception as e:
+        logger.error(f"Vacancy score error: {e}")
+        await loading.edit_text(i18n.t("jobs_search_failed", user["lang"]))
+        return
+
+    user["current_vacancy"] = vacancy
+    user["seen_companies"].append(vacancy["company"])
+    await loading.delete()
+
+    card = formatter.vacancy_card(vacancy, score, user["search_count"], 3, user["lang"])
+    buttons = [[InlineKeyboardButton(i18n.t("jobs_pick_button", user["lang"]), callback_data="vacancy_pick")]]
+    if user["search_count"] < 3:
+        buttons.append([InlineKeyboardButton(i18n.t("jobs_search_again_button", user["lang"]), callback_data="vacancy_again")])
+    await message.reply_text(card, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(buttons))
 
 
 # ── JD text → run analysis ────────────────────────────────────────────────────
@@ -268,6 +370,20 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         state.log_event(user_id, "name_provided")
         await update.message.reply_text(i18n.stats_and_privacy(name, user["lang"]))
         await update.message.reply_text(i18n.t("welcome", user["lang"]), parse_mode=ParseMode.HTML)
+        return
+
+    if user["phase"] == "waiting_location":
+        user["location"] = text[:100]
+        user["phase"] = "waiting_work_setup"
+        await update.message.reply_text(
+            i18n.t("jobs_ask_work_setup", user["lang"]),
+            reply_markup=work_setup_markup(user["lang"]),
+        )
+        return
+
+    if user["phase"] == "waiting_industry":
+        user["industry"] = text[:100]
+        await run_vacancy_search(update.message, user_id)
         return
 
     if user["phase"] != "waiting_jd":
@@ -417,6 +533,44 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await message.reply_text(i18n.t("waitlist_joined", user["lang"]))
         return
 
+    if action == "jobtitle_regenerate":
+        await start_job_title_suggestion(message, user_id)
+        return
+
+    if action.startswith("jobtitle_"):
+        index = int(action.split("_")[1])
+        user["job_title"] = user["suggested_titles"][index]
+        user["phase"] = "waiting_location"
+        await message.reply_text(i18n.t("jobs_ask_location", user["lang"]))
+        return
+
+    if action.startswith("worksetup_"):
+        user["work_setup"] = action.split("_", 1)[1]
+        user["phase"] = "waiting_industry"
+        await message.reply_text(
+            i18n.t("jobs_ask_industry", user["lang"]),
+            reply_markup=action_button(i18n.t("jobs_industry_skip_button", user["lang"]), "industry_skip"),
+        )
+        return
+
+    if action == "industry_skip":
+        user["industry"] = ""
+        await run_vacancy_search(message, user_id)
+        return
+
+    if action == "vacancy_again":
+        if user["search_count"] >= 3:
+            await message.reply_text(i18n.t("jobs_search_cap_reached", user["lang"]))
+            return
+        await run_vacancy_search(message, user_id)
+        return
+
+    if action == "vacancy_pick":
+        user["chosen_vacancy"] = user["current_vacancy"]
+        state.log_event(user_id, "vacancy_picked", metadata={"company": user["current_vacancy"]["company"]})
+        await message.reply_text(i18n.t("jobs_picked", user["lang"]))
+        return
+
     if not user.get("outputs"):
         await message.reply_text(i18n.t("session_expired", user["lang"]))
         return
@@ -471,6 +625,7 @@ def main() -> None:
     app.add_handler(CommandHandler("reset", state.persisting(reset_cmd)))
     app.add_handler(CommandHandler("language", state.persisting(language_cmd)))
     app.add_handler(CommandHandler("app", state.persisting(app_cmd)))
+    app.add_handler(CommandHandler("jobs", state.persisting(jobs_cmd)))
     app.add_handler(CommandHandler("stats", state.persisting(stats)))
     app.add_handler(CommandHandler("grant", state.persisting(grant_cmd)))
     app.add_handler(MessageHandler(filters.Document.ALL, state.persisting(handle_document)))

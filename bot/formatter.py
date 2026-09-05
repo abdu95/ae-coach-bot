@@ -185,19 +185,19 @@ def _bold(text: str) -> str:
     return "".join(result)
 
 
-def vacancy_card(vacancy: dict, score: dict, index: int, total: int) -> str:
+def vacancy_card(vacancy: dict, score: dict, index: int, total: int, lang: str = "en") -> str:
     pct = score.get("score", 0)
     bar = _score_bar(pct)
     matched = ", ".join(score.get("matched", [])) or "none"
     missing = ", ".join(score.get("missing", [])) or "none"
 
     return (
-        f"<b>Search {index} of {total} · {pct}% Match</b>\n"
+        f"<b>{i18n.t('vacancy_search_label', lang)} {index} {'/' if lang != 'en' else 'of'} {total} · {pct}% {i18n.t('vacancy_match_label', lang)}</b>\n"
         f"{bar}\n\n"
         f"<b>{_esc(vacancy['title'])}</b> @ <b>{_esc(vacancy['company'])}</b>\n"
         f"📍 {_esc(vacancy['location'])}\n\n"
         f"{_esc(vacancy['summary'])}\n\n"
-        f"✅ <b>Matched:</b> {_esc(matched)}\n"
-        f"❌ <b>Missing:</b> {_esc(missing)}\n\n"
-        f"🔗 <a href='{vacancy['url']}'>View job posting</a>"
+        f"✅ <b>{i18n.t('vacancy_matched_label', lang)}:</b> {_esc(matched)}\n"
+        f"❌ <b>{i18n.t('vacancy_missing_label', lang)}:</b> {_esc(missing)}\n\n"
+        f"🔗 <a href='{vacancy['url']}'>{i18n.t('vacancy_view_posting', lang)}</a>"
     )
