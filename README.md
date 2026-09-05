@@ -46,6 +46,7 @@ cd ae-coach-bot
 cp .env.example .env
 # Edit .env and add your tokens and DATABASE_URL
 
+cd bot
 pip install -r requirements.txt
 python bot.py
 ```
@@ -55,9 +56,10 @@ python bot.py
 1. Push to GitHub
 2. Go to https://railway.app → New Project → Deploy from GitHub
 3. Select your repo
-4. In the same project: New → Database → Add PostgreSQL
-5. In the bot service's Variables tab, add a reference to the Postgres `DATABASE_URL` (Railway's "Add Reference" option), plus `TELEGRAM_TOKEN` and `ANTHROPIC_API_KEY`
-6. Railway auto-detects Python and runs `python bot.py`
+4. In the bot service's Settings → Source, set **Root Directory** to `bot` — the repo also has a separate `webapp/` service (Telegram Mini App), and without this the build can pick up the wrong dependencies/start command from it
+5. In the same project: New → Database → Add PostgreSQL
+6. In the bot service's Variables tab, add a reference to the Postgres `DATABASE_URL` (Railway's "Add Reference" option), plus `TELEGRAM_TOKEN` and `ANTHROPIC_API_KEY`
+7. Railway auto-detects Python and runs `python bot.py`
 
 No Dockerfile needed. Free tier is enough for low-traffic usage.
 
@@ -65,11 +67,13 @@ No Dockerfile needed. Free tier is enough for low-traffic usage.
 
 | File | Purpose |
 |---|---|
-| `bot.py` | Main entry point, all Telegram handlers |
-| `coach.py` | Anthropic API calls (analyze + roadmap) |
-| `state.py` | Per-user conversation state (Postgres-backed, in-memory cache) |
-| `prompts.py` | All Claude prompts per level |
-| `formatter.py` | Format outputs as Telegram HTML |
+| `bot/bot.py` | Main entry point, all Telegram handlers |
+| `bot/coach.py` | Anthropic API calls (analyze + roadmap) |
+| `bot/state.py` | Per-user conversation state (Postgres-backed, in-memory cache) |
+| `bot/prompts.py` | All Claude prompts per level |
+| `bot/formatter.py` | Format outputs as Telegram HTML |
+| `bot/vacancy_source.py` | Swappable vacancy-search interface used by the bot |
+| `webapp/` | Telegram Mini App (separate Railway service) for vacancy search |
 
 ## Notes
 
