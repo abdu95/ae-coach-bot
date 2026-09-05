@@ -109,6 +109,14 @@ const I18N = {
     uz: "Ushbu lavozim uchun qidiruv chegarasiga yetdingiz — qayta qidirish uchun uni yuqorida o'zgartiring.",
     ru: "Достигнут лимит поиска для этой должности — измените её выше, чтобы искать снова.",
   },
+  search_cap_prompt: {
+    en: "Want a deeper look? Analyze your CV against a specific job — get an ATS score, bullet-point fixes, and a step-by-step roadmap.",
+    uz: "Chuqurroq tahlil kerakmi? CV'ingizni aniq bir ish e'loniga solishtiring — ATS bali, tuzatishlar va bosqichma-bosqich reja oling.",
+    ru: "Хотите более глубокий анализ? Сравните резюме с конкретной вакансией — получите ATS-балл, исправления и пошаговый план.",
+  },
+  search_cap_analyze_btn: {
+    en: "📊 Analyze my CV against a job", uz: "📊 CV'imni ish e'loniga solishtirish", ru: "📊 Сравнить резюме с вакансией",
+  },
   carousel_prev: { en: "← Previous", uz: "← Oldingi", ru: "← Предыдущая" },
   carousel_next: { en: "Next →", uz: "Keyingi →", ru: "Следующая →" },
   how_proceed: { en: "How do you want to proceed?", uz: "Qanday davom etishni xohlaysiz?", ru: "Как хотите продолжить?" },
@@ -663,7 +671,7 @@ async function search() {
     return;
   }
   if (state.searchCount >= MAX_SEARCHES) {
-    resultEl.innerHTML = `<div class="hint">${escapeHtml(t("search_limit_session"))}</div>`;
+    resultEl.innerHTML = `<div class="hint">${escapeHtml(t("search_limit_session"))}</div>${searchCapCta()}`;
     return;
   }
 
@@ -744,10 +752,17 @@ function renderVacancyCard() {
       <button onclick="likeVacancy()">${escapeHtml(t("yes_like_it"))}</button>
       ${canSearchAgain ? `<button class="secondary" onclick="search()">${escapeHtml(t("search_again_btn"))}</button>` : ''}
     </div>
-    ${!canSearchAgain ? `<div class="hint" style="margin-top:8px;">${escapeHtml(t("search_limit_title"))}</div>` : ''}
+    ${!canSearchAgain ? `<div class="hint" style="margin-top:8px;">${escapeHtml(t("search_limit_title"))}</div>${searchCapCta()}` : ''}
     <div id="action-area"></div>
   `;
   scrollToBottom();
+}
+
+function searchCapCta() {
+  return `
+    <div class="prompt-block">${escapeHtml(t("search_cap_prompt"))}</div>
+    <button onclick="goToAnalysis()">${escapeHtml(t("search_cap_analyze_btn"))}</button>
+  `;
 }
 
 function actionArea() {
