@@ -18,6 +18,7 @@ os.environ["BOT_USERNAME"] = "acceptedai_bot"
 import server  # noqa: E402
 import db  # noqa: E402
 import cv_analysis  # noqa: E402
+import jd_fetch  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 TOKEN = "dummy:token"
@@ -59,25 +60,28 @@ with mock.patch.object(db, "ensure_user"), \
     m_analyze.assert_not_called()
 print("PASS: cv-jd-analysis rejects a JD under 100 chars, no API call made")
 
-# --- Test 3: quota exhausted -> limit_reached, no Claude call, no increment ---
+# --- Test 3: quota exhausted -> limit_reached, no Claude call, no increment, logs limit_reached ---
 with mock.patch.object(db, "ensure_user"), \
      mock.patch.object(db, "get_cv_text", return_value="Some CV text"), \
      mock.patch.object(db, "get_quota_status", return_value=(2, 2)), \
      mock.patch.object(cv_analysis, "analyze_cv") as m_analyze, \
-     mock.patch.object(db, "increment_usage_count") as m_incr:
+     mock.patch.object(db, "increment_usage_count") as m_incr, \
+     mock.patch.object(db, "log_event") as m_log:
     resp = client.post("/api/cv-jd-analysis", json={"init_data": init_data, "jd": "x" * 150})
     assert resp.status_code == 200, resp.text
     assert resp.json() == {"limit_reached": True, "remaining": 0, "quota": 2}
     m_analyze.assert_not_called()
     m_incr.assert_not_called()
-print("PASS: cv-jd-analysis at quota returns limit_reached without calling Claude or incrementing")
+    m_log.assert_called_once_with(777, "limit_reached")
+print("PASS: cv-jd-analysis at quota returns limit_reached, logs the event, no Claude call")
 
-# --- Test 4: successful analysis increments usage exactly once and returns outputs ---
+# --- Test 4: successful analysis increments usage exactly once, logs check_completed, returns outputs ---
 with mock.patch.object(db, "ensure_user"), \
      mock.patch.object(db, "get_cv_text", return_value="Some CV text"), \
      mock.patch.object(db, "get_quota_status", side_effect=[(0, 2), (1, 2)]), \
      mock.patch.object(cv_analysis, "analyze_cv", new=mock.AsyncMock(return_value=FAKE_ANALYSIS)), \
-     mock.patch.object(db, "increment_usage_count") as m_incr:
+     mock.patch.object(db, "increment_usage_count") as m_incr, \
+     mock.patch.object(db, "log_event") as m_log:
     resp = client.post("/api/cv-jd-analysis", json={"init_data": init_data, "jd": "x" * 150})
     assert resp.status_code == 200, resp.text
     body = resp.json()
@@ -86,7 +90,8 @@ with mock.patch.object(db, "ensure_user"), \
     assert body["ats"]["score"] == 72
     assert body["level"]["assessment"] == "Mid"
     m_incr.assert_called_once_with(777)
-print("PASS: a successful analysis increments usage once and returns the full outputs + quota")
+    m_log.assert_called_once_with(777, "check_completed")
+print("PASS: a successful analysis increments usage once, logs check_completed (same name bot.py's /stats already reads), and returns the full outputs + quota")
 
 # --- Test 5: analysis failure doesn't increment usage ---
 with mock.patch.object(db, "ensure_user"), \
@@ -99,12 +104,13 @@ with mock.patch.object(db, "ensure_user"), \
     m_incr.assert_not_called()
 print("PASS: a failed analysis does not consume quota")
 
-# --- Test 6: roadmap item 1 for Junior routes to generate_cv_fixes, not generate_roadmap_item ---
+# --- Test 6: roadmap item 1 for Junior routes to generate_cv_fixes, logs roadmap_requested once ---
 with mock.patch.object(db, "ensure_user"), \
      mock.patch.object(db, "get_cv_text", return_value="Some CV text"), \
      mock.patch.object(cv_analysis, "generate_cv_fixes", new=mock.AsyncMock(
          return_value=[{"issue": "x", "before": "", "after": "y"}])) as m_fixes, \
-     mock.patch.object(cv_analysis, "generate_roadmap_item") as m_roadmap:
+     mock.patch.object(cv_analysis, "generate_roadmap_item") as m_roadmap, \
+     mock.patch.object(db, "log_event") as m_log:
     resp = client.post("/api/roadmap-item", json={
         "init_data": init_data, "jd": "x" * 150, "level": "Junior", "item": 1,
     })
@@ -115,7 +121,8 @@ with mock.patch.object(db, "ensure_user"), \
     assert body["is_last"] is False
     m_fixes.assert_called_once()
     m_roadmap.assert_not_called()
-print("PASS: roadmap item 1 (Junior/Mid/Senior) routes to generate_cv_fixes")
+    m_log.assert_called_once_with(777, "roadmap_requested")
+print("PASS: roadmap item 1 (Junior/Mid/Senior) routes to generate_cv_fixes and logs roadmap_requested")
 
 # --- Test 7: roadmap item 4 for Junior is the last item and returns raw text ---
 with mock.patch.object(db, "ensure_user"), \
@@ -173,5 +180,45 @@ with mock.patch.object(db, "ensure_user"):
         resp = client.post("/api/checkout", json={"init_data": init_data, "checks": bad})
         assert resp.status_code == 400, (bad, resp.text)
 print("PASS: checkout rejects quantities outside 1-100")
+
+# --- Test 12: jd_fetch.looks_like_url basic sanity ---
+assert jd_fetch.looks_like_url("https://boards.greenhouse.io/acme/jobs/123") is True
+assert jd_fetch.looks_like_url("http://example.com") is True
+assert jd_fetch.looks_like_url("We are looking for a Data Analyst...") is False
+assert jd_fetch.looks_like_url("check out https://example.com for details") is False
+print("PASS: looks_like_url correctly distinguishes a bare URL from JD text")
+
+# --- Test 13: a pasted URL is fetched and the extracted text is analyzed, not the URL itself ---
+with mock.patch.object(db, "ensure_user"), \
+     mock.patch.object(db, "get_cv_text", return_value="Some CV text"), \
+     mock.patch.object(db, "get_quota_status", side_effect=[(0, 2), (1, 2)]), \
+     mock.patch.object(jd_fetch, "fetch_jd_text", new=mock.AsyncMock(
+         return_value="Extracted job posting text " * 10)) as m_fetch, \
+     mock.patch.object(cv_analysis, "analyze_cv", new=mock.AsyncMock(return_value=FAKE_ANALYSIS)) as m_analyze, \
+     mock.patch.object(db, "increment_usage_count"), \
+     mock.patch.object(db, "log_event"):
+    resp = client.post("/api/cv-jd-analysis", json={
+        "init_data": init_data, "jd": "https://boards.greenhouse.io/acme/jobs/123",
+    })
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    m_fetch.assert_called_once_with("https://boards.greenhouse.io/acme/jobs/123")
+    analyzed_jd = m_analyze.call_args[0][0]
+    assert analyzed_jd.startswith("Extracted job posting text"), analyzed_jd
+    assert body["jd_text"] == analyzed_jd
+print("PASS: a pasted URL is fetched and the extracted page text (not the URL) is analyzed")
+
+# --- Test 14: a URL that fails to fetch returns a friendly 400, no Claude call ---
+with mock.patch.object(db, "ensure_user"), \
+     mock.patch.object(db, "get_cv_text", return_value="Some CV text"), \
+     mock.patch.object(jd_fetch, "fetch_jd_text", new=mock.AsyncMock(side_effect=Exception("connection refused"))), \
+     mock.patch.object(cv_analysis, "analyze_cv") as m_analyze:
+    resp = client.post("/api/cv-jd-analysis", json={
+        "init_data": init_data, "jd": "https://example.com/dead-link",
+    })
+    assert resp.status_code == 400, resp.text
+    assert "link" in resp.json()["detail"].lower()
+    m_analyze.assert_not_called()
+print("PASS: a link that fails to fetch returns a friendly error, no Claude call made")
 
 print("\nALL CV-ANALYSIS FLOW CHECKS PASSED")

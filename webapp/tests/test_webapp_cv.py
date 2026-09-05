@@ -60,6 +60,7 @@ print("PASS: cv-status rejects tampered signature")
 import cv_parser  # noqa: E402
 with mock.patch.object(db, "ensure_user") as m_ensure, \
      mock.patch.object(db, "save_cv_text") as m_save, \
+     mock.patch.object(db, "log_event") as m_log, \
      mock.patch.object(cv_parser, "parse_cv", return_value="Extracted CV text here") as m_parse:
     resp = client.post(
         "/api/upload-cv",
@@ -71,7 +72,8 @@ with mock.patch.object(db, "ensure_user") as m_ensure, \
     m_ensure.assert_called_once_with(777, "testuser", "Test")
     m_parse.assert_called_once()
     m_save.assert_called_once_with(777, "Extracted CV text here")
-print("PASS: upload-cv parses and saves correctly")
+    m_log.assert_called_once_with(777, "cv_uploaded")
+print("PASS: upload-cv parses and saves correctly, logs cv_uploaded (same name bot.py's /stats reads)")
 
 # --- Test 5: upload-cv rejects non-PDF/DOCX file types ---
 with mock.patch.object(db, "ensure_user"):

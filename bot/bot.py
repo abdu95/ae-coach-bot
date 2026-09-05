@@ -137,7 +137,8 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     acct = state.account_stats()
     pilot = state.pilot_stats()
     ev = state.event_stats(
-        ["started", "name_provided", "check_completed", "roadmap_requested", "reset"]
+        ["started", "name_provided", "cv_uploaded", "check_completed",
+         "roadmap_requested", "limit_reached", "reset"]
     )
     chashma_count = state.source_count("chashma_marathon")
 
@@ -152,15 +153,14 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"Total checks run — {acct['total_checks']}\n\n"
         f"{line('Started', 'started')}\n"
         f"{line('Name provided', 'name_provided')}\n"
+        f"{line('CV uploaded', 'cv_uploaded')}\n"
         f"{line('Check completed', 'check_completed')}\n"
         f"{line('Roadmap requested', 'roadmap_requested')}\n"
+        f"{line('Limit reached', 'limit_reached')}\n"
         f"{line('Reset', 'reset')}\n\n"
         f"Waitlist — {acct['waitlist']}\n\n"
         f"🎓 School21 pilot — {pilot['users']} users · {pilot['checks']} checks · avg {pilot['avg']}/user\n"
-        f"🏃 Chashma marathon — {chashma_count} users\n\n"
-        f"Note: 'Check completed'/'Roadmap requested' now happen inside the Mini App, "
-        f"which doesn't log these bot-side events yet — treat as historical/chat-only "
-        f"until the app logs its own.",
+        f"🏃 Chashma marathon — {chashma_count} users",
         parse_mode=ParseMode.HTML,
     )
 

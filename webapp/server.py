@@ -20,6 +20,7 @@ import cv_fixes  # local to this folder
 import cv_parser  # local to this folder
 import db  # local to this folder
 import hypothesis  # local to this folder
+import jd_fetch  # local to this folder
 import scoring  # local to this folder
 import vacancy_source  # local to this folder - see its docstring
 
@@ -134,6 +135,7 @@ async def upload_cv(init_data: str = Form(...), file: UploadFile = File(...)):
         raise HTTPException(400, "Could not find any text in that file")
 
     db.save_cv_text(user["id"], cv_text)
+    db.log_event(user["id"], "cv_uploaded")
     return {"saved": True}
 
 
@@ -285,23 +287,36 @@ async def cv_jd_analysis(req: AnalyzeRequest):
     cv_text = db.get_cv_text(user["id"])
     if not cv_text:
         raise HTTPException(400, "No CV on file - upload one first")
-    if len(req.jd.strip()) < 100:
+
+    jd_input = req.jd.strip()
+    if jd_fetch.looks_like_url(jd_input):
+        try:
+            jd_text = await jd_fetch.fetch_jd_text(jd_input)
+        except Exception:
+            logger.exception("Fetching JD from URL failed")
+            raise HTTPException(400, "Couldn't read that link - try pasting the job description text instead")
+    else:
+        jd_text = jd_input
+
+    if len(jd_text) < 100:
         raise HTTPException(400, "Job description looks too short")
 
     usage_count, quota = db.get_quota_status(user["id"])
     if usage_count >= quota:
+        db.log_event(user["id"], "limit_reached")
         return {"limit_reached": True, "remaining": 0, "quota": quota}
 
     try:
-        outputs = await cv_analysis.analyze_cv(req.jd, cv_text)
+        outputs = await cv_analysis.analyze_cv(jd_text, cv_text)
     except Exception:
         logger.exception("CV/JD analysis failed")
         raise HTTPException(502, "Analysis failed, try again")
 
     db.increment_usage_count(user["id"])
+    db.log_event(user["id"], "check_completed")
     usage_count, quota = db.get_quota_status(user["id"])
     remaining = max(0, quota - usage_count)
-    return {"limit_reached": False, "remaining": remaining, "quota": quota, **outputs}
+    return {"limit_reached": False, "remaining": remaining, "quota": quota, "jd_text": jd_text, **outputs}
 
 
 class RoadmapItemRequest(BaseModel):
@@ -320,6 +335,8 @@ async def roadmap_item(req: RoadmapItemRequest):
 
     title = cv_analysis.roadmap_block_title(req.level, req.item)
     max_item = cv_analysis.roadmap_max_item(req.level)
+    if req.item == 1:
+        db.log_event(user["id"], "roadmap_requested")
 
     try:
         if title == "CV Fixes":
