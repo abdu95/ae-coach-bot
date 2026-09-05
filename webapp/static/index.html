@@ -326,6 +326,8 @@
       }
     }
 
+    const MAX_IMPROVES = 2;
+
     function renderResult(vacancies) {
       const resultEl = document.getElementById("result");
       if (!vacancies || vacancies.length === 0) {
@@ -333,6 +335,8 @@
         return;
       }
       const v = vacancies[0];
+      state.currentVacancy = v;
+      state.improveCount = 0;
       state.seenCompanies.push(v.company);
       const canSearchAgain = state.searchCount < MAX_SEARCHES;
 
@@ -349,13 +353,179 @@
           ${canSearchAgain ? '<button class="secondary" onclick="search()">🔄 Search again</button>' : ''}
         </div>
         ${!canSearchAgain ? '<div class="hint" style="margin-top:8px;">Search limit reached for this title — change it above to search again.</div>' : ''}
+        <div id="action-area"></div>
       `;
     }
 
+    function actionArea() {
+      return document.getElementById("action-area");
+    }
+
     function likeVacancy() {
-      // Next chunk: apply-directly vs upload-CV-for-scoring branch.
-      document.getElementById("result").insertAdjacentHTML("beforeend",
-        '<div class="hint" style="margin-top:12px;">🚧 Apply / score-my-CV flow coming next.</div>');
+      actionArea().innerHTML = `
+        <div class="hint" style="margin-top:12px;">How do you want to proceed?</div>
+        <div class="row">
+          <button onclick="applyDirectly()">✅ Apply directly</button>
+          <button class="secondary" onclick="checkFit()">📊 Check my CV fit</button>
+        </div>
+      `;
+    }
+
+    async function callApi(path, body, btn) {
+      if (btn) btn.disabled = true;
+      try {
+        const res = await fetch(path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ init_data: tg.initData, ...body }),
+        });
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.detail || "Request failed");
+        }
+        return await res.json();
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    async function applyDirectly() {
+      actionArea().innerHTML = '<div class="hint">Saving…</div>';
+      try {
+        await callApi("/api/apply", { vacancy: state.currentVacancy, score: null });
+        renderSaved();
+      } catch (err) {
+        console.error("Apply failed:", err);
+        actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(err.message || "Couldn't save, try again.")}</div>`;
+      }
+    }
+
+    async function checkFit() {
+      actionArea().innerHTML = '<div class="hint">📊 Comparing your CV to this vacancy…</div>';
+      try {
+        const score = await callApi("/api/score-vacancy", { vacancy: state.currentVacancy });
+        state.lastScore = score;
+        renderScoreResult(score);
+      } catch (err) {
+        console.error("Scoring failed:", err);
+        actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(err.message || "Couldn't score your CV, try again.")}</div>`;
+      }
+    }
+
+    function renderScoreResult(score) {
+      const matched = (score.matched || []).join(", ") || "none";
+      const missing = (score.missing || []).join(", ") || "none";
+      actionArea().innerHTML = `
+        <div class="card" style="margin-top:12px;">
+          <h3>${score.score}% Match</h3>
+          <p>${escapeHtml(score.verdict || "")}</p>
+          <div>✅ <b>Matched:</b> ${escapeHtml(matched)}</div>
+          <div>❌ <b>Missing:</b> ${escapeHtml(missing)}</div>
+        </div>
+        <div class="row">
+          <button onclick="applyDirectly()">✅ Apply anyway</button>
+          ${state.improveCount < MAX_IMPROVES ? '<button class="secondary" onclick="showLevelPicker()">📝 Get recommendations</button>' : ''}
+        </div>
+      `;
+    }
+
+    function showLevelPicker() {
+      actionArea().insertAdjacentHTML("beforeend", `
+        <div class="hint" style="margin-top:12px;">What's your level for this role?</div>
+        <div class="row">
+          <button onclick="getRecommendations('Junior')">Junior</button>
+          <button onclick="getRecommendations('Mid')">Mid</button>
+          <button onclick="getRecommendations('Senior')">Senior</button>
+        </div>
+      `);
+    }
+
+    async function getRecommendations(level) {
+      actionArea().innerHTML = '<div class="hint">📝 Working out what to fix…</div>';
+      try {
+        const data = await callApi("/api/cv-recommendations", { vacancy: state.currentVacancy, level });
+        renderRecommendations(data.fixes);
+      } catch (err) {
+        console.error("Recommendations failed:", err);
+        actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(err.message || "Couldn't get recommendations, try again.")}</div>`;
+      }
+    }
+
+    function renderRecommendations(fixes) {
+      const cards = (fixes || []).map(f => `
+        <div class="card" style="margin-top:8px;">
+          <p><b>Issue:</b> ${escapeHtml(f.issue)}</p>
+          ${f.before ? `<p><i>Before:</i> ${escapeHtml(f.before)}</p>` : ""}
+          <p><i>After:</i> ${escapeHtml(f.after)}</p>
+        </div>
+      `).join("");
+
+      actionArea().innerHTML = `
+        ${cards}
+        <div class="hint" style="margin-top:12px;">Ready to apply, or want to improve your CV first?</div>
+        <div class="row">
+          <button onclick="applyDirectly()">✅ Apply now</button>
+          ${state.improveCount < MAX_IMPROVES ? '<button class="secondary" onclick="showImproveUpload()">📄 Improve CV</button>' : ''}
+        </div>
+      `;
+    }
+
+    function showImproveUpload() {
+      actionArea().innerHTML = `
+        <div class="hint">Upload your updated CV (PDF or DOCX).</div>
+        <input type="file" id="improve_cv_file" accept=".pdf,.docx" />
+        <button onclick="uploadImprovedCV()">📄 Upload improved CV</button>
+        <div id="improve_result"></div>
+      `;
+    }
+
+    async function uploadImprovedCV() {
+      const fileInput = document.getElementById("improve_cv_file");
+      const resultEl = document.getElementById("improve_result");
+      const file = fileInput.files[0];
+      if (!file) {
+        resultEl.innerHTML = '<div class="error">Choose a PDF or DOCX file first.</div>';
+        return;
+      }
+
+      resultEl.innerHTML = '<div class="hint">📄 Reading your updated CV…</div>';
+      const formData = new FormData();
+      formData.append("init_data", tg.initData);
+      formData.append("file", file);
+
+      try {
+        const res = await fetch("/api/upload-cv", { method: "POST", body: formData });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.detail || "Upload failed");
+        }
+        state.improveCount += 1;
+        renderPostImproveChoice();
+      } catch (err) {
+        console.error("Improved CV upload failed:", err);
+        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(err.message || "Upload failed, try again.")}</div>`;
+      }
+    }
+
+    function renderPostImproveChoice() {
+      if (state.improveCount >= MAX_IMPROVES) {
+        actionArea().innerHTML = `
+          <div class="hint">CV updated. You've reached the improve limit for this vacancy — ready to apply.</div>
+          <button onclick="applyDirectly()">✅ Apply now</button>
+        `;
+        return;
+      }
+      actionArea().innerHTML = `
+        <div class="hint">CV updated. Apply now, or check your new match % first?</div>
+        <div class="row">
+          <button onclick="applyDirectly()">✅ Apply now</button>
+          <button class="secondary" onclick="checkFit()">📊 Check match again</button>
+        </div>
+      `;
+    }
+
+    function renderSaved() {
+      actionArea().innerHTML = '<div class="hint">✅ Saved to your tracked applications.</div>';
     }
 
     function escapeHtml(text) {

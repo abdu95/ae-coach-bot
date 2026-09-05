@@ -14,9 +14,11 @@ from pydantic import BaseModel
 
 load_dotenv()
 
+import cv_fixes  # local to this folder
 import cv_parser  # local to this folder
 import db  # local to this folder
 import hypothesis  # local to this folder
+import scoring  # local to this folder
 import vacancy_source  # local to this folder - see its docstring
 
 logging.basicConfig(level=logging.INFO)
@@ -142,6 +144,77 @@ async def suggest_titles(req: SuggestTitlesRequest):
         raise HTTPException(502, "Couldn't generate suggestions, try again")
 
     return {"titles": titles}
+
+
+class Vacancy(BaseModel):
+    title: str
+    company: str
+    location: str = ""
+    url: str = ""
+    summary: str = ""
+
+
+class ScoreRequest(BaseModel):
+    init_data: str
+    vacancy: Vacancy
+
+
+@app.post("/api/score-vacancy")
+async def score_vacancy_endpoint(req: ScoreRequest):
+    user = authenticate(req.init_data)
+    cv_text = db.get_cv_text(user["id"])
+    if not cv_text:
+        raise HTTPException(400, "No CV on file - upload one first")
+
+    try:
+        score = await scoring.score_vacancy(cv_text, req.vacancy.model_dump())
+    except Exception:
+        logger.exception("Scoring failed")
+        raise HTTPException(502, "Couldn't score your CV, try again")
+
+    return score
+
+
+class RecommendationsRequest(BaseModel):
+    init_data: str
+    vacancy: Vacancy
+    level: str
+
+
+@app.post("/api/cv-recommendations")
+async def cv_recommendations(req: RecommendationsRequest):
+    user = authenticate(req.init_data)
+    cv_text = db.get_cv_text(user["id"])
+    if not cv_text:
+        raise HTTPException(400, "No CV on file - upload one first")
+
+    try:
+        fixes = await cv_fixes.generate_cv_fixes(req.level, req.vacancy.model_dump(), cv_text)
+    except Exception:
+        logger.exception("CV fix generation failed")
+        raise HTTPException(502, "Couldn't generate recommendations, try again")
+
+    return {"fixes": fixes}
+
+
+class ApplyRequest(BaseModel):
+    init_data: str
+    vacancy: Vacancy
+    score: dict | None = None
+
+
+@app.post("/api/apply")
+async def apply(req: ApplyRequest):
+    user = authenticate(req.init_data)
+    cv_text = db.get_cv_text(user["id"]) or ""
+
+    try:
+        db.save_application(user["id"], req.vacancy.model_dump(), cv_text, req.score)
+    except Exception:
+        logger.exception("Saving application failed")
+        raise HTTPException(500, "Couldn't save your application, try again")
+
+    return {"saved": True}
 
 
 @app.get("/api/health")

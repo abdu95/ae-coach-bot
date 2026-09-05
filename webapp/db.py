@@ -4,6 +4,7 @@ uses (tables are created by bot/state.py's init_db() - this module only
 reads/writes, never creates schema).
 """
 
+import json
 import os
 
 import psycopg2
@@ -72,6 +73,30 @@ def save_cv_text(telegram_id: int, cv_text: str) -> None:
                 SET data = user_state.data || jsonb_build_object('cv_text', %s::text),
                     updated_at = now()
             """, (telegram_id, cv_text, cv_text))
+    finally:
+        pool.putconn(conn)
+
+
+def save_application(telegram_id: int, vacancy: dict, cv_snapshot: str,
+                      score: dict | None, source: str = "webapp") -> None:
+    pool = get_pool()
+    conn = pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO applications (
+                    telegram_id, vacancy_title, vacancy_company, vacancy_location,
+                    vacancy_url, vacancy_summary, cv_snapshot, match_score,
+                    matched_keywords, missing_keywords, source
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                telegram_id, vacancy["title"], vacancy["company"], vacancy.get("location"),
+                vacancy.get("url"), vacancy.get("summary"), cv_snapshot,
+                score.get("score") if score else None,
+                json.dumps(score.get("matched")) if score else None,
+                json.dumps(score.get("missing")) if score else None,
+                source,
+            ))
     finally:
         pool.putconn(conn)
 
