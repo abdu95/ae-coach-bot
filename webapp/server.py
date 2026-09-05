@@ -4,12 +4,13 @@ import hmac
 import json
 import logging
 import os
+import time
 from pathlib import Path
 from urllib.parse import parse_qsl
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -26,6 +27,13 @@ import vacancy_source  # local to this folder - see its docstring
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Cache-busting version tag for /static/app.js and style.css - tied to
+# process start time, so it changes automatically on every deploy with
+# no manual bumping. Telegram's in-app WebView (and browsers) can hold
+# onto a stale app.js/style.css across reopens otherwise, silently
+# hiding fixes/features that are actually already live.
+APP_VERSION = str(int(time.time()))
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -395,7 +403,16 @@ async def health():
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+_INDEX_HTML = (STATIC_DIR / "index.html").read_text()
+_INDEX_HTML = _INDEX_HTML.replace(
+    'href="/static/style.css"', f'href="/static/style.css?v={APP_VERSION}"'
+).replace(
+    'src="/static/app.js"', f'src="/static/app.js?v={APP_VERSION}"'
+)
+
 
 @app.get("/")
 async def index():
-    return FileResponse(STATIC_DIR / "index.html")
+    # No-cache on the HTML itself - it's what carries the ?v= that busts
+    # the JS/CSS cache, so if THIS gets cached the whole scheme is moot.
+    return HTMLResponse(_INDEX_HTML, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
