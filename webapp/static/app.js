@@ -850,19 +850,21 @@ function renderVacancyCard() {
       <p>${escapeHtml(v.summary)}</p>
       <a href="${v.url}" target="_blank">${escapeHtml(t("view_posting"))}</a>
     </div>
-    ${total > 1 ? `
-      <div class="nav-row">
-        <button class="secondary" onclick="showVacancy(${state.vacancyIndex - 1})" ${canPrev ? '' : 'disabled'}>${escapeHtml(t("carousel_prev"))}</button>
-        <span class="nav-counter">${state.vacancyIndex + 1} / ${total}</span>
-        <button class="secondary" onclick="showVacancy(${state.vacancyIndex + 1})" ${canNext ? '' : 'disabled'}>${escapeHtml(t("carousel_next"))}</button>
+    <div id="vacancy-decision">
+      ${total > 1 ? `
+        <div class="nav-row">
+          <button class="secondary" onclick="showVacancy(${state.vacancyIndex - 1})" ${canPrev ? '' : 'disabled'}>${escapeHtml(t("carousel_prev"))}</button>
+          <span class="nav-counter">${state.vacancyIndex + 1} / ${total}</span>
+          <button class="secondary" onclick="showVacancy(${state.vacancyIndex + 1})" ${canNext ? '' : 'disabled'}>${escapeHtml(t("carousel_next"))}</button>
+        </div>
+      ` : ''}
+      <div class="prompt-block">${escapeHtml(t("like_this_one"))}</div>
+      <div class="row">
+        <button onclick="likeVacancy()">${escapeHtml(t("yes_like_it"))}</button>
+        ${canSearchAgain ? `<button class="secondary" onclick="search()">${escapeHtml(t("search_again_btn"))}</button>` : ''}
       </div>
-    ` : ''}
-    <div class="prompt-block">${escapeHtml(t("like_this_one"))}</div>
-    <div class="row">
-      <button onclick="likeVacancy()">${escapeHtml(t("yes_like_it"))}</button>
-      ${canSearchAgain ? `<button class="secondary" onclick="search()">${escapeHtml(t("search_again_btn"))}</button>` : ''}
+      ${!canSearchAgain ? `<div class="hint" style="margin-top:8px;">${escapeHtml(t("search_limit_title"))}</div>${searchCapCta()}` : ''}
     </div>
-    ${!canSearchAgain ? `<div class="hint" style="margin-top:8px;">${escapeHtml(t("search_limit_title"))}</div>${searchCapCta()}` : ''}
     <div id="action-area"></div>
   `;
   scrollToBottom();
@@ -881,6 +883,11 @@ function actionArea() {
 
 function likeVacancy() {
   state.improveCount = 0;
+  // Once committed to this vacancy, the "like it / search again / switch
+  // vacancy / analyze CV instead" decision no longer applies - hide it so
+  // only the buttons relevant to the current step (apply / check fit /
+  // etc.) are visible, instead of stacking on top of stale ones.
+  document.getElementById("vacancy-decision").hidden = true;
   actionArea().innerHTML = `
     <div class="prompt-block">${escapeHtml(t("how_proceed"))}</div>
     <div class="row">

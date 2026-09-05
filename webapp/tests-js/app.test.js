@@ -178,6 +178,26 @@ test("the 3-search cap is session-wide: changing job titles does not reset it", 
   assert.equal(searchCalls, 3, "a 4th search, even under a brand-new title, must not hit the API");
 });
 
+test("liking a vacancy hides the like/search-again/carousel/analyze-CV decision block, leaving only the current step's buttons", async () => {
+  const dom = loadApp({
+    fetchImpl: defaultFetchMock({
+      "/api/cv-status": () => ({ has_cv: true, lang: "en" }),
+      "/api/search": () => ({ vacancies: [{ title: "Data Analyst", company: "Acme", location: "Remote", url: "https://x", summary: "..." }] }),
+    }),
+  });
+  await flush();
+  const { document, window } = dom.window;
+  window.pickTitle("Data Analyst");
+  await window.search();
+
+  assert.equal(document.getElementById("vacancy-decision").hidden, false);
+  window.likeVacancy();
+  assert.equal(document.getElementById("vacancy-decision").hidden, true,
+    "the like-it/search-again/carousel-nav block must disappear once the user commits to a vacancy");
+  assert.match(document.getElementById("action-area").innerHTML, /checkFit\(\)/,
+    "the current step's buttons (apply/check fit) must be visible");
+});
+
 test("hitting the search cap shows a call-to-action into the paid analysis flow", async () => {
   const dom = loadApp({
     fetchImpl: defaultFetchMock({
