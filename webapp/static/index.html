@@ -92,7 +92,7 @@
       }
 
       btn.disabled = true;
-      resultEl.innerHTML = '<div class="hint">Searching…</div>';
+      resultEl.innerHTML = `<div class="hint">🔎 Searching for <b>${escapeHtml(jobTitle)}</b> in <b>${escapeHtml(location)}</b>… usually takes 15–30 seconds.</div>`;
 
       try {
         const res = await fetch("/api/search", {
