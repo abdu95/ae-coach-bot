@@ -91,35 +91,35 @@
 <body>
   <div style="display:flex; justify-content:space-between; align-items:center;">
     <h2 id="greeting">AcceptedAI</h2>
-    <button id="nav-applications" class="link" onclick="showApplications()" hidden style="margin:0;">📋 My Applications</button>
+    <button id="nav-applications" class="link" onclick="showApplications()" hidden style="margin:0;"></button>
   </div>
 
   <div id="loading-gate" class="hint">Loading…</div>
 
   <div id="cv-gate" hidden>
-    <div class="hint">Upload your CV so I can search and score vacancies against it.</div>
-    <label for="cv_file">CV (PDF or DOCX)</label>
+    <div class="hint" id="cv-gate-hint"></div>
+    <label for="cv_file" id="cv-file-label"></label>
     <input type="file" id="cv_file" accept=".pdf,.docx" />
-    <button id="upload_btn" onclick="uploadCV()">📄 Upload CV</button>
+    <button id="upload_btn" onclick="uploadCV()"></button>
     <div id="upload_result"></div>
   </div>
 
   <div id="title-screen" hidden>
-    <div class="hint">What position are you looking for?</div>
+    <div class="hint" id="title-screen-hint"></div>
     <div class="row">
-      <button onclick="showManualTitle()">✍️ Type my own</button>
-      <button class="secondary" onclick="suggestTitles()">🤖 Suggest from my CV</button>
+      <button id="btn-type-own" onclick="showManualTitle()"></button>
+      <button id="btn-suggest-cv" class="secondary" onclick="suggestTitles()"></button>
     </div>
 
     <div id="manual-title-box" hidden>
-      <label for="manual_title">Job title</label>
-      <input id="manual_title" placeholder="e.g. Data Analyst" />
-      <button onclick="pickTitle(document.getElementById('manual_title').value.trim())">Next →</button>
+      <label for="manual_title" id="manual-title-label"></label>
+      <input id="manual_title" />
+      <button id="btn-next-title" onclick="pickTitle(document.getElementById('manual_title').value.trim())"></button>
     </div>
 
     <div id="suggested-titles-box" hidden>
       <div id="title-chips"></div>
-      <button class="link" onclick="suggestTitles()">🔄 Suggest different titles</button>
+      <button id="btn-suggest-again" class="link" onclick="suggestTitles()"></button>
     </div>
 
     <div id="title-error"></div>
@@ -127,39 +127,255 @@
 
   <div id="search-screen" hidden>
     <div class="selected-title">
-      <span>Searching for <b id="chosen-title-label"></b></span>
-      <button class="link" onclick="backToTitleScreen()" style="margin:0;">change</button>
+      <span id="searching-for-label">Searching for <b id="chosen-title-label"></b></span>
+      <button id="btn-change-title" class="link" onclick="backToTitleScreen()" style="margin:0;"></button>
     </div>
 
-    <label for="location">Location</label>
-    <input id="location" placeholder="e.g. Tashkent, Remote, Europe" />
+    <label for="location" id="location-label"></label>
+    <input id="location" />
 
-    <button id="search_btn" onclick="search()">🔍 Search</button>
+    <button id="search_btn" onclick="search()"></button>
 
     <div id="result"></div>
   </div>
 
   <div id="applications-screen" hidden>
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <div class="hint" style="margin:0;">Your tracked applications</div>
-      <button class="link" onclick="showScreen('title-screen')" style="margin:0;">← back</button>
+      <div class="hint" id="applications-title" style="margin:0;"></div>
+      <button id="btn-applications-back" class="link" onclick="showScreen('title-screen')" style="margin:0;"></button>
     </div>
     <div id="applications-list"></div>
   </div>
 
   <script>
+    // ── i18n ─────────────────────────────────────────────────────────────
+    const I18N = {
+      nav_applications: { en: "📋 My Applications", uz: "📋 Arizalarim", ru: "📋 Мои заявки" },
+      greeting: { en: "Hi {name}", uz: "Salom, {name}", ru: "Привет, {name}" },
+      open_from_bot: {
+        en: "Open this from the Telegram bot, not a regular browser.",
+        uz: "Buni oddiy brauzerda emas, Telegram bot orqali oching.",
+        ru: "Откройте это через Telegram-бота, а не в обычном браузере.",
+      },
+      cv_gate_hint: {
+        en: "Upload your CV so I can search and score vacancies against it.",
+        uz: "Vakansiyalarni qidirish va CV'ingizni ular bilan solishtirish uchun CV yuklang.",
+        ru: "Загрузите резюме, чтобы я мог искать вакансии и сравнивать их с вашим резюме.",
+      },
+      cv_file_label: { en: "CV (PDF or DOCX)", uz: "CV (PDF yoki DOCX)", ru: "Резюме (PDF или DOCX)" },
+      upload_cv_btn: { en: "📄 Upload CV", uz: "📄 CV yuklash", ru: "📄 Загрузить резюме" },
+      title_screen_hint: {
+        en: "What position are you looking for?", uz: "Qanday lavozimni qidiryapsiz?", ru: "Какую должность вы ищете?",
+      },
+      type_own: { en: "✍️ Type my own", uz: "✍️ O'zim kiritaman", ru: "✍️ Введу сам" },
+      suggest_from_cv: { en: "🤖 Suggest from my CV", uz: "🤖 CV'imdan taklif qiling", ru: "🤖 Предложить по резюме" },
+      job_title_label: { en: "Job title", uz: "Lavozim nomi", ru: "Название должности" },
+      job_title_placeholder: { en: "e.g. Data Analyst", uz: "masalan: Data Analyst", ru: "например: Data Analyst" },
+      next_btn: { en: "Next →", uz: "Keyingi →", ru: "Далее →" },
+      suggest_different: {
+        en: "🔄 Suggest different titles", uz: "🔄 Boshqa lavozimlarni taklif qilish", ru: "🔄 Предложить другие варианты",
+      },
+      searching_for_prefix: { en: "Searching for", uz: "Qidirilmoqda:", ru: "Ищу:" },
+      change_link: { en: "change", uz: "o'zgartirish", ru: "изменить" },
+      location_label: { en: "Location", uz: "Joylashuv", ru: "Локация" },
+      location_placeholder: {
+        en: "e.g. Tashkent, Remote, Europe", uz: "masalan: Toshkent, Remote, Yevropa", ru: "например: Ташкент, Remote, Европа",
+      },
+      search_btn: { en: "🔍 Search", uz: "🔍 Qidirish", ru: "🔍 Искать" },
+      applications_title: {
+        en: "Your tracked applications", uz: "Kuzatilayotgan arizalaringiz", ru: "Ваши отслеживаемые заявки",
+      },
+      back_link: { en: "← back", uz: "← orqaga", ru: "← назад" },
+      couldnt_load_profile: {
+        en: "Couldn't load your profile.", uz: "Profilingizni yuklab bo'lmadi.", ru: "Не удалось загрузить ваш профиль.",
+      },
+      choose_file_first: {
+        en: "Choose a PDF or DOCX file first.", uz: "Avval PDF yoki DOCX faylni tanlang.", ru: "Сначала выберите файл PDF или DOCX.",
+      },
+      reading_cv: { en: "📄 Reading your CV…", uz: "📄 CV'ingiz o'qilmoqda…", ru: "📄 Читаю ваше резюме…" },
+      upload_failed: {
+        en: "Upload failed, try again.", uz: "Yuklash amalga oshmadi, qaytadan urinib ko'ring.", ru: "Загрузка не удалась, попробуйте снова.",
+      },
+      analyzing_cv: { en: "🤖 Analyzing your CV…", uz: "🤖 CV'ingiz tahlil qilinmoqda…", ru: "🤖 Анализирую ваше резюме…" },
+      suggestions_failed: {
+        en: "Couldn't get suggestions, try again.", uz: "Takliflarni olib bo'lmadi, qaytadan urinib ko'ring.", ru: "Не удалось получить варианты, попробуйте снова.",
+      },
+      enter_title_first: {
+        en: "Enter a job title first.", uz: "Avval lavozim nomini kiriting.", ru: "Сначала введите название должности.",
+      },
+      status_applied: { en: "Applied", uz: "Yuborilgan", ru: "Подана" },
+      status_phone_screen: { en: "Phone screen", uz: "Telefon suhbati", ru: "Телефонное интервью" },
+      status_tech_interview: { en: "Tech interview", uz: "Texnik intervyu", ru: "Техническое интервью" },
+      status_offer: { en: "Offer 🎉", uz: "Taklif 🎉", ru: "Оффер 🎉" },
+      status_rejected: { en: "Rejected", uz: "Rad etilgan", ru: "Отказ" },
+      status_ghosted: { en: "Ghosted", uz: "Javob kelmadi", ru: "Без ответа" },
+      applications_load_failed: {
+        en: "Couldn't load your applications.", uz: "Arizalaringizni yuklab bo'lmadi.", ru: "Не удалось загрузить ваши заявки.",
+      },
+      no_applications: {
+        en: "Nothing tracked yet — like a vacancy and apply to see it here.",
+        uz: "Hali hech narsa yo'q — vakansiyani yoqtiring va ariza bering, shunda u shu yerda ko'rinadi.",
+        ru: "Пока пусто — отметьте вакансию как понравившуюся и подайте заявку, чтобы увидеть её здесь.",
+      },
+      status_label_prefix: { en: "Status:", uz: "Holat:", ru: "Статус:" },
+      match_suffix: { en: "% match", uz: "% moslik", ru: "% совпадение" },
+      view_posting: { en: "View posting →", uz: "E'lonni ko'rish →", ru: "Посмотреть вакансию →" },
+      search_limit_session: {
+        en: "You've reached the search limit for this session — pick one of the postings above, or change the title to search again.",
+        uz: "Ushbu sessiya uchun qidiruv chegarasiga yetdingiz — yuqoridagi e'lonlardan birini tanlang yoki qaytadan qidirish uchun lavozimni o'zgartiring.",
+        ru: "Вы достигли лимита поиска для этой сессии — выберите одну из вакансий выше или измените должность, чтобы искать снова.",
+      },
+      searching_message: {
+        en: "🔎 Searching for {title} in {location}… usually takes 15–30 seconds.",
+        uz: "🔎 {title} bo'yicha {location} joyida qidirilmoqda… odatda 15–30 soniya vaqt oladi.",
+        ru: "🔎 Ищу «{title}» в {location}… обычно занимает 15–30 секунд.",
+      },
+      search_failed: {
+        en: "Search failed on our end. Please try again in a moment.",
+        uz: "Qidiruv bizning tomonda amalga oshmadi. Birozdan keyin qayta urinib ko'ring.",
+        ru: "Поиск не удался на нашей стороне. Попробуйте ещё раз через некоторое время.",
+      },
+      no_match_found: {
+        en: "No matching posting found — try different criteria.",
+        uz: "Mos e'lon topilmadi — boshqa mezonlar bilan urinib ko'ring.",
+        ru: "Подходящая вакансия не найдена — попробуйте другие критерии.",
+      },
+      link_disclaimer: {
+        en: "⚠️ This link is AI-found and may occasionally be outdated or already filled.",
+        uz: "⚠️ Bu havola AI tomonidan topilgan va ba'zan eskirgan yoki allaqachon yopilgan bo'lishi mumkin.",
+        ru: "⚠️ Эта ссылка найдена ИИ и иногда может быть устаревшей или вакансия уже закрыта.",
+      },
+      like_this_one: { en: "Like this one?", uz: "Shu yoqdimi?", ru: "Нравится эта вакансия?" },
+      yes_like_it: { en: "👍 Yes, I like it", uz: "👍 Ha, yoqdi", ru: "👍 Да, нравится" },
+      search_again_btn: { en: "🔄 Search again", uz: "🔄 Qayta qidirish", ru: "🔄 Искать снова" },
+      search_limit_title: {
+        en: "Search limit reached for this title — change it above to search again.",
+        uz: "Ushbu lavozim uchun qidiruv chegarasiga yetdingiz — qayta qidirish uchun uni yuqorida o'zgartiring.",
+        ru: "Достигнут лимит поиска для этой должности — измените её выше, чтобы искать снова.",
+      },
+      how_proceed: { en: "How do you want to proceed?", uz: "Qanday davom etishni xohlaysiz?", ru: "Как хотите продолжить?" },
+      apply_directly: { en: "✅ Apply directly", uz: "✅ To'g'ridan-to'g'ri ariza berish", ru: "✅ Подать заявку сразу" },
+      check_cv_fit: { en: "📊 Check my CV fit", uz: "📊 CV moslikni tekshirish", ru: "📊 Проверить соответствие резюме" },
+      saving: { en: "Saving…", uz: "Saqlanmoqda…", ru: "Сохраняю…" },
+      apply_failed: {
+        en: "Couldn't save your application, try again.", uz: "Arizangizni saqlab bo'lmadi, qaytadan urinib ko'ring.", ru: "Не удалось сохранить заявку, попробуйте снова.",
+      },
+      checking_fit: {
+        en: "📊 Comparing your CV to this vacancy…", uz: "📊 CV'ingiz ushbu vakansiya bilan solishtirilmoqda…", ru: "📊 Сравниваю ваше резюме с этой вакансией…",
+      },
+      scoring_failed: {
+        en: "Couldn't score your CV, try again.", uz: "CV'ingizni baholab bo'lmadi, qaytadan urinib ko'ring.", ru: "Не удалось оценить резюме, попробуйте снова.",
+      },
+      match_heading: { en: "{score}% Match", uz: "{score}% Moslik", ru: "{score}% Соответствие" },
+      matched_label: { en: "Matched:", uz: "Mos keldi:", ru: "Совпало:" },
+      missing_label: { en: "Missing:", uz: "Yetishmayapti:", ru: "Отсутствует:" },
+      apply_anyway: { en: "✅ Apply anyway", uz: "✅ Baribir ariza berish", ru: "✅ Подать заявку в любом случае" },
+      get_recommendations: { en: "📝 Get recommendations", uz: "📝 Tavsiyalar olish", ru: "📝 Получить рекомендации" },
+      level_question: {
+        en: "What's your level for this role?", uz: "Ushbu lavozim uchun darajangiz qanday?", ru: "Какой у вас уровень для этой роли?",
+      },
+      working_out_fixes: {
+        en: "📝 Working out what to fix…", uz: "📝 Nimani tuzatish kerakligi aniqlanmoqda…", ru: "📝 Определяю, что нужно исправить…",
+      },
+      recommendations_failed: {
+        en: "Couldn't get recommendations, try again.", uz: "Tavsiyalarni olib bo'lmadi, qaytadan urinib ko'ring.", ru: "Не удалось получить рекомендации, попробуйте снова.",
+      },
+      issue_label: { en: "Issue:", uz: "Muammo:", ru: "Проблема:" },
+      before_label: { en: "Before:", uz: "Oldin:", ru: "До:" },
+      after_label: { en: "After:", uz: "Keyin:", ru: "После:" },
+      ready_to_apply: {
+        en: "Ready to apply, or want to improve your CV first?",
+        uz: "Ariza berishga tayyormisiz, yoki avval CV'ingizni yaxshilamoqchimisiz?",
+        ru: "Готовы подать заявку, или сначала хотите улучшить резюме?",
+      },
+      apply_now: { en: "✅ Apply now", uz: "✅ Hozir ariza berish", ru: "✅ Подать заявку сейчас" },
+      improve_cv_btn: { en: "📄 Improve CV", uz: "📄 CV'ni yaxshilash", ru: "📄 Улучшить резюме" },
+      upload_updated_cv: {
+        en: "Upload your updated CV (PDF or DOCX).", uz: "Yangilangan CV'ingizni yuklang (PDF yoki DOCX).", ru: "Загрузите обновлённое резюме (PDF или DOCX).",
+      },
+      upload_improved_btn: {
+        en: "📄 Upload improved CV", uz: "📄 Yaxshilangan CV'ni yuklash", ru: "📄 Загрузить улучшенное резюме",
+      },
+      reading_updated_cv: {
+        en: "📄 Reading your updated CV…", uz: "📄 Yangilangan CV'ingiz o'qilmoqda…", ru: "📄 Читаю обновлённое резюме…",
+      },
+      improve_limit_reached: {
+        en: "CV updated. You've reached the improve limit for this vacancy — ready to apply.",
+        uz: "CV yangilandi. Ushbu vakansiya uchun yaxshilash chegarasiga yetdingiz — ariza berishga tayyor.",
+        ru: "Резюме обновлено. Вы достигли лимита улучшений для этой вакансии — можно подавать заявку.",
+      },
+      improve_choice: {
+        en: "CV updated. Apply now, or check your new match % first?",
+        uz: "CV yangilandi. Hozir ariza berasizmi, yoki avval yangi moslik foizini tekshirasizmi?",
+        ru: "Резюме обновлено. Подать заявку сейчас или сначала проверить новый процент соответствия?",
+      },
+      check_match_again: { en: "📊 Check match again", uz: "📊 Moslikni qayta tekshirish", ru: "📊 Проверить соответствие снова" },
+      saved_confirmation: {
+        en: "✅ Saved to your tracked applications.", uz: "✅ Kuzatilayotgan arizalaringizga saqlandi.", ru: "✅ Сохранено в отслеживаемых заявках.",
+      },
+      view_my_applications: { en: "📋 View my applications", uz: "📋 Arizalarimni ko'rish", ru: "📋 Посмотреть мои заявки" },
+      err_timeout: {
+        en: "That took too long and timed out — please try again.",
+        uz: "Bu juda uzoq davom etdi va vaqt tugadi — qaytadan urinib ko'ring.",
+        ru: "Это заняло слишком много времени — попробуйте снова.",
+      },
+      err_network: {
+        en: "Couldn't connect — check your internet connection and try again.",
+        uz: "Ulanib bo'lmadi — internet aloqangizni tekshiring va qaytadan urinib ko'ring.",
+        ru: "Не удалось подключиться — проверьте интернет-соединение и попробуйте снова.",
+      },
+      err_session_expired: {
+        en: "Your session expired — close this and reopen it from the bot.",
+        uz: "Sessiya muddati tugadi — buni yoping va botdan qaytadan oching.",
+        ru: "Сессия истекла — закройте это и откройте заново через бота.",
+      },
+      err_generic: {
+        en: "Something went wrong. Please try again.", uz: "Nimadir xato ketdi. Qaytadan urinib ko'ring.", ru: "Что-то пошло не так. Попробуйте снова.",
+      },
+    };
+
+    let currentLang = "en";
+
+    function t(key, vars) {
+      const entry = I18N[key];
+      let text = (entry && (entry[currentLang] || entry.en)) || key;
+      if (vars) {
+        for (const k in vars) text = text.replace(`{${k}}`, vars[k]);
+      }
+      return text;
+    }
+
+    function applyStaticTranslations() {
+      document.getElementById("nav-applications").textContent = t("nav_applications");
+      document.getElementById("cv-gate-hint").textContent = t("cv_gate_hint");
+      document.getElementById("cv-file-label").textContent = t("cv_file_label");
+      document.getElementById("upload_btn").textContent = t("upload_cv_btn");
+      document.getElementById("title-screen-hint").textContent = t("title_screen_hint");
+      document.getElementById("btn-type-own").textContent = t("type_own");
+      document.getElementById("btn-suggest-cv").textContent = t("suggest_from_cv");
+      document.getElementById("manual-title-label").textContent = t("job_title_label");
+      document.getElementById("manual_title").placeholder = t("job_title_placeholder");
+      document.getElementById("btn-next-title").textContent = t("next_btn");
+      document.getElementById("btn-suggest-again").textContent = t("suggest_different");
+      document.getElementById("searching-for-label").firstChild.textContent = t("searching_for_prefix") + " ";
+      document.getElementById("btn-change-title").textContent = t("change_link");
+      document.getElementById("location-label").textContent = t("location_label");
+      document.getElementById("location").placeholder = t("location_placeholder");
+      document.getElementById("search_btn").textContent = t("search_btn");
+      document.getElementById("applications-title").textContent = t("applications_title");
+      document.getElementById("btn-applications-back").textContent = t("back_link");
+    }
+
+    // ── app ──────────────────────────────────────────────────────────────
     const tg = window.Telegram?.WebApp;
     if (tg) {
       tg.ready();
       tg.expand();
-      const user = tg.initDataUnsafe?.user;
-      if (user) {
-        document.getElementById("greeting").textContent = `Hi ${user.first_name}`;
-      }
     }
 
     const state = { jobTitle: "", seenCompanies: [], searchCount: 0 };
     const MAX_SEARCHES = 3;
+    const MAX_IMPROVES = 2;
 
     function showScreen(id) {
       for (const s of ["loading-gate", "cv-gate", "title-screen", "search-screen", "applications-screen"]) {
@@ -170,7 +386,7 @@
     async function checkCVAndRoute() {
       if (!tg || !tg.initData) {
         document.getElementById("loading-gate").innerHTML =
-          '<div class="error">Open this from the Telegram bot, not a regular browser.</div>';
+          `<div class="error">${escapeHtml(t("open_from_bot"))}</div>`;
         return;
       }
       try {
@@ -181,12 +397,20 @@
         });
         if (!res.ok) throw new Error("status check failed");
         const data = await res.json();
+        currentLang = data.lang || "en";
+        applyStaticTranslations();
+
+        const userInfo = tg.initDataUnsafe?.user;
+        if (userInfo) {
+          document.getElementById("greeting").textContent = t("greeting", { name: userInfo.first_name });
+        }
+
         showScreen(data.has_cv ? "title-screen" : "cv-gate");
         document.getElementById("nav-applications").hidden = false;
       } catch (err) {
         console.error("CV status check failed:", err);
         document.getElementById("loading-gate").innerHTML =
-          `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Couldn't load your profile."))}</div>`;
+          `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("couldnt_load_profile")))}</div>`;
       }
     }
     checkCVAndRoute();
@@ -198,12 +422,12 @@
       const file = fileInput.files[0];
 
       if (!file) {
-        resultEl.innerHTML = '<div class="error">Choose a PDF or DOCX file first.</div>';
+        resultEl.innerHTML = `<div class="error">${escapeHtml(t("choose_file_first"))}</div>`;
         return;
       }
 
       btn.disabled = true;
-      resultEl.innerHTML = '<div class="hint">📄 Reading your CV…</div>';
+      resultEl.innerHTML = `<div class="hint">${escapeHtml(t("reading_cv"))}</div>`;
 
       const formData = new FormData();
       formData.append("init_data", tg.initData);
@@ -223,7 +447,7 @@
         showScreen("title-screen");
       } catch (err) {
         console.error("CV upload failed:", err);
-        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Upload failed, try again."))}</div>`;
+        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("upload_failed")))}</div>`;
       } finally {
         clearTimeout(timeout);
         btn.disabled = false;
@@ -242,7 +466,7 @@
       const errEl = document.getElementById("title-error");
       box.hidden = false;
       errEl.innerHTML = "";
-      chipsEl.innerHTML = '<div class="hint">🤖 Analyzing your CV…</div>';
+      chipsEl.innerHTML = `<div class="hint">${escapeHtml(t("analyzing_cv"))}</div>`;
 
       try {
         const data = await callApi("/api/suggest-titles", {});
@@ -257,13 +481,13 @@
       } catch (err) {
         console.error("Suggest titles failed:", err);
         chipsEl.innerHTML = "";
-        errEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Couldn't get suggestions, try again."))}</div>`;
+        errEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("suggestions_failed")))}</div>`;
       }
     }
 
     function pickTitle(title) {
       if (!title) {
-        document.getElementById("title-error").innerHTML = '<div class="error">Enter a job title first.</div>';
+        document.getElementById("title-error").innerHTML = `<div class="error">${escapeHtml(t("enter_title_first"))}</div>`;
         return;
       }
       state.jobTitle = title;
@@ -278,43 +502,43 @@
       showScreen("title-screen");
     }
 
-    const STATUS_LABELS = {
-      applied: "Applied", phone_screen: "Phone screen", tech_interview: "Tech interview",
-      offer: "Offer 🎉", rejected: "Rejected", ghosted: "Ghosted",
-    };
+    function statusLabel(status) {
+      const key = "status_" + status;
+      return I18N[key] ? t(key) : status;
+    }
 
     async function showApplications() {
       showScreen("applications-screen");
       const listEl = document.getElementById("applications-list");
-      listEl.innerHTML = '<div class="hint">Loading…</div>';
+      listEl.innerHTML = '<div class="hint">…</div>';
 
       try {
         const data = await callApi("/api/applications", {});
         renderApplications(data.applications);
       } catch (err) {
         console.error("Loading applications failed:", err);
-        listEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Couldn't load your applications."))}</div>`;
+        listEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("applications_load_failed")))}</div>`;
       }
     }
 
     function renderApplications(applications) {
       const listEl = document.getElementById("applications-list");
       if (!applications || applications.length === 0) {
-        listEl.innerHTML = '<div class="hint">Nothing tracked yet — like a vacancy and apply to see it here.</div>';
+        listEl.innerHTML = `<div class="hint">${escapeHtml(t("no_applications"))}</div>`;
         return;
       }
       listEl.innerHTML = applications.map(a => {
         const date = new Date(a.created_at).toLocaleDateString();
-        const status = STATUS_LABELS[a.status] || a.status;
+        const status = statusLabel(a.status);
         const scoreLine = (a.match_score !== null && a.match_score !== undefined)
-          ? `<div>${a.match_score}% match</div>` : "";
+          ? `<div>${a.match_score}${escapeHtml(t("match_suffix"))}</div>` : "";
         return `
           <div class="card" style="margin-bottom:8px;">
             <h3>${escapeHtml(a.title)}</h3>
             <div class="company">${escapeHtml(a.company)}${a.location ? " · " + escapeHtml(a.location) : ""}</div>
             ${scoreLine}
-            <div>Status: <b>${escapeHtml(status)}</b> · ${escapeHtml(date)}</div>
-            ${a.url ? `<a href="${a.url}" target="_blank">View posting →</a>` : ""}
+            <div>${escapeHtml(t("status_label_prefix"))} <b>${escapeHtml(status)}</b> · ${escapeHtml(date)}</div>
+            ${a.url ? `<a href="${a.url}" target="_blank">${escapeHtml(t("view_posting"))}</a>` : ""}
           </div>
         `;
       }).join("");
@@ -326,16 +550,16 @@
       const btn = document.getElementById("search_btn");
 
       if (!tg || !tg.initData) {
-        resultEl.innerHTML = '<div class="error">Open this from the Telegram bot, not a regular browser.</div>';
+        resultEl.innerHTML = `<div class="error">${escapeHtml(t("open_from_bot"))}</div>`;
         return;
       }
       if (state.searchCount >= MAX_SEARCHES) {
-        resultEl.innerHTML = '<div class="hint">You\'ve reached the search limit for this session — pick one of the postings above, or change the title to search again.</div>';
+        resultEl.innerHTML = `<div class="hint">${escapeHtml(t("search_limit_session"))}</div>`;
         return;
       }
 
       btn.disabled = true;
-      resultEl.innerHTML = `<div class="hint">🔎 Searching for <b>${escapeHtml(state.jobTitle)}</b> in <b>${escapeHtml(location)}</b>… usually takes 15–30 seconds.</div>`;
+      resultEl.innerHTML = `<div class="hint">${escapeHtml(t("searching_message", { title: state.jobTitle, location: location }))}</div>`;
 
       try {
         const data = await callApi("/api/search", {
@@ -347,18 +571,16 @@
         renderResult(data.vacancies);
       } catch (err) {
         console.error("Search error:", err);
-        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Search failed on our end. Please try again in a moment."))}</div>`;
+        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("search_failed")))}</div>`;
       } finally {
         btn.disabled = false;
       }
     }
 
-    const MAX_IMPROVES = 2;
-
     function renderResult(vacancies) {
       const resultEl = document.getElementById("result");
       if (!vacancies || vacancies.length === 0) {
-        resultEl.innerHTML = '<div class="hint">No matching posting found — try different criteria.</div>';
+        resultEl.innerHTML = `<div class="hint">${escapeHtml(t("no_match_found"))}</div>`;
         return;
       }
       const v = vacancies[0];
@@ -372,15 +594,15 @@
           <h3>${escapeHtml(v.title)}</h3>
           <div class="company">${escapeHtml(v.company)} · ${escapeHtml(v.location)}</div>
           <p>${escapeHtml(v.summary)}</p>
-          <a href="${v.url}" target="_blank">View posting →</a>
+          <a href="${v.url}" target="_blank">${escapeHtml(t("view_posting"))}</a>
         </div>
-        <div class="hint" style="margin-top:4px;">⚠️ This link is AI-found and may occasionally be outdated or already filled.</div>
-        <div class="hint" style="margin-top:12px;">Like this one?</div>
+        <div class="hint" style="margin-top:4px;">${escapeHtml(t("link_disclaimer"))}</div>
+        <div class="hint" style="margin-top:12px;">${escapeHtml(t("like_this_one"))}</div>
         <div class="row">
-          <button onclick="likeVacancy()">👍 Yes, I like it</button>
-          ${canSearchAgain ? '<button class="secondary" onclick="search()">🔄 Search again</button>' : ''}
+          <button onclick="likeVacancy()">${escapeHtml(t("yes_like_it"))}</button>
+          ${canSearchAgain ? `<button class="secondary" onclick="search()">${escapeHtml(t("search_again_btn"))}</button>` : ''}
         </div>
-        ${!canSearchAgain ? '<div class="hint" style="margin-top:8px;">Search limit reached for this title — change it above to search again.</div>' : ''}
+        ${!canSearchAgain ? `<div class="hint" style="margin-top:8px;">${escapeHtml(t("search_limit_title"))}</div>` : ''}
         <div id="action-area"></div>
       `;
     }
@@ -391,10 +613,10 @@
 
     function likeVacancy() {
       actionArea().innerHTML = `
-        <div class="hint" style="margin-top:12px;">How do you want to proceed?</div>
+        <div class="hint" style="margin-top:12px;">${escapeHtml(t("how_proceed"))}</div>
         <div class="row">
-          <button onclick="applyDirectly()">✅ Apply directly</button>
-          <button class="secondary" onclick="checkFit()">📊 Check my CV fit</button>
+          <button onclick="applyDirectly()">${escapeHtml(t("apply_directly"))}</button>
+          <button class="secondary" onclick="checkFit()">${escapeHtml(t("check_cv_fit"))}</button>
         </div>
       `;
     }
@@ -426,65 +648,59 @@
 
     // Maps any thrown error into a specific, non-technical message. Never
     // shows raw server/network text to the user (that goes to console only).
+    // Note: `fallback` is already-localized text from the call site; only
+    // backend `detail` strings (err.message) remain English-only for now.
     function friendlyError(err, fallback) {
-      if (err && err.name === "AbortError") {
-        return "That took too long and timed out — please try again.";
-      }
-      if (err instanceof TypeError) {
-        return "Couldn't connect — check your internet connection and try again.";
-      }
-      if (err && err.sessionExpired) {
-        return "Your session expired — close this and reopen it from the bot.";
-      }
-      if (err && typeof err.message === "string" && err.message.trim()) {
-        return err.message;
-      }
-      return fallback || "Something went wrong. Please try again.";
+      if (err && err.name === "AbortError") return t("err_timeout");
+      if (err instanceof TypeError) return t("err_network");
+      if (err && err.sessionExpired) return t("err_session_expired");
+      if (err && typeof err.message === "string" && err.message.trim()) return err.message;
+      return fallback || t("err_generic");
     }
 
     async function applyDirectly() {
-      actionArea().innerHTML = '<div class="hint">Saving…</div>';
+      actionArea().innerHTML = `<div class="hint">${escapeHtml(t("saving"))}</div>`;
       try {
         await callApi("/api/apply", { vacancy: state.currentVacancy, score: null });
         renderSaved();
       } catch (err) {
         console.error("Apply failed:", err);
-        actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Couldn't save your application, try again."))}</div>`;
+        actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("apply_failed")))}</div>`;
       }
     }
 
     async function checkFit() {
-      actionArea().innerHTML = '<div class="hint">📊 Comparing your CV to this vacancy…</div>';
+      actionArea().innerHTML = `<div class="hint">${escapeHtml(t("checking_fit"))}</div>`;
       try {
         const score = await callApi("/api/score-vacancy", { vacancy: state.currentVacancy });
         state.lastScore = score;
         renderScoreResult(score);
       } catch (err) {
         console.error("Scoring failed:", err);
-        actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Couldn't score your CV, try again."))}</div>`;
+        actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("scoring_failed")))}</div>`;
       }
     }
 
     function renderScoreResult(score) {
-      const matched = (score.matched || []).join(", ") || "none";
-      const missing = (score.missing || []).join(", ") || "none";
+      const matched = (score.matched || []).join(", ") || "—";
+      const missing = (score.missing || []).join(", ") || "—";
       actionArea().innerHTML = `
         <div class="card" style="margin-top:12px;">
-          <h3>${score.score}% Match</h3>
+          <h3>${escapeHtml(t("match_heading", { score: score.score }))}</h3>
           <p>${escapeHtml(score.verdict || "")}</p>
-          <div>✅ <b>Matched:</b> ${escapeHtml(matched)}</div>
-          <div>❌ <b>Missing:</b> ${escapeHtml(missing)}</div>
+          <div>✅ <b>${escapeHtml(t("matched_label"))}</b> ${escapeHtml(matched)}</div>
+          <div>❌ <b>${escapeHtml(t("missing_label"))}</b> ${escapeHtml(missing)}</div>
         </div>
         <div class="row">
-          <button onclick="applyDirectly()">✅ Apply anyway</button>
-          ${state.improveCount < MAX_IMPROVES ? '<button class="secondary" onclick="showLevelPicker()">📝 Get recommendations</button>' : ''}
+          <button onclick="applyDirectly()">${escapeHtml(t("apply_anyway"))}</button>
+          ${state.improveCount < MAX_IMPROVES ? `<button class="secondary" onclick="showLevelPicker()">${escapeHtml(t("get_recommendations"))}</button>` : ''}
         </div>
       `;
     }
 
     function showLevelPicker() {
       actionArea().insertAdjacentHTML("beforeend", `
-        <div class="hint" style="margin-top:12px;">What's your level for this role?</div>
+        <div class="hint" style="margin-top:12px;">${escapeHtml(t("level_question"))}</div>
         <div class="row">
           <button onclick="getRecommendations('Junior')">Junior</button>
           <button onclick="getRecommendations('Mid')">Mid</button>
@@ -494,40 +710,40 @@
     }
 
     async function getRecommendations(level) {
-      actionArea().innerHTML = '<div class="hint">📝 Working out what to fix…</div>';
+      actionArea().innerHTML = `<div class="hint">${escapeHtml(t("working_out_fixes"))}</div>`;
       try {
         const data = await callApi("/api/cv-recommendations", { vacancy: state.currentVacancy, level });
         renderRecommendations(data.fixes);
       } catch (err) {
         console.error("Recommendations failed:", err);
-        actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Couldn't get recommendations, try again."))}</div>`;
+        actionArea().innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("recommendations_failed")))}</div>`;
       }
     }
 
     function renderRecommendations(fixes) {
       const cards = (fixes || []).map(f => `
         <div class="card" style="margin-top:8px;">
-          <p><b>Issue:</b> ${escapeHtml(f.issue)}</p>
-          ${f.before ? `<p><i>Before:</i> ${escapeHtml(f.before)}</p>` : ""}
-          <p><i>After:</i> ${escapeHtml(f.after)}</p>
+          <p><b>${escapeHtml(t("issue_label"))}</b> ${escapeHtml(f.issue)}</p>
+          ${f.before ? `<p><i>${escapeHtml(t("before_label"))}</i> ${escapeHtml(f.before)}</p>` : ""}
+          <p><i>${escapeHtml(t("after_label"))}</i> ${escapeHtml(f.after)}</p>
         </div>
       `).join("");
 
       actionArea().innerHTML = `
         ${cards}
-        <div class="hint" style="margin-top:12px;">Ready to apply, or want to improve your CV first?</div>
+        <div class="hint" style="margin-top:12px;">${escapeHtml(t("ready_to_apply"))}</div>
         <div class="row">
-          <button onclick="applyDirectly()">✅ Apply now</button>
-          ${state.improveCount < MAX_IMPROVES ? '<button class="secondary" onclick="showImproveUpload()">📄 Improve CV</button>' : ''}
+          <button onclick="applyDirectly()">${escapeHtml(t("apply_now"))}</button>
+          ${state.improveCount < MAX_IMPROVES ? `<button class="secondary" onclick="showImproveUpload()">${escapeHtml(t("improve_cv_btn"))}</button>` : ''}
         </div>
       `;
     }
 
     function showImproveUpload() {
       actionArea().innerHTML = `
-        <div class="hint">Upload your updated CV (PDF or DOCX).</div>
+        <div class="hint">${escapeHtml(t("upload_updated_cv"))}</div>
         <input type="file" id="improve_cv_file" accept=".pdf,.docx" />
-        <button onclick="uploadImprovedCV()">📄 Upload improved CV</button>
+        <button onclick="uploadImprovedCV()">${escapeHtml(t("upload_improved_btn"))}</button>
         <div id="improve_result"></div>
       `;
     }
@@ -537,11 +753,11 @@
       const resultEl = document.getElementById("improve_result");
       const file = fileInput.files[0];
       if (!file) {
-        resultEl.innerHTML = '<div class="error">Choose a PDF or DOCX file first.</div>';
+        resultEl.innerHTML = `<div class="error">${escapeHtml(t("choose_file_first"))}</div>`;
         return;
       }
 
-      resultEl.innerHTML = '<div class="hint">📄 Reading your updated CV…</div>';
+      resultEl.innerHTML = `<div class="hint">${escapeHtml(t("reading_updated_cv"))}</div>`;
       const formData = new FormData();
       formData.append("init_data", tg.initData);
       formData.append("file", file);
@@ -561,7 +777,7 @@
         renderPostImproveChoice();
       } catch (err) {
         console.error("Improved CV upload failed:", err);
-        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, "Upload failed, try again."))}</div>`;
+        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("upload_failed")))}</div>`;
       } finally {
         clearTimeout(timeout);
       }
@@ -570,24 +786,24 @@
     function renderPostImproveChoice() {
       if (state.improveCount >= MAX_IMPROVES) {
         actionArea().innerHTML = `
-          <div class="hint">CV updated. You've reached the improve limit for this vacancy — ready to apply.</div>
-          <button onclick="applyDirectly()">✅ Apply now</button>
+          <div class="hint">${escapeHtml(t("improve_limit_reached"))}</div>
+          <button onclick="applyDirectly()">${escapeHtml(t("apply_now"))}</button>
         `;
         return;
       }
       actionArea().innerHTML = `
-        <div class="hint">CV updated. Apply now, or check your new match % first?</div>
+        <div class="hint">${escapeHtml(t("improve_choice"))}</div>
         <div class="row">
-          <button onclick="applyDirectly()">✅ Apply now</button>
-          <button class="secondary" onclick="checkFit()">📊 Check match again</button>
+          <button onclick="applyDirectly()">${escapeHtml(t("apply_now"))}</button>
+          <button class="secondary" onclick="checkFit()">${escapeHtml(t("check_match_again"))}</button>
         </div>
       `;
     }
 
     function renderSaved() {
       actionArea().innerHTML = `
-        <div class="hint">✅ Saved to your tracked applications.</div>
-        <button class="secondary" onclick="showApplications()">📋 View my applications</button>
+        <div class="hint">${escapeHtml(t("saved_confirmation"))}</div>
+        <button class="secondary" onclick="showApplications()">${escapeHtml(t("view_my_applications"))}</button>
       `;
     }
 

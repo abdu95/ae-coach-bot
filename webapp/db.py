@@ -46,6 +46,23 @@ def ensure_user(telegram_id: int, username: str | None, name: str | None) -> Non
         pool.putconn(conn)
 
 
+def get_user_language(telegram_id: int) -> str:
+    """Returns the language the user picked in the bot (uz/ru), matching
+    bot/i18n.py's fallback: empty/unset -> "en". Deliberately NOT the
+    device's system language (Telegram's initData.user.language_code) -
+    that reflects the phone's OS locale, not what the user actually chose
+    via the bot's language picker (see bot.py's send_language_picker)."""
+    pool = get_pool()
+    conn = pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT language FROM users WHERE telegram_id = %s", (telegram_id,))
+            row = cur.fetchone()
+            return row[0] if row and row[0] else "en"
+    finally:
+        pool.putconn(conn)
+
+
 def get_cv_text(telegram_id: int) -> str | None:
     pool = get_pool()
     conn = pool.getconn()

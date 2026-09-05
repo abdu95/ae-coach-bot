@@ -102,7 +102,8 @@ class CVStatusRequest(BaseModel):
 async def cv_status(req: CVStatusRequest):
     user = authenticate(req.init_data)
     cv_text = db.get_cv_text(user["id"])
-    return {"has_cv": bool(cv_text)}
+    lang = db.get_user_language(user["id"])
+    return {"has_cv": bool(cv_text), "lang": lang}
 
 
 @app.post("/api/upload-cv")
