@@ -1,7 +1,9 @@
+import asyncio
 import logging
 import os
 import io
 import base64
+import time
 
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
@@ -51,6 +53,18 @@ def can_run_check(user_id: int, user: dict) -> bool:
 
 def action_button(label: str, callback: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[InlineKeyboardButton(label, callback_data=callback)]])
+
+
+MIN_LOADING_SECONDS = 1.5
+
+
+async def ensure_min_display(started_at: float, minimum: float = MIN_LOADING_SECONDS) -> None:
+    """Keeps a status message ('Reading your CV...', 'Analyzing...') on
+    screen for at least `minimum` seconds even if the underlying call
+    finishes faster, so it doesn't flash by unread."""
+    elapsed = time.monotonic() - started_at
+    if elapsed < minimum:
+        await asyncio.sleep(minimum - elapsed)
 
 
 LANG_BUTTONS = {
@@ -241,6 +255,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     state.log_event(user_id, "cv_uploaded")
     msg = await update.message.reply_text(i18n.t("reading_cv", user["lang"]))
+    started = time.monotonic()
 
     try:
         file = await context.bot.get_file(doc.file_id)
@@ -262,6 +277,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await msg.edit_text(i18n.t("cv_read_error", user["lang"]))
         return
 
+    await ensure_min_display(started)
     await msg.delete()
 
     if came_from_jobs:
@@ -297,6 +313,7 @@ async def start_job_title_suggestion(message, user_id: int) -> None:
     user["industry"] = ""
 
     loading = await message.reply_text(i18n.t("jobs_finding_titles", user["lang"]))
+    started = time.monotonic()
     try:
         titles = await coach.suggest_job_titles(user["cv_text"])
     except Exception as e:
@@ -306,6 +323,7 @@ async def start_job_title_suggestion(message, user_id: int) -> None:
 
     user["suggested_titles"] = titles
     user["phase"] = "waiting_job_title"
+    await ensure_min_display(started)
     await loading.delete()
 
     buttons = [[InlineKeyboardButton(title, callback_data=f"jobtitle_{i}")] for i, title in enumerate(titles)]
@@ -319,6 +337,7 @@ async def start_job_title_suggestion(message, user_id: int) -> None:
 async def run_vacancy_search(message, user_id: int) -> None:
     user = state.get(user_id)
     loading = await message.reply_text(i18n.t("jobs_searching", user["lang"]))
+    started = time.monotonic()
 
     try:
         vacancies = await vacancy_source.search_vacancies(
@@ -347,6 +366,7 @@ async def run_vacancy_search(message, user_id: int) -> None:
 
     user["current_vacancy"] = vacancy
     user["seen_companies"].append(vacancy["company"])
+    await ensure_min_display(started)
     await loading.delete()
 
     card = formatter.vacancy_card(vacancy, score, user["search_count"], 3, user["lang"])
@@ -404,6 +424,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     msg = await update.message.reply_text(
         i18n.t("analyzing", user["lang"]), parse_mode=ParseMode.HTML
     )
+    started = time.monotonic()
     try:
         outputs = await coach.analyze_cv(user["jd"], user["cv_text"])
         user["outputs"] = outputs
@@ -416,6 +437,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await msg.edit_text(i18n.t("analysis_failed", user["lang"]))
         return
 
+    await ensure_min_display(started)
     await msg.delete()
     quota = effective_quota(user_id)
     remaining = max(0, quota - user["usage_count"])
@@ -458,6 +480,7 @@ async def send_roadmap_item(message, user_id: int, item: int) -> None:
         i18n.roadmap_loading(item, title, user["lang"]),
         parse_mode=ParseMode.HTML,
     )
+    started = time.monotonic()
 
     if title == "CV Fixes":
         try:
@@ -466,6 +489,7 @@ async def send_roadmap_item(message, user_id: int, item: int) -> None:
             logger.error(f"Roadmap error (item {item}): {e}")
             await loading.edit_text(i18n.t("roadmap_failed", user["lang"]))
             return
+        await ensure_min_display(started)
         await loading.delete()
         user["cv_fixes"] = fixes
         await send_cv_fix(message, user_id, index=1)
@@ -478,6 +502,7 @@ async def send_roadmap_item(message, user_id: int, item: int) -> None:
         await loading.edit_text(i18n.t("roadmap_failed", user["lang"]))
         return
 
+    await ensure_min_display(started)
     await loading.delete()
     formatted = formatter.step_roadmap_block(item, title, text, user["lang"])
 
