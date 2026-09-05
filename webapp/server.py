@@ -16,6 +16,7 @@ load_dotenv()
 
 import cv_parser  # local to this folder
 import db  # local to this folder
+import hypothesis  # local to this folder
 import vacancy_source  # local to this folder - see its docstring
 
 logging.basicConfig(level=logging.INFO)
@@ -72,6 +73,7 @@ class SearchRequest(BaseModel):
     location: str = "Any"
     work_setup: str = "Any"
     industry: str = "Any"
+    seen_companies: list[str] = []
 
 
 @app.post("/api/search")
@@ -80,7 +82,8 @@ async def search(req: SearchRequest):
 
     try:
         vacancies = await vacancy_source.search_vacancies(
-            req.job_title, req.location, req.work_setup, req.industry
+            req.job_title, req.location, req.work_setup, req.industry,
+            seen_companies=req.seen_companies or None,
         )
     except Exception:
         logger.exception("Vacancy search failed")
@@ -119,6 +122,26 @@ async def upload_cv(init_data: str = Form(...), file: UploadFile = File(...)):
 
     db.save_cv_text(user["id"], cv_text)
     return {"saved": True}
+
+
+class SuggestTitlesRequest(BaseModel):
+    init_data: str
+
+
+@app.post("/api/suggest-titles")
+async def suggest_titles(req: SuggestTitlesRequest):
+    user = authenticate(req.init_data)
+    cv_text = db.get_cv_text(user["id"])
+    if not cv_text:
+        raise HTTPException(400, "No CV on file - upload one first")
+
+    try:
+        titles = await hypothesis.suggest_job_titles(cv_text)
+    except Exception:
+        logger.exception("Title suggestion failed")
+        raise HTTPException(502, "Couldn't generate suggestions, try again")
+
+    return {"titles": titles}
 
 
 @app.get("/api/health")

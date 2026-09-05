@@ -39,6 +39,21 @@
     cursor: pointer;
   }
   button:disabled { opacity: 0.6; }
+  button.secondary {
+    background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+    color: var(--tg-theme-text-color, #000000);
+  }
+  button.link {
+    width: auto;
+    background: none;
+    color: var(--tg-theme-link-color, #2481cc);
+    padding: 4px 0;
+    margin-top: 4px;
+    font-weight: 400;
+    text-align: left;
+  }
+  .row { display: flex; gap: 8px; }
+  .row button { margin-top: 0; }
   #result { margin-top: 20px; }
   .card {
     border: 1px solid var(--tg-theme-hint-color, #dddddd);
@@ -49,6 +64,26 @@
   .card .company { color: var(--tg-theme-hint-color, #999999); font-size: 13px; margin-bottom: 8px; }
   .card a { color: var(--tg-theme-link-color, #2481cc); }
   .error { color: #d33; font-size: 14px; }
+  .chip {
+    display: inline-block;
+    border: 1px solid var(--tg-theme-hint-color, #cccccc);
+    border-radius: 20px;
+    padding: 8px 14px;
+    margin: 4px 4px 0 0;
+    font-size: 14px;
+    cursor: pointer;
+    background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+  }
+  .selected-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+  }
+  .selected-title b { font-size: 15px; }
   [hidden] { display: none !important; }
   input[type="file"] { border: none; padding: 8px 0; background: none; }
 </style>
@@ -66,11 +101,32 @@
     <div id="upload_result"></div>
   </div>
 
-  <div id="search-screen" hidden>
-    <div class="hint">Search live job postings matching your CV.</div>
+  <div id="title-screen" hidden>
+    <div class="hint">What position are you looking for?</div>
+    <div class="row">
+      <button onclick="showManualTitle()">✍️ Type my own</button>
+      <button class="secondary" onclick="suggestTitles()">🤖 Suggest from my CV</button>
+    </div>
 
-    <label for="job_title">Job title</label>
-    <input id="job_title" placeholder="e.g. Data Analyst" />
+    <div id="manual-title-box" hidden>
+      <label for="manual_title">Job title</label>
+      <input id="manual_title" placeholder="e.g. Data Analyst" />
+      <button onclick="pickTitle(document.getElementById('manual_title').value.trim())">Next →</button>
+    </div>
+
+    <div id="suggested-titles-box" hidden>
+      <div id="title-chips"></div>
+      <button class="link" onclick="suggestTitles()">🔄 Suggest different titles</button>
+    </div>
+
+    <div id="title-error"></div>
+  </div>
+
+  <div id="search-screen" hidden>
+    <div class="selected-title">
+      <span>Searching for <b id="chosen-title-label"></b></span>
+      <button class="link" onclick="backToTitleScreen()" style="margin:0;">change</button>
+    </div>
 
     <label for="location">Location</label>
     <input id="location" placeholder="e.g. Tashkent, Remote, Europe" />
@@ -91,10 +147,19 @@
       }
     }
 
+    const state = { jobTitle: "", seenCompanies: [], searchCount: 0 };
+    const MAX_SEARCHES = 3;
+
+    function showScreen(id) {
+      for (const s of ["loading-gate", "cv-gate", "title-screen", "search-screen"]) {
+        document.getElementById(s).hidden = (s !== id);
+      }
+    }
+
     async function checkCVAndRoute() {
-      const loadingEl = document.getElementById("loading-gate");
       if (!tg || !tg.initData) {
-        loadingEl.innerHTML = '<div class="error">Open this from the Telegram bot, not a regular browser.</div>';
+        document.getElementById("loading-gate").innerHTML =
+          '<div class="error">Open this from the Telegram bot, not a regular browser.</div>';
         return;
       }
       try {
@@ -105,11 +170,11 @@
         });
         if (!res.ok) throw new Error("status check failed");
         const data = await res.json();
-        loadingEl.hidden = true;
-        document.getElementById(data.has_cv ? "search-screen" : "cv-gate").hidden = false;
+        showScreen(data.has_cv ? "title-screen" : "cv-gate");
       } catch (err) {
         console.error("CV status check failed:", err);
-        loadingEl.innerHTML = '<div class="error">⚠️ Couldn\'t load your profile. Please try reopening from the bot.</div>';
+        document.getElementById("loading-gate").innerHTML =
+          '<div class="error">⚠️ Couldn\'t load your profile. Please try reopening from the bot.</div>';
       }
     }
     checkCVAndRoute();
@@ -138,8 +203,7 @@
           const body = await res.json().catch(() => ({}));
           throw new Error(body.detail || "Upload failed");
         }
-        document.getElementById("cv-gate").hidden = true;
-        document.getElementById("search-screen").hidden = false;
+        showScreen("title-screen");
       } catch (err) {
         console.error("CV upload failed:", err);
         resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(err.message || "Upload failed, try again.")}</div>`;
@@ -148,23 +212,76 @@
       }
     }
 
+    function showManualTitle() {
+      document.getElementById("suggested-titles-box").hidden = true;
+      document.getElementById("manual-title-box").hidden = false;
+    }
+
+    async function suggestTitles() {
+      document.getElementById("manual-title-box").hidden = true;
+      const box = document.getElementById("suggested-titles-box");
+      const chipsEl = document.getElementById("title-chips");
+      const errEl = document.getElementById("title-error");
+      box.hidden = false;
+      errEl.innerHTML = "";
+      chipsEl.innerHTML = '<div class="hint">🤖 Analyzing your CV…</div>';
+
+      try {
+        const res = await fetch("/api/suggest-titles", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ init_data: tg.initData }),
+        });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || "Couldn't get suggestions");
+        const data = await res.json();
+        chipsEl.innerHTML = "";
+        for (const title of data.titles) {
+          const chip = document.createElement("span");
+          chip.className = "chip";
+          chip.textContent = title;
+          chip.onclick = () => pickTitle(title);
+          chipsEl.appendChild(chip);
+        }
+      } catch (err) {
+        console.error("Suggest titles failed:", err);
+        chipsEl.innerHTML = "";
+        errEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(err.message || "Something went wrong.")}</div>`;
+      }
+    }
+
+    function pickTitle(title) {
+      if (!title) {
+        document.getElementById("title-error").innerHTML = '<div class="error">Enter a job title first.</div>';
+        return;
+      }
+      state.jobTitle = title;
+      state.seenCompanies = [];
+      state.searchCount = 0;
+      document.getElementById("chosen-title-label").textContent = title;
+      document.getElementById("result").innerHTML = "";
+      showScreen("search-screen");
+    }
+
+    function backToTitleScreen() {
+      showScreen("title-screen");
+    }
+
     async function search() {
-      const jobTitle = document.getElementById("job_title").value.trim();
       const location = document.getElementById("location").value.trim() || "Any";
       const resultEl = document.getElementById("result");
       const btn = document.getElementById("search_btn");
 
-      if (!jobTitle) {
-        resultEl.innerHTML = '<div class="error">Enter a job title first.</div>';
-        return;
-      }
       if (!tg || !tg.initData) {
         resultEl.innerHTML = '<div class="error">Open this from the Telegram bot, not a regular browser.</div>';
         return;
       }
+      if (state.searchCount >= MAX_SEARCHES) {
+        resultEl.innerHTML = '<div class="hint">You\'ve reached the search limit for this session — pick one of the postings above, or change the title to search again.</div>';
+        return;
+      }
 
       btn.disabled = true;
-      resultEl.innerHTML = `<div class="hint">🔎 Searching for <b>${escapeHtml(jobTitle)}</b> in <b>${escapeHtml(location)}</b>… usually takes 15–30 seconds.</div>`;
+      resultEl.innerHTML = `<div class="hint">🔎 Searching for <b>${escapeHtml(state.jobTitle)}</b> in <b>${escapeHtml(location)}</b>… usually takes 15–30 seconds.</div>`;
 
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 45000);
@@ -175,15 +292,15 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             init_data: tg.initData,
-            job_title: jobTitle,
+            job_title: state.jobTitle,
             location: location,
+            seen_companies: state.seenCompanies,
           }),
           signal: controller.signal,
         });
 
         if (!res.ok) {
-          const rawText = await res.text().catch(() => "");
-          console.error("Search request failed:", res.status, rawText);
+          console.error("Search request failed:", res.status, await res.text().catch(() => ""));
           if (res.status === 401) {
             throw new Error("FRIENDLY:Your session expired — close this and reopen it from the bot.");
           }
@@ -191,6 +308,7 @@
         }
 
         const data = await res.json();
+        state.searchCount += 1;
         renderResult(data.vacancies);
       } catch (err) {
         let friendly = "Something went wrong. Please try again.";
@@ -214,14 +332,30 @@
         resultEl.innerHTML = '<div class="hint">No matching posting found — try different criteria.</div>';
         return;
       }
-      resultEl.innerHTML = vacancies.map(v => `
+      const v = vacancies[0];
+      state.seenCompanies.push(v.company);
+      const canSearchAgain = state.searchCount < MAX_SEARCHES;
+
+      resultEl.innerHTML = `
         <div class="card">
           <h3>${escapeHtml(v.title)}</h3>
           <div class="company">${escapeHtml(v.company)} · ${escapeHtml(v.location)}</div>
           <p>${escapeHtml(v.summary)}</p>
           <a href="${v.url}" target="_blank">View posting →</a>
         </div>
-      `).join("");
+        <div class="hint" style="margin-top:12px;">Like this one?</div>
+        <div class="row">
+          <button onclick="likeVacancy()">👍 Yes, I like it</button>
+          ${canSearchAgain ? '<button class="secondary" onclick="search()">🔄 Search again</button>' : ''}
+        </div>
+        ${!canSearchAgain ? '<div class="hint" style="margin-top:8px;">Search limit reached for this title — change it above to search again.</div>' : ''}
+      `;
+    }
+
+    function likeVacancy() {
+      // Next chunk: apply-directly vs upload-CV-for-scoring branch.
+      document.getElementById("result").insertAdjacentHTML("beforeend",
+        '<div class="hint" style="margin-top:12px;">🚧 Apply / score-my-CV flow coming next.</div>');
     }
 
     function escapeHtml(text) {
