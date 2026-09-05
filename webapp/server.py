@@ -1,18 +1,20 @@
 import hashlib
 import hmac
+import json
 import logging
 import os
 from pathlib import Path
 from urllib.parse import parse_qsl
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 load_dotenv()
 
+import cv_parser  # local to this folder
 import db  # local to this folder
 import vacancy_source  # local to this folder - see its docstring
 
@@ -47,6 +49,23 @@ def verify_init_data(init_data: str) -> dict:
     return parsed
 
 
+def authenticate(init_data: str) -> dict:
+    """Validates initData and ensures a `users` row exists for this
+    telegram_id (needed before any write to `applications`, which has a
+    foreign key to `users`). Returns the Telegram user dict (id,
+    first_name, username)."""
+    parsed = verify_init_data(init_data)
+    try:
+        user = json.loads(parsed.get("user", "{}"))
+    except json.JSONDecodeError:
+        raise HTTPException(400, "Malformed user data in initData")
+    telegram_id = user.get("id")
+    if not telegram_id:
+        raise HTTPException(400, "Missing user id in initData")
+    db.ensure_user(telegram_id, user.get("username"), user.get("first_name"))
+    return user
+
+
 class SearchRequest(BaseModel):
     init_data: str
     job_title: str
@@ -68,6 +87,38 @@ async def search(req: SearchRequest):
         raise HTTPException(502, "Search failed, try again")
 
     return {"vacancies": vacancies}
+
+
+class CVStatusRequest(BaseModel):
+    init_data: str
+
+
+@app.post("/api/cv-status")
+async def cv_status(req: CVStatusRequest):
+    user = authenticate(req.init_data)
+    cv_text = db.get_cv_text(user["id"])
+    return {"has_cv": bool(cv_text)}
+
+
+@app.post("/api/upload-cv")
+async def upload_cv(init_data: str = Form(...), file: UploadFile = File(...)):
+    user = authenticate(init_data)
+
+    if not file.filename.lower().endswith((".pdf", ".docx")):
+        raise HTTPException(400, "Only PDF and DOCX files are accepted")
+
+    file_bytes = await file.read()
+    try:
+        cv_text = cv_parser.parse_cv(file.filename, file_bytes)
+    except Exception:
+        logger.exception("CV parsing failed")
+        raise HTTPException(400, "Could not read that file - try a different PDF/DOCX")
+
+    if not cv_text.strip():
+        raise HTTPException(400, "Could not find any text in that file")
+
+    db.save_cv_text(user["id"], cv_text)
+    return {"saved": True}
 
 
 @app.get("/api/health")

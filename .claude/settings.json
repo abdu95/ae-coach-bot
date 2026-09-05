@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(railway logs *)",
+      "Bash(curl *)",
+      "Bash(railway service status *)",
+      "Bash(railway variable list *)",
+      "Bash(railway deployment list *)"
+    ]
+  }
+}

@@ -49,21 +49,36 @@
   .card .company { color: var(--tg-theme-hint-color, #999999); font-size: 13px; margin-bottom: 8px; }
   .card a { color: var(--tg-theme-link-color, #2481cc); }
   .error { color: #d33; font-size: 14px; }
+  [hidden] { display: none !important; }
+  input[type="file"] { border: none; padding: 8px 0; background: none; }
 </style>
 </head>
 <body>
-  <h2 id="greeting">Find a vacancy</h2>
-  <div class="hint">Search live job postings matching your CV.</div>
+  <h2 id="greeting">AcceptedAI</h2>
 
-  <label for="job_title">Job title</label>
-  <input id="job_title" placeholder="e.g. Data Analyst" />
+  <div id="loading-gate" class="hint">Loading…</div>
 
-  <label for="location">Location</label>
-  <input id="location" placeholder="e.g. Tashkent, Remote, Europe" />
+  <div id="cv-gate" hidden>
+    <div class="hint">Upload your CV so I can search and score vacancies against it.</div>
+    <label for="cv_file">CV (PDF or DOCX)</label>
+    <input type="file" id="cv_file" accept=".pdf,.docx" />
+    <button id="upload_btn" onclick="uploadCV()">📄 Upload CV</button>
+    <div id="upload_result"></div>
+  </div>
 
-  <button id="search_btn" onclick="search()">🔍 Search</button>
+  <div id="search-screen" hidden>
+    <div class="hint">Search live job postings matching your CV.</div>
 
-  <div id="result"></div>
+    <label for="job_title">Job title</label>
+    <input id="job_title" placeholder="e.g. Data Analyst" />
+
+    <label for="location">Location</label>
+    <input id="location" placeholder="e.g. Tashkent, Remote, Europe" />
+
+    <button id="search_btn" onclick="search()">🔍 Search</button>
+
+    <div id="result"></div>
+  </div>
 
   <script>
     const tg = window.Telegram?.WebApp;
@@ -72,7 +87,64 @@
       tg.expand();
       const user = tg.initDataUnsafe?.user;
       if (user) {
-        document.getElementById("greeting").textContent = `Hi ${user.first_name}, find a vacancy`;
+        document.getElementById("greeting").textContent = `Hi ${user.first_name}`;
+      }
+    }
+
+    async function checkCVAndRoute() {
+      const loadingEl = document.getElementById("loading-gate");
+      if (!tg || !tg.initData) {
+        loadingEl.innerHTML = '<div class="error">Open this from the Telegram bot, not a regular browser.</div>';
+        return;
+      }
+      try {
+        const res = await fetch("/api/cv-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ init_data: tg.initData }),
+        });
+        if (!res.ok) throw new Error("status check failed");
+        const data = await res.json();
+        loadingEl.hidden = true;
+        document.getElementById(data.has_cv ? "search-screen" : "cv-gate").hidden = false;
+      } catch (err) {
+        console.error("CV status check failed:", err);
+        loadingEl.innerHTML = '<div class="error">⚠️ Couldn\'t load your profile. Please try reopening from the bot.</div>';
+      }
+    }
+    checkCVAndRoute();
+
+    async function uploadCV() {
+      const fileInput = document.getElementById("cv_file");
+      const resultEl = document.getElementById("upload_result");
+      const btn = document.getElementById("upload_btn");
+      const file = fileInput.files[0];
+
+      if (!file) {
+        resultEl.innerHTML = '<div class="error">Choose a PDF or DOCX file first.</div>';
+        return;
+      }
+
+      btn.disabled = true;
+      resultEl.innerHTML = '<div class="hint">📄 Reading your CV…</div>';
+
+      const formData = new FormData();
+      formData.append("init_data", tg.initData);
+      formData.append("file", file);
+
+      try {
+        const res = await fetch("/api/upload-cv", { method: "POST", body: formData });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.detail || "Upload failed");
+        }
+        document.getElementById("cv-gate").hidden = true;
+        document.getElementById("search-screen").hidden = false;
+      } catch (err) {
+        console.error("CV upload failed:", err);
+        resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(err.message || "Upload failed, try again.")}</div>`;
+      } finally {
+        btn.disabled = false;
       }
     }
 

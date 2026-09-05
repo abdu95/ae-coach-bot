@@ -156,8 +156,16 @@ async def language_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 async def app_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Spike: opens the Mini App for searching a live vacancy. Separate
-    from the ATS flow — no CV/JD required."""
+    """Opens the Mini App (vacancy search -> apply -> track). No CV/JD
+    needed in chat first - the app handles CV upload itself.
+
+    Calling state.get() here (even though this handler doesn't use the
+    session data) ensures a `users` row exists for this telegram_id.
+    Without it, a user who only ever taps /app (never /start) would have
+    no `users` row, and saving an application later would fail - the
+    applications table has telegram_id REFERENCES users(telegram_id)."""
+    state.get(update.effective_user.id)
+
     if not MINI_APP_URL:
         await update.message.reply_text("Mini App isn't configured yet.")
         return
