@@ -4,7 +4,7 @@ import io
 import base64
 
 from dotenv import load_dotenv
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     CallbackQueryHandler, ContextTypes, filters,
@@ -36,6 +36,7 @@ PILOT_CAP = int(os.getenv("PILOT_CAP", "10"))
 PAYME_ID = os.getenv("PAYME_ID", "")
 PACKAGE_AMOUNT = int(os.getenv("PACKAGE_AMOUNT_TIYIN", "9900000"))  # 99,000 UZS in tiyin
 PACKAGE_NAME = "10_checks"
+MINI_APP_URL = os.getenv("MINI_APP_URL", "")
 
 
 def effective_quota(user_id: int) -> int:
@@ -137,6 +138,20 @@ async def reset_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def language_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await send_language_picker(update.message, update.effective_user.language_code)
+
+
+async def app_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Spike: opens the Mini App for searching a live vacancy. Separate
+    from the ATS flow — no CV/JD required."""
+    if not MINI_APP_URL:
+        await update.message.reply_text("Mini App isn't configured yet.")
+        return
+    await update.message.reply_text(
+        "🔍 Search live vacancies matching a job title and location.",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("Open search", web_app=WebAppInfo(url=MINI_APP_URL))
+        ]]),
+    )
 
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -455,6 +470,7 @@ def main() -> None:
     app.add_handler(CommandHandler("start", state.persisting(start)))
     app.add_handler(CommandHandler("reset", state.persisting(reset_cmd)))
     app.add_handler(CommandHandler("language", state.persisting(language_cmd)))
+    app.add_handler(CommandHandler("app", state.persisting(app_cmd)))
     app.add_handler(CommandHandler("stats", state.persisting(stats)))
     app.add_handler(CommandHandler("grant", state.persisting(grant_cmd)))
     app.add_handler(MessageHandler(filters.Document.ALL, state.persisting(handle_document)))
