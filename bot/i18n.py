@@ -61,7 +61,6 @@ STATS_AND_PRIVACY = {
         "spend scanning a CV on average. Also, in a recent study, 43% of rejections came "
         "from preventable issues — bad formatting, missing keywords, parsing errors — "
         "not real experience gaps.\n\n"
-        "So as a first step, I need your CV.\n\n"
         "🔒 Btw, don't worry about privacy: your CV is only used to generate your report. "
         "It's never shared with recruiters or anyone else — wipe it anytime with /reset."
     ),
@@ -70,7 +69,6 @@ STATS_AND_PRIVACY = {
         "vaqt ajratishadi. Yana, so'nggi tadqiqotga ko'ra, rad javoblarining 43% aslida "
         "tajriba yetishmasligidan emas — balki noto'g'ri formatlash, kalit so'zlar yo'qligi "
         "va CV'ni tizim o'qiy olmasligidan kelib chiqadi.\n\n"
-        "Shuning uchun birinchi qadam sifatida menga CV'ingiz kerak.\n\n"
         "🔒 Aytgancha, maxfiylik haqida xavotir olmang: CV'ingiz faqat hisobot tayyorlash "
         "uchun ishlatiladi. U ish beruvchilarga yoki boshqa hech kimga berilmaydi — "
         "xohlagan vaqtda /reset bilan o'chirib tashlashingiz mumkin."
@@ -80,7 +78,6 @@ STATS_AND_PRIVACY = {
         "тратят на просмотр резюме. Также, по данным недавнего исследования, 43% отказов "
         "связаны не с нехваткой опыта, а с исправимыми проблемами — плохим форматированием, "
         "отсутствием ключевых слов и ошибками при разборе резюме системой.\n\n"
-        "Поэтому первым делом мне нужно ваше резюме.\n\n"
         "🔒 Кстати, не переживайте насчёт конфиденциальности: ваше резюме используется "
         "только для подготовки отчёта. Оно не передаётся рекрутёрам и никому другому — "
         "можете удалить его в любой момент командой /reset."
@@ -256,9 +253,9 @@ PILOT_FULL = {
 }
 
 RESET_DONE = {
-    "en": "🔄 Reset. Upload your CV to start again.",
-    "uz": "🔄 Qayta boshlandi. Qaytadan boshlash uchun CV'ingizni yuklang.",
-    "ru": "🔄 Сброшено. Загрузите резюме, чтобы начать заново.",
+    "en": "🔄 Reset. Tap below to start again.",
+    "uz": "🔄 Qayta boshlandi. Qaytadan boshlash uchun pastni bosing.",
+    "ru": "🔄 Сброшено. Нажмите ниже, чтобы начать заново.",
 }
 
 PLEASE_UPLOAD_CV = {
@@ -352,13 +349,34 @@ ROADMAP_WAIT_NOTE = {
 }
 
 APP_INTRO = {
-    "en": "🔍 Search live vacancies matching a job title and location.",
-    "uz": "🔍 Lavozim va joylashuvga mos vakansiyalarni qidiring.",
-    "ru": "🔍 Ищите вакансии по должности и локации.",
+    "en": (
+        "👋 <b>Accepted AI</b>\n\n"
+        "I help you get accepted into your dream job:\n"
+        "📊 Analyze your CV against a job description — ATS score, bullet-point fixes, "
+        "and a step-by-step roadmap\n"
+        "🔍 Search live vacancies and track every application\n\n"
+        "Everything happens in the app below 👇"
+    ),
+    "uz": (
+        "👋 <b>Accepted AI</b>\n\n"
+        "Men sizga orzuingizdagi ishga qabul qilinishda yordam beraman:\n"
+        "📊 CV'ingizni ish e'loniga solishtiring — ATS bali, band tuzatishlari va "
+        "bosqichma-bosqich reja\n"
+        "🔍 Joriy vakansiyalarni qidiring va har bir arizani kuzating\n\n"
+        "Hammasi quyidagi ilova ichida 👇"
+    ),
+    "ru": (
+        "👋 <b>Accepted AI</b>\n\n"
+        "Я помогу вам получить работу мечты:\n"
+        "📊 Сравню ваше резюме с вакансией — ATS-балл, исправления формулировок и "
+        "пошаговый план\n"
+        "🔍 Поиск актуальных вакансий и отслеживание каждой заявки\n\n"
+        "Всё это — в приложении ниже 👇"
+    ),
 }
 
 APP_OPEN_BUTTON = {
-    "en": "Open search", "uz": "Qidiruvni ochish", "ru": "Открыть поиск",
+    "en": "🚀 Open AcceptedAI", "uz": "🚀 AcceptedAI'ni ochish", "ru": "🚀 Открыть AcceptedAI",
 }
 
 APP_NOT_CONFIGURED = {
