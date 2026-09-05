@@ -236,6 +236,8 @@ def _empty() -> dict:
         "lang": "",                 # "uz" or "ru", empty until chosen
         "usage_count": 0,           # successful analyses run, lifetime
         "waitlisted": False,
+        "awaiting_custom_checks": False,  # true while waiting for a typed check quantity
+        "app_nudge_sent": False,    # one-time /app discovery nudge after first completed roadmap
     }
 
 
@@ -287,7 +289,7 @@ def get_or_create_order(telegram_id: int, amount: int, package: str) -> int:
     repeated prompts don't pile up dead `orders` rows. Refreshes the amount
     on reuse so a reused order always matches the currently-configured
     price — otherwise a stale pending order from before a price change
-    would disagree with the checkout link built from the new PACKAGE_AMOUNT,
+    would disagree with the checkout link built from the new price,
     and Payme would reject the transaction as an amount mismatch."""
     conn = _pool.getconn()
     try:

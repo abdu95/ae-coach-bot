@@ -7,22 +7,31 @@ WELCOME = {
         "1️⃣ Upload your CV as a PDF or Word (.docx) file\n"
         "2️⃣ Paste the job description you are targeting\n"
         "3️⃣ I analyse your CV against it step by step\n\n"
-        "📄 <b>Upload your CV to begin.</b>"
+        "📄 <b>Upload your CV to begin.</b>\n\n"
+        "💼 Prefer to browse live vacancies first? Type /app"
     ),
     "uz": (
         "👋 <b>Accepted AI</b>\n\n"
         "1️⃣ CV'ingizni PDF yoki Word (.docx) formatida yuklang\n"
         "2️⃣ Maqsad qilgan ish tavsifini (job description) joylashtiring\n"
         "3️⃣ Men CV'ingizni bosqichma-bosqich tahlil qilaman\n\n"
-        "📄 <b>Boshlash uchun CV'ingizni yuklang.</b>"
+        "📄 <b>Boshlash uchun CV'ingizni yuklang.</b>\n\n"
+        "💼 Avval joriy vakansiyalarni ko'rmoqchimisiz? /app buyrug'ini yuboring"
     ),
     "ru": (
         "👋 <b>Accepted AI</b>\n\n"
         "1️⃣ Загрузите своё резюме (CV) в формате PDF или Word (.docx)\n"
         "2️⃣ Вставьте описание вакансии, на которую претендуете\n"
         "3️⃣ Я проанализирую ваше резюме по шагам\n\n"
-        "📄 <b>Загрузите резюме, чтобы начать.</b>"
+        "📄 <b>Загрузите резюме, чтобы начать.</b>\n\n"
+        "💼 Хотите сначала посмотреть актуальные вакансии? Отправьте /app"
     ),
+}
+
+APP_NUDGE = {
+    "en": "🎯 <b>New:</b> search live vacancies and track your applications right here — type /app to try it.",
+    "uz": "🎯 <b>Yangilik:</b> joriy vakansiyalarni qidiring va arizalaringizni shu yerda kuzating — sinab ko'rish uchun /app yuboring.",
+    "ru": "🎯 <b>Новое:</b> ищите актуальные вакансии и отслеживайте свои отклики прямо здесь — отправьте /app, чтобы попробовать.",
 }
 
 ASK_NAME = {
@@ -132,25 +141,52 @@ ANALYZING = {
 LIMIT_REACHED = {
     "en": (
         "🚦 <b>You've used all {limit} free checks.</b>\n\n"
-        "We're working on making more checks available (including paid options). "
-        "Tap below to join the waitlist and we'll notify you here as soon as that's ready."
+        "Buy more — {price} UZS per check. Choose how many:"
     ),
     "uz": (
         "🚦 <b>Siz barcha {limit} ta bepul tekshiruvdan foydalandingiz.</b>\n\n"
-        "Ko'proq tekshiruvlarni (shu jumladan pullik variantlarni) taqdim etish ustida ishlayapmiz. "
-        "Kutish ro'yxatiga qo'shilish uchun pastdagi tugmani bosing — tayyor bo'lishi bilan shu yerda xabar beramiz."
+        "Ko'proq sotib oling — har biri {price} so'm. Nechtasini xohlaysiz?"
     ),
     "ru": (
         "🚦 <b>Вы использовали все {limit} бесплатных проверок.</b>\n\n"
-        "Мы работаем над тем, чтобы открыть больше проверок (в том числе платных). "
-        "Нажмите кнопку ниже, чтобы встать в список ожидания — мы сообщим здесь, как только это будет готово."
+        "Купите ещё — по {price} сум за проверку. Выберите количество:"
     ),
 }
 
+BUY_CHECKS_BUTTON = {
+    "en": "{checks} — {amount} UZS",
+    "uz": "{checks} — {amount} so'm",
+    "ru": "{checks} — {amount} сум",
+}
+
+BUY_CUSTOM_BUTTON = {
+    "en": "🔢 Custom amount",
+    "uz": "🔢 Boshqa miqdor",
+    "ru": "🔢 Другое количество",
+}
+
+BUY_CUSTOM_PROMPT = {
+    "en": "How many checks would you like? Enter a number from {min} to {max}.",
+    "uz": "Nechta tekshiruv xohlaysiz? {min} dan {max} gacha son kiriting.",
+    "ru": "Сколько проверок вам нужно? Введите число от {min} до {max}.",
+}
+
+BUY_CUSTOM_INVALID = {
+    "en": "Please enter a whole number from {min} to {max}.",
+    "uz": "Iltimos, {min} dan {max} gacha butun son kiriting.",
+    "ru": "Пожалуйста, введите целое число от {min} до {max}.",
+}
+
+CHECKOUT_READY = {
+    "en": "You're buying {checks} for {amount} UZS. Tap below to pay:",
+    "uz": "Siz {checks} sotib olyapsiz — {amount} so'm. To'lash uchun pastni bosing:",
+    "ru": "Вы покупаете {checks} за {amount} сум. Нажмите ниже, чтобы оплатить:",
+}
+
 PAY_BUTTON = {
-    "en": "💳 Pay {amount} UZS — 10 checks",
-    "uz": "💳 To'lash — {amount} so'm — 10 ta tekshiruv",
-    "ru": "💳 Оплатить {amount} сум — 10 проверок",
+    "en": "💳 Pay {amount} UZS — {checks}",
+    "uz": "💳 To'lash — {amount} so'm — {checks}",
+    "ru": "💳 Оплатить {amount} сум — {checks}",
 }
 
 JOIN_WAITLIST_BUTTON = {
@@ -189,18 +225,15 @@ ANALYSIS_DONE_CONTINUE = {
 ANALYSIS_DONE_LIMIT = {
     "en": (
         "✅ This is the end of the analysis. Apply the tips above to your job application.\n\n"
-        "You've used all {limit} free checks. Want to check another role? "
-        "Join the waitlist below and we'll notify you when more checks are available."
+        "You've used all {limit} free checks. Buy more below — {price} UZS per check."
     ),
     "uz": (
         "✅ Tahlil yakunlandi. Yuqoridagi tavsiyalarni ariza topshirishda qo'llang.\n\n"
-        "Siz barcha {limit} ta bepul tekshiruvdan foydalandingiz. Yana tekshirmoqchimisiz? "
-        "Ko'proq tekshiruvlar mavjud bo'lganda xabar berishimiz uchun pastdagi kutish ro'yxatiga qo'shiling."
+        "Siz barcha {limit} ta bepul tekshiruvdan foydalandingiz. Pastdan ko'proq sotib oling — har biri {price} so'm."
     ),
     "ru": (
         "✅ Анализ завершён. Примените советы выше в своей заявке.\n\n"
-        "Вы использовали все {limit} бесплатных проверок. Хотите проверить ещё одну вакансию? "
-        "Встаньте в список ожидания ниже — мы сообщим, когда будет доступно больше проверок."
+        "Вы использовали все {limit} бесплатных проверок. Купите ещё ниже — по {price} сум за проверку."
     ),
 }
 
@@ -607,6 +640,8 @@ STRINGS = {
     "vacancy_matched_label": VACANCY_MATCHED_LABEL,
     "vacancy_missing_label": VACANCY_MISSING_LABEL,
     "vacancy_view_posting": VACANCY_VIEW_POSTING,
+    "app_nudge": APP_NUDGE,
+    "buy_custom_button": BUY_CUSTOM_BUTTON,
 }
 
 
@@ -637,9 +672,50 @@ def roadmap_loading(item: int, title: str, lang: str) -> str:
     return f"<b>{roadmap_header(item, title, lang)}</b>\n\n⏳ {desc}\n\n{wait}"
 
 
-def pay_button(amount_tiyin: int, lang: str) -> str:
+def _checks_label(n: int, lang: str) -> str:
+    if lang == "ru":
+        n_mod100 = n % 100
+        n_mod10 = n % 10
+        if 11 <= n_mod100 <= 14:
+            word = "проверок"
+        elif n_mod10 == 1:
+            word = "проверка"
+        elif 2 <= n_mod10 <= 4:
+            word = "проверки"
+        else:
+            word = "проверок"
+        return f"{n} {word}"
+    if lang == "uz":
+        return f"{n} ta tekshiruv"
+    return f"{n} check" if n == 1 else f"{n} checks"
+
+
+def buy_checks_button(n: int, price_tiyin: int, lang: str) -> str:
+    template = BUY_CHECKS_BUTTON.get(lang) or BUY_CHECKS_BUTTON["en"]
+    amount = (n * price_tiyin) // 100
+    return template.format(checks=_checks_label(n, lang), amount=f"{amount:,}")
+
+
+def buy_custom_prompt(min_n: int, max_n: int, lang: str) -> str:
+    template = BUY_CUSTOM_PROMPT.get(lang) or BUY_CUSTOM_PROMPT["en"]
+    return template.format(min=min_n, max=max_n)
+
+
+def buy_custom_invalid(min_n: int, max_n: int, lang: str) -> str:
+    template = BUY_CUSTOM_INVALID.get(lang) or BUY_CUSTOM_INVALID["en"]
+    return template.format(min=min_n, max=max_n)
+
+
+def checkout_ready(checks: int, price_tiyin: int, lang: str) -> str:
+    template = CHECKOUT_READY.get(lang) or CHECKOUT_READY["en"]
+    amount = (checks * price_tiyin) // 100
+    return template.format(checks=_checks_label(checks, lang), amount=f"{amount:,}")
+
+
+def pay_button(checks: int, price_tiyin: int, lang: str) -> str:
     template = PAY_BUTTON.get(lang) or PAY_BUTTON["en"]
-    return template.format(amount=f"{amount_tiyin // 100:,}")
+    amount = (checks * price_tiyin) // 100
+    return template.format(amount=f"{amount:,}", checks=_checks_label(checks, lang))
 
 
 def continue_button(title: str, lang: str) -> str:
@@ -657,9 +733,9 @@ def stats_and_privacy(name: str, lang: str) -> str:
     return template.format(name=name)
 
 
-def limit_reached(limit: int, lang: str) -> str:
+def limit_reached(limit: int, price_tiyin: int, lang: str) -> str:
     template = LIMIT_REACHED.get(lang) or LIMIT_REACHED["en"]
-    return template.format(limit=limit)
+    return template.format(limit=limit, price=f"{price_tiyin // 100:,}")
 
 
 def checks_left(remaining: int, limit: int, lang: str) -> str:
@@ -667,9 +743,9 @@ def checks_left(remaining: int, limit: int, lang: str) -> str:
     return template.format(remaining=remaining, limit=limit)
 
 
-def analysis_done(remaining: int, limit: int, lang: str) -> str:
+def analysis_done(remaining: int, limit: int, lang: str, price_tiyin: int = 0) -> str:
     if remaining <= 0:
         template = ANALYSIS_DONE_LIMIT.get(lang) or ANALYSIS_DONE_LIMIT["en"]
-        return template.format(limit=limit)
+        return template.format(limit=limit, price=f"{price_tiyin // 100:,}")
     template = ANALYSIS_DONE_CONTINUE.get(lang) or ANALYSIS_DONE_CONTINUE["en"]
     return template.format(remaining=remaining, limit=limit)

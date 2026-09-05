@@ -40,8 +40,13 @@ MARKETING_SOURCES = {"chashma": "chashma_marathon"}
 PILOT_QUOTA = int(os.getenv("PILOT_QUOTA", "10"))
 PILOT_CAP = int(os.getenv("PILOT_CAP", "10"))
 PAYME_ID = os.getenv("PAYME_ID", "")
-PACKAGE_AMOUNT = int(os.getenv("PACKAGE_AMOUNT_TIYIN", "9900000"))  # 99,000 UZS in tiyin
-PACKAGE_NAME = "10_checks"
+# Must match payme-webhook's PRICE_PER_CHECK_TIYIN — that service derives
+# how many checks a paid order is worth from (amount / this price), since
+# orders no longer carry a fixed package size.
+PRICE_PER_CHECK_TIYIN = int(os.getenv("PRICE_PER_CHECK_TIYIN", "1000000"))  # 10,000 UZS/check
+CHECK_QUANTITY_PRESETS = [1, 5, 10, 20, 50]
+MIN_CHECKS_PURCHASE = 1
+MAX_CHECKS_PURCHASE = 100
 MINI_APP_URL = os.getenv("MINI_APP_URL", "")
 
 
@@ -87,30 +92,49 @@ async def send_language_picker(message, hint_code: str | None) -> None:
     )
 
 
-def build_checkout_url(order_id: int, bot_username: str) -> str:
-    raw = f"m={PAYME_ID};ac.order_id={order_id};a={PACKAGE_AMOUNT};c=https://t.me/{bot_username}"
+def build_checkout_url(order_id: int, bot_username: str, amount: int) -> str:
+    raw = f"m={PAYME_ID};ac.order_id={order_id};a={amount};c=https://t.me/{bot_username}"
     return "https://checkout.paycom.uz/" + base64.b64encode(raw.encode()).decode()
 
 
-def checkout_url_for(user_id: int, bot_username: str) -> str:
-    order_id = state.get_or_create_order(user_id, PACKAGE_AMOUNT, PACKAGE_NAME)
-    return build_checkout_url(order_id, bot_username)
+def checkout_url_for(user_id: int, bot_username: str, checks: int) -> str:
+    amount = checks * PRICE_PER_CHECK_TIYIN
+    order_id = state.get_or_create_order(user_id, amount, f"{checks}_checks")
+    return build_checkout_url(order_id, bot_username, amount)
 
 
-def out_of_checks_markup(lang: str, checkout_url: str) -> InlineKeyboardMarkup:
+def checks_quantity_markup(lang: str) -> InlineKeyboardMarkup:
+    rows = [
+        [InlineKeyboardButton(i18n.buy_checks_button(n, PRICE_PER_CHECK_TIYIN, lang), callback_data=f"buy_{n}")]
+        for n in CHECK_QUANTITY_PRESETS
+    ]
+    rows.append([InlineKeyboardButton(i18n.t("buy_custom_button", lang), callback_data="buy_custom")])
+    rows.append([InlineKeyboardButton(i18n.t("join_waitlist_button", lang), callback_data="join_waitlist")])
+    return InlineKeyboardMarkup(rows)
+
+
+def checkout_link_markup(lang: str, checks: int, checkout_url: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(i18n.pay_button(PACKAGE_AMOUNT, lang), url=checkout_url)],
-        [InlineKeyboardButton(i18n.t("join_waitlist_button", lang), callback_data="join_waitlist")],
+        [InlineKeyboardButton(i18n.pay_button(checks, PRICE_PER_CHECK_TIYIN, lang), url=checkout_url)],
     ])
 
 
 async def send_limit_reached(message, user_id: int, lang: str) -> None:
     state.log_event(user_id, "limit_reached")
-    checkout_url = checkout_url_for(user_id, message.get_bot().username)
     await message.reply_text(
-        i18n.limit_reached(effective_quota(user_id), lang),
+        i18n.limit_reached(effective_quota(user_id), PRICE_PER_CHECK_TIYIN, lang),
         parse_mode=ParseMode.HTML,
-        reply_markup=out_of_checks_markup(lang, checkout_url),
+        reply_markup=checks_quantity_markup(lang),
+    )
+
+
+async def send_checkout_link(message, user_id: int, checks: int, lang: str) -> None:
+    checkout_url = checkout_url_for(user_id, message.get_bot().username, checks)
+    state.log_event(user_id, "checkout_started", metadata={"checks": checks})
+    await message.reply_text(
+        i18n.checkout_ready(checks, PRICE_PER_CHECK_TIYIN, lang),
+        parse_mode=ParseMode.HTML,
+        reply_markup=checkout_link_markup(lang, checks, checkout_url),
     )
 
 
@@ -399,6 +423,16 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     user = state.get(user_id)
     text = update.message.text.strip()
 
+    if user.get("awaiting_custom_checks"):
+        if not text.isdigit() or not (MIN_CHECKS_PURCHASE <= int(text) <= MAX_CHECKS_PURCHASE):
+            await update.message.reply_text(
+                i18n.buy_custom_invalid(MIN_CHECKS_PURCHASE, MAX_CHECKS_PURCHASE, user["lang"])
+            )
+            return
+        user["awaiting_custom_checks"] = False
+        await send_checkout_link(update.message, user_id, int(text), user["lang"])
+        return
+
     if user["phase"] == "waiting_name":
         name = text[:50]
         user["name"] = name
@@ -537,15 +571,18 @@ async def send_roadmap_item(message, user_id: int, item: int) -> None:
             await message.reply_text(chunk, parse_mode=ParseMode.HTML)
         quota = effective_quota(user_id)
         remaining = max(0, quota - user["usage_count"])
-        done_text = i18n.analysis_done(remaining, quota, user["lang"])
+        done_text = i18n.analysis_done(remaining, quota, user["lang"], PRICE_PER_CHECK_TIYIN)
         if remaining <= 0:
-            checkout_url = checkout_url_for(user_id, message.get_bot().username)
             await message.reply_text(
                 done_text, parse_mode=ParseMode.HTML,
-                reply_markup=out_of_checks_markup(user["lang"], checkout_url),
+                reply_markup=checks_quantity_markup(user["lang"]),
             )
         else:
             await message.reply_text(done_text, parse_mode=ParseMode.HTML)
+
+        if not user.get("app_nudge_sent"):
+            user["app_nudge_sent"] = True
+            await message.reply_text(i18n.t("app_nudge", user["lang"]), parse_mode=ParseMode.HTML)
 
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -565,6 +602,16 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         else:
             user["phase"] = "waiting_name"
             await message.reply_text(i18n.t("ask_name", user["lang"]))
+        return
+
+    if action == "buy_custom":
+        user["awaiting_custom_checks"] = True
+        await message.reply_text(i18n.buy_custom_prompt(MIN_CHECKS_PURCHASE, MAX_CHECKS_PURCHASE, user["lang"]))
+        return
+
+    if action.startswith("buy_"):
+        checks = int(action.split("_", 1)[1])
+        await send_checkout_link(message, user_id, checks, user["lang"])
         return
 
     if action == "join_waitlist":
