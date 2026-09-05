@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 load_dotenv()
 
+import db  # local to this folder
 import vacancy_source  # local to this folder - see its docstring
 
 logging.basicConfig(level=logging.INFO)
@@ -67,6 +68,15 @@ async def search(req: SearchRequest):
         raise HTTPException(502, "Search failed, try again")
 
     return {"vacancies": vacancies}
+
+
+@app.get("/api/health")
+async def health():
+    try:
+        return db.check_connection()
+    except Exception:
+        logger.exception("DB health check failed")
+        raise HTTPException(500, "DB connection failed")
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
