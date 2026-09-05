@@ -10,13 +10,24 @@
 <body>
   <div style="display:flex; justify-content:space-between; align-items:center;">
     <h2 id="greeting">AcceptedAI</h2>
-    <button id="nav-applications" class="link" onclick="showApplications()" hidden style="margin:0;"></button>
+    <div style="display:flex; gap:12px; align-items:center;">
+      <button id="nav-checks" class="link" onclick="showProfile()" hidden style="margin:0;"></button>
+      <button id="nav-applications" class="link" onclick="showApplications()" hidden style="margin:0;"></button>
+    </div>
   </div>
 
   <div id="loading-gate" class="hint">Loading…</div>
 
+  <div id="welcome-screen" hidden>
+    <div class="hint" id="welcome-body"></div>
+    <button id="welcome-continue-btn" onclick="showScreen('home-screen')"></button>
+  </div>
+
   <div id="cv-gate" hidden>
-    <div class="hint" id="cv-gate-hint"></div>
+    <div class="screen-header">
+      <div class="hint" id="cv-gate-hint"></div>
+      <button id="btn-cv-gate-back" class="back-btn" onclick="goHome()"></button>
+    </div>
     <label for="cv_file" id="cv-file-label"></label>
     <input type="file" id="cv_file" accept=".pdf,.docx" />
     <button id="upload_btn" onclick="uploadCV()"></button>
@@ -25,14 +36,22 @@
 
   <div id="home-screen" hidden>
     <div class="hint" id="home-hint"></div>
-    <button class="menu-option" onclick="goToAnalysis()">
-      <div id="home-analyze-option"></div>
-      <div class="hint" id="home-analyze-hint"></div>
-    </button>
     <button class="menu-option" onclick="goToVacancySearch()">
       <div id="home-vacancy-option"></div>
       <div class="hint" id="home-vacancy-hint"></div>
     </button>
+    <button class="menu-option" onclick="goToAnalysis()">
+      <div id="home-analyze-option"></div>
+      <div class="hint" id="home-analyze-hint"></div>
+    </button>
+  </div>
+
+  <div id="profile-screen" hidden>
+    <div class="screen-header">
+      <div class="hint" id="profile-title"></div>
+      <button id="btn-profile-back" class="back-btn" onclick="goHome()"></button>
+    </div>
+    <div id="profile-content"></div>
   </div>
 
   <div id="analysis-screen" hidden>

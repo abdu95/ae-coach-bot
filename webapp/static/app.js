@@ -77,9 +77,9 @@ const I18N = {
   match_suffix: { en: "% match", uz: "% moslik", ru: "% совпадение" },
   view_posting: { en: "View posting →", uz: "E'lonni ko'rish →", ru: "Посмотреть вакансию →" },
   search_limit_session: {
-    en: "You've reached the search limit for this session — pick one of the postings above, or change the title to search again.",
-    uz: "Ushbu sessiya uchun qidiruv chegarasiga yetdingiz — yuqoridagi e'lonlardan birini tanlang yoki qaytadan qidirish uchun lavozimni o'zgartiring.",
-    ru: "Вы достигли лимита поиска для этой сессии — выберите одну из вакансий выше или измените должность, чтобы искать снова.",
+    en: "You've used all 3 free vacancy searches for this session.",
+    uz: "Ushbu sessiya uchun barcha 3 ta bepul vakansiya qidiruvidan foydalandingiz.",
+    ru: "Вы использовали все 3 бесплатных поиска вакансий за эту сессию.",
   },
   searching_message: {
     en: "🔎 Searching for {title} in {location}… usually takes 15–30 seconds.",
@@ -105,9 +105,9 @@ const I18N = {
   yes_like_it: { en: "👍 Yes, I like it", uz: "👍 Ha, yoqdi", ru: "👍 Да, нравится" },
   search_again_btn: { en: "🔄 Search again", uz: "🔄 Qayta qidirish", ru: "🔄 Искать снова" },
   search_limit_title: {
-    en: "Search limit reached for this title — change it above to search again.",
-    uz: "Ushbu lavozim uchun qidiruv chegarasiga yetdingiz — qayta qidirish uchun uni yuqorida o'zgartiring.",
-    ru: "Достигнут лимит поиска для этой должности — измените её выше, чтобы искать снова.",
+    en: "You've used all 3 free vacancy searches for this session.",
+    uz: "Ushbu sessiya uchun barcha 3 ta bepul vakansiya qidiruvidan foydalandingiz.",
+    ru: "Вы использовали все 3 бесплатных поиска вакансий за эту сессию.",
   },
   search_cap_prompt: {
     en: "Want a deeper look? Analyze your CV against a specific job — get an ATS score, bullet-point fixes, and a step-by-step roadmap.",
@@ -307,6 +307,33 @@ const I18N = {
   },
   checks_word: { en: "checks", uz: "ta tekshiruv", ru: "проверок" },
   check_word_one: { en: "check", uz: "ta tekshiruv", ru: "проверка" },
+  welcome_body: {
+    en: "👋 Welcome to AcceptedAI. I help you get accepted into your dream job — analyze your CV against a job description, or find and track vacancies.",
+    uz: "👋 AcceptedAI'ga xush kelibsiz. Men sizga orzuingizdagi ishga qabul qilinishda yordam beraman — CV'ingizni ish e'loniga solishtiring yoki vakansiyalarni toping va kuzating.",
+    ru: "👋 Добро пожаловать в AcceptedAI. Я помогу вам получить работу мечты — сравните резюме с вакансией или найдите и отслеживайте вакансии.",
+  },
+  welcome_continue_btn: { en: "Get started →", uz: "Boshlash →", ru: "Начать →" },
+  profile_title: { en: "Profile", uz: "Profil", ru: "Профиль" },
+  profile_checks_line: {
+    en: "You have {remaining} of {quota} free checks left.",
+    uz: "Sizda {quota} tadan {remaining} ta bepul tekshiruv qoldi.",
+    ru: "У вас осталось {remaining} из {quota} бесплатных проверок.",
+  },
+  profile_buy_more_btn: { en: "💳 Buy more checks", uz: "💳 Ko'proq tekshiruv sotib olish", ru: "💳 Купить ещё проверок" },
+  nav_checks_badge: { en: "🎫 {remaining}/{quota}", uz: "🎫 {remaining}/{quota}", ru: "🎫 {remaining}/{quota}" },
+  post_roadmap_no_checks: {
+    en: "You're out of free checks. Buy more to analyze another job:",
+    uz: "Bepul tekshiruvlaringiz tugadi. Boshqa ish e'lonini tahlil qilish uchun ko'proq sotib oling:",
+    ru: "У вас закончились бесплатные проверки. Купите ещё, чтобы проанализировать другую вакансию:",
+  },
+  post_roadmap_checks_left: {
+    en: "You have {remaining}/{quota} free checks left.",
+    uz: "Sizda {remaining}/{quota} ta bepul tekshiruv qoldi.",
+    ru: "У вас осталось {remaining}/{quota} бесплатных проверок.",
+  },
+  analyze_another_btn: {
+    en: "📊 Analyze another job", uz: "📊 Boshqa ish e'lonini tahlil qilish", ru: "📊 Проанализировать другую вакансию",
+  },
 };
 
 let currentLang = "en";
@@ -350,6 +377,11 @@ function applyStaticTranslations() {
   document.getElementById("search_btn").textContent = t("search_btn");
   document.getElementById("applications-title").textContent = t("applications_title");
   document.getElementById("btn-applications-back").textContent = t("back_link");
+  document.getElementById("btn-cv-gate-back").textContent = t("back_link");
+  document.getElementById("welcome-body").textContent = t("welcome_body");
+  document.getElementById("welcome-continue-btn").textContent = t("welcome_continue_btn");
+  document.getElementById("profile-title").textContent = t("profile_title");
+  document.getElementById("btn-profile-back").textContent = t("back_link");
 
   const filterEl = document.getElementById("applications-filter");
   filterEl.innerHTML = ['all', 'applied', 'phone_screen', 'tech_interview', 'offer', 'rejected', 'ghosted']
@@ -369,6 +401,7 @@ const state = {
   jobTitle: "", seenCompanies: [], searchCount: 0,
   vacancies: [], vacancyIndex: -1, improveCount: 0,
   jd: "", analysisLevel: "", analysisRemaining: null, analysisQuota: null,
+  hasCv: false, postUploadDestination: null,
 };
 const MAX_SEARCHES = 3;
 const MAX_IMPROVES = 2;
@@ -377,15 +410,28 @@ const MIN_CHECKS_PURCHASE = 1;
 const MAX_CHECKS_PURCHASE = 100;
 
 function showScreen(id) {
-  for (const s of ["loading-gate", "cv-gate", "home-screen", "analysis-screen", "title-screen", "search-screen", "applications-screen"]) {
+  for (const s of ["loading-gate", "welcome-screen", "cv-gate", "home-screen", "profile-screen", "analysis-screen", "title-screen", "search-screen", "applications-screen"]) {
     document.getElementById(s).hidden = (s !== id);
   }
 }
 
 function goHome() { showScreen("home-screen"); }
-function goToVacancySearch() { showScreen("title-screen"); }
+
+function goToVacancySearch() {
+  if (!state.hasCv) {
+    state.postUploadDestination = "vacancy";
+    showScreen("cv-gate");
+    return;
+  }
+  showScreen("title-screen");
+}
 
 function goToAnalysis() {
+  if (!state.hasCv) {
+    state.postUploadDestination = "analysis";
+    showScreen("cv-gate");
+    return;
+  }
   document.getElementById("jd-input-box").hidden = false;
   document.getElementById("analysis-result").innerHTML = "";
   showScreen("analysis-screen");
@@ -395,6 +441,21 @@ function scrollToBottom() {
   requestAnimationFrame(() => {
     window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   });
+}
+
+function updateChecksHeader(remaining, quota) {
+  const badge = document.getElementById("nav-checks");
+  badge.textContent = t("nav_checks_badge", { remaining, quota });
+  badge.hidden = false;
+}
+
+async function refreshChecksHeader() {
+  try {
+    const q = await callApi("/api/quota-status", {});
+    updateChecksHeader(q.remaining, q.quota);
+  } catch (err) {
+    console.error("Couldn't load quota status for header:", err);
+  }
 }
 
 async function checkCVAndRoute() {
@@ -413,14 +474,16 @@ async function checkCVAndRoute() {
     const data = await res.json();
     currentLang = data.lang || "en";
     applyStaticTranslations();
+    state.hasCv = data.has_cv;
 
     const userInfo = tg.initDataUnsafe?.user;
     if (userInfo) {
       document.getElementById("greeting").textContent = t("greeting", { name: userInfo.first_name });
     }
 
-    showScreen(data.has_cv ? "home-screen" : "cv-gate");
+    showScreen(data.has_cv ? "home-screen" : "welcome-screen");
     document.getElementById("nav-applications").hidden = false;
+    refreshChecksHeader();
   } catch (err) {
     console.error("CV status check failed:", err);
     document.getElementById("loading-gate").innerHTML =
@@ -428,6 +491,40 @@ async function checkCVAndRoute() {
   }
 }
 checkCVAndRoute();
+
+async function showProfile() {
+  showScreen("profile-screen");
+  const contentEl = document.getElementById("profile-content");
+  contentEl.innerHTML = `<div class="hint">…</div>`;
+  try {
+    const q = await callApi("/api/quota-status", {});
+    updateChecksHeader(q.remaining, q.quota);
+    contentEl.innerHTML = `
+      <div class="card">
+        <div>${escapeHtml(t("profile_checks_line", { remaining: q.remaining, quota: q.quota }))}</div>
+      </div>
+    `;
+    if (q.remaining <= 0) {
+      const buyBox = document.createElement("div");
+      buyBox.style.marginTop = "12px";
+      contentEl.appendChild(buyBox);
+      await renderBuyChecks(buyBox);
+    } else {
+      const btn = document.createElement("button");
+      btn.className = "secondary";
+      btn.textContent = t("profile_buy_more_btn");
+      btn.onclick = async () => {
+        const buyBox = document.createElement("div");
+        contentEl.appendChild(buyBox);
+        await renderBuyChecks(buyBox);
+      };
+      contentEl.appendChild(btn);
+    }
+  } catch (err) {
+    console.error("Couldn't load profile:", err);
+    contentEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("couldnt_load_profile")))}</div>`;
+  }
+}
 
 async function uploadCV() {
   const fileInput = document.getElementById("cv_file");
@@ -458,7 +555,18 @@ async function uploadCV() {
       if (res.status === 401) err.sessionExpired = true;
       throw err;
     }
-    showScreen("home-screen");
+    state.hasCv = true;
+    if (state.postUploadDestination === "analysis") {
+      state.postUploadDestination = null;
+      document.getElementById("jd-input-box").hidden = false;
+      document.getElementById("analysis-result").innerHTML = "";
+      showScreen("analysis-screen");
+    } else if (state.postUploadDestination === "vacancy") {
+      state.postUploadDestination = null;
+      showScreen("title-screen");
+    } else {
+      showScreen("home-screen");
+    }
   } catch (err) {
     console.error("CV upload failed:", err);
     resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("upload_failed")))}</div>`;
@@ -506,7 +614,6 @@ function pickTitle(title) {
   }
   state.jobTitle = title;
   state.seenCompanies = [];
-  state.searchCount = 0;
   state.vacancies = [];
   state.vacancyIndex = -1;
   state.improveCount = 0;
@@ -532,6 +639,7 @@ async function showApplications() {
   document.getElementById("application-detail").hidden = true;
   document.getElementById("applications-list").hidden = false;
   document.getElementById("applications-controls").hidden = false;
+  document.getElementById("btn-applications-back").hidden = false;
   const listEl = document.getElementById("applications-list");
   listEl.innerHTML = '<div class="hint">…</div>';
 
@@ -589,6 +697,7 @@ function openApplicationDetail(id) {
   if (!app) return;
   document.getElementById("applications-list").hidden = true;
   document.getElementById("applications-controls").hidden = true;
+  document.getElementById("btn-applications-back").hidden = true;
   const detailEl = document.getElementById("application-detail");
   detailEl.hidden = false;
 
@@ -617,6 +726,7 @@ function closeApplicationDetail() {
   document.getElementById("application-detail").hidden = true;
   document.getElementById("applications-list").hidden = false;
   document.getElementById("applications-controls").hidden = false;
+  document.getElementById("btn-applications-back").hidden = false;
 }
 
 async function setApplicationStatus(id, status) {
@@ -1009,6 +1119,7 @@ async function analyzeCV() {
     state.analysisLevel = data.level.assessment;
     state.analysisRemaining = data.remaining;
     state.analysisQuota = data.quota;
+    updateChecksHeader(data.remaining, data.quota);
     document.getElementById("jd-input-box").hidden = true;
     renderAnalysisResult(data);
   } catch (err) {
@@ -1069,27 +1180,34 @@ function renderAnalysisResult(data) {
 }
 
 function startRoadmap() {
+  document.getElementById("roadmap-area").innerHTML = "";
   loadRoadmapItem(1);
 }
 
+// Each roadmap item gets appended as its own permanent block (like the
+// vacancy carousel keeps prior state around) instead of replacing the
+// previous item's content - so "Phone Screen Prep" stays visible above
+// "Technical Interview Prep" rather than vanishing when you continue.
 async function loadRoadmapItem(item) {
   const areaEl = document.getElementById("roadmap-area");
-  areaEl.innerHTML = `<div class="hint">${escapeHtml(t("analyzing_message_web"))}</div>`;
+  const blockId = `roadmap-item-${item}`;
+  areaEl.insertAdjacentHTML("beforeend", `<div id="${blockId}"><div class="hint">${escapeHtml(t("analyzing_message_web"))}</div></div>`);
+  scrollToBottom();
+  const blockEl = document.getElementById(blockId);
   try {
     const data = await callApi("/api/roadmap-item", { jd: state.jd, level: state.analysisLevel, item });
     if (data.fixes) {
-      renderRoadmapFixes(data, item);
+      renderRoadmapFixes(blockEl, data, item);
     } else {
-      renderRoadmapText(data, item);
+      renderRoadmapText(blockEl, data, item);
     }
   } catch (err) {
     console.error("Roadmap item failed:", err);
-    areaEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("roadmap_failed_web")))}</div>`;
+    blockEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("roadmap_failed_web")))}</div>`;
   }
 }
 
-function renderRoadmapFixes(data, item) {
-  const areaEl = document.getElementById("roadmap-area");
+function renderRoadmapFixes(blockEl, data, item) {
   const cards = (data.fixes || []).map(f => `
     <div class="card" style="margin-top:8px;">
       <p><b>${escapeHtml(t("issue_label"))}</b> ${escapeHtml(f.issue)}</p>
@@ -1097,12 +1215,12 @@ function renderRoadmapFixes(data, item) {
       <p><i>${escapeHtml(t("after_label"))}</i> ${escapeHtml(f.after)}</p>
     </div>
   `).join("");
-  areaEl.innerHTML = `
+  blockEl.innerHTML = `
     <h3 style="margin-top:16px;">${escapeHtml(data.title)}</h3>
     ${cards}
-    <div id="roadmap-next"></div>
+    <div id="roadmap-next-${item}"></div>
   `;
-  renderRoadmapNext(data.is_last, item);
+  renderRoadmapNext(document.getElementById(`roadmap-next-${item}`), data.is_last, item);
   scrollToBottom();
 }
 
@@ -1115,29 +1233,52 @@ function formatRoadmapText(raw) {
   }).join("\n");
 }
 
-function renderRoadmapText(data, item) {
-  const areaEl = document.getElementById("roadmap-area");
-  areaEl.innerHTML = `
+function renderRoadmapText(blockEl, data, item) {
+  blockEl.innerHTML = `
     <div class="card" style="margin-top:16px;">
       <h3>${escapeHtml(data.title)}</h3>
       <div class="roadmap-body">${formatRoadmapText(data.text)}</div>
     </div>
-    <div id="roadmap-next"></div>
+    <div id="roadmap-next-${item}"></div>
   `;
-  renderRoadmapNext(data.is_last, item);
+  renderRoadmapNext(document.getElementById(`roadmap-next-${item}`), data.is_last, item);
   scrollToBottom();
 }
 
-function renderRoadmapNext(isLast, item) {
-  const nextEl = document.getElementById("roadmap-next");
+function renderRoadmapNext(nextEl, isLast, item) {
   if (!isLast) {
     nextEl.innerHTML = `<button onclick="loadRoadmapItem(${item + 1})">${escapeHtml(t("roadmap_continue_btn"))}</button>`;
     return;
   }
-  nextEl.innerHTML = `<div class="hint" style="margin-top:8px;">${escapeHtml(t("roadmap_done"))}</div><div id="post-roadmap-buy"></div>`;
-  if (state.analysisRemaining !== null && state.analysisRemaining <= 0) {
-    renderBuyChecks(document.getElementById("post-roadmap-buy"));
+  renderRoadmapDone(nextEl);
+}
+
+// The real next-step flow after finishing a roadmap: no dead end - tell
+// the user exactly how many free checks they have left, and either offer
+// to analyze another job or send them straight to buying more checks.
+async function renderRoadmapDone(nextEl) {
+  nextEl.innerHTML = `<div class="hint" style="margin-top:8px;">${escapeHtml(t("roadmap_done"))}</div><div id="post-roadmap-next"></div>`;
+  const box = document.getElementById("post-roadmap-next");
+  box.innerHTML = `<div class="hint">…</div>`;
+  try {
+    const q = await callApi("/api/quota-status", {});
+    updateChecksHeader(q.remaining, q.quota);
+    if (q.remaining <= 0) {
+      box.innerHTML = `<div class="prompt-block">${escapeHtml(t("post_roadmap_no_checks"))}</div>`;
+      const buyBox = document.createElement("div");
+      box.appendChild(buyBox);
+      await renderBuyChecks(buyBox);
+    } else {
+      box.innerHTML = `
+        <div class="prompt-block">${escapeHtml(t("post_roadmap_checks_left", { remaining: q.remaining, quota: q.quota }))}</div>
+        <button onclick="goToAnalysis()">${escapeHtml(t("analyze_another_btn"))}</button>
+      `;
+    }
+  } catch (err) {
+    console.error("Couldn't load quota status after roadmap:", err);
+    box.innerHTML = `<button onclick="goToAnalysis()">${escapeHtml(t("analyze_another_btn"))}</button>`;
   }
+  scrollToBottom();
 }
 
 // ── Buy checks (flexible pay-per-check pricing) ──────────────────────
