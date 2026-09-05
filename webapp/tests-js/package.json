@@ -1,0 +1,16 @@
+{
+  "name": "webapp-frontend-tests",
+  "version": "1.0.0",
+  "description": "Node-based tests for webapp/static/app.js, run against the real app.js/index.html via jsdom",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "jsdom": "^30.0.1"
+  }
+}
