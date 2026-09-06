@@ -1,5 +1,5 @@
 """
-Syncs webapp/greenhouse_companies.csv into the `greenhouse_companies`
+Syncs webapp/scripts/greenhouse_companies.csv into the `greenhouse_companies`
 table: upserts every row in the CSV (active=true), and deactivates
 (active=false, never deletes - keeps history of what was tried) any DB
 row whose slug is no longer in the CSV.
@@ -12,7 +12,7 @@ Usage:
     DATABASE_URL=postgresql://... python3 scripts/sync_greenhouse_companies.py [path/to/csv]
 
 If no path is given, defaults to greenhouse_companies.csv next to this
-script's parent directory (webapp/greenhouse_companies.csv).
+script (webapp/scripts/greenhouse_companies.csv).
 """
 
 import csv
@@ -21,7 +21,7 @@ import sys
 
 import psycopg2
 
-DEFAULT_CSV_PATH = os.path.join(os.path.dirname(__file__), "..", "greenhouse_companies.csv")
+DEFAULT_CSV_PATH = os.path.join(os.path.dirname(__file__), "greenhouse_companies.csv")
 
 
 def main() -> None:

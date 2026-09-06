@@ -9,7 +9,7 @@ each individually confirmed live via a real API call before being
 added - not guessed from memory, and not assumed just because a
 company is well-known or Fortune-500-scale) now lives in the
 `greenhouse_companies` DB table (see db.get_active_companies()),
-not hardcoded here - edit webapp/greenhouse_companies.csv and run
+not hardcoded here - edit webapp/scripts/greenhouse_companies.csv and run
 scripts/sync_greenhouse_companies.py to change it, no deploy needed.
 That verification step matters: most old-economy enterprises (banks,
 retailers, industrials) run on Workday/SAP SuccessFactors/Oracle/

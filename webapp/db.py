@@ -349,7 +349,7 @@ _COMPANIES_CACHE_TTL = 600  # 10 minutes
 def get_active_companies() -> dict[str, str]:
     """Returns {slug: display_name} for active Greenhouse companies.
     Cached in-process so a vacancy search doesn't hit Postgres every
-    call - editing webapp/greenhouse_companies.csv and running
+    call - editing webapp/scripts/greenhouse_companies.csv and running
     scripts/sync_greenhouse_companies.py takes effect within
     _COMPANIES_CACHE_TTL seconds, no deploy needed."""
     global _companies_cache, _companies_cache_at
