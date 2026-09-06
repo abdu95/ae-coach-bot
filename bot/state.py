@@ -208,6 +208,21 @@ def _upsert_and_load_account(user_id: int) -> dict:
 
 
 def _save(user_id: int, data: dict) -> None:
+    # checks_used is deliberately NOT written here. bot.py hasn't incremented
+    # usage_count since the Stage 3 migration (the CV-analysis flow that used
+    # to do that now lives entirely in the Mini App, which increments
+    # checks_used itself via webapp/db.py). But this dict's cached
+    # "usage_count" is only refreshed from the DB once per process (see
+    # get()), so if the bot's cache went stale relative to a webapp-side
+    # increment, writing it back here would silently roll back real usage -
+    # exactly what happened to a real user (2026-09-06): the bot's cached
+    # copy of his checks_used lagged behind two webapp-side increments, and
+    # the next bot handler call (persisting() -> _save()) overwrote the
+    # correct DB value with the stale cached one, letting him run one extra
+    # free analysis he shouldn't have had. Treat checks_used the same way
+    # quota_override already is (see get_quota_override) - owned by
+    # whichever process actually changes it, never blindly written back by
+    # a reader that just happens to be holding a stale in-memory copy.
     session = {k: v for k, v in data.items() if k not in _ACCOUNT_KEYS}
     conn = _pool.getconn()
     try:
@@ -221,13 +236,12 @@ def _save(user_id: int, data: dict) -> None:
             cur.execute("""
                 UPDATE users
                 SET language = %s,
-                    checks_used = %s,
                     joined_waitlist = %s,
                     waitlist_at = CASE WHEN %s AND waitlist_at IS NULL THEN now() ELSE waitlist_at END,
                     name = %s,
                     last_seen_at = now()
                 WHERE telegram_id = %s
-            """, (data["lang"] or None, data["usage_count"], data["waitlisted"], data["waitlisted"], data["name"] or None, user_id))
+            """, (data["lang"] or None, data["waitlisted"], data["waitlisted"], data["name"] or None, user_id))
     finally:
         _pool.putconn(conn)
 
