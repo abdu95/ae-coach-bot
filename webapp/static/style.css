@@ -81,6 +81,20 @@ button.back-btn {
   font-weight: 600;
   margin-top: 0;
 }
+/* Header nav buttons (Profile/checks, Applications) - a visible pill,
+   not a bare text link that reads as a stat rather than a tappable
+   navigation target. */
+button.nav-chip {
+  width: auto;
+  background: var(--tg-theme-secondary-bg-color, #ececec);
+  color: var(--tg-theme-text-color, #000000);
+  border: 1px solid var(--tg-theme-hint-color, #cccccc);
+  border-radius: 16px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 0;
+}
 .row { display: flex; gap: 8px; margin-top: 16px; }
 .row button { margin-top: 0; }
 #result { margin-top: 20px; }

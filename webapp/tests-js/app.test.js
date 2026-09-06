@@ -35,7 +35,7 @@ test("t() interpolates {vars} into the template", async () => {
   const dom = loadApp({ fetchImpl: defaultFetchMock({ "/api/cv-status": () => ({ has_cv: true, lang: "en" }) }) });
   await flush();
   const { window } = dom;
-  assert.equal(window.t("nav_checks_badge", { remaining: 2, quota: 3 }), "🎫 2/3");
+  assert.equal(window.t("nav_checks_badge", { remaining: 2, quota: 3 }), "👤 🎫 2/3");
 });
 
 test("checksLabel pluralizes in English", async () => {
@@ -376,7 +376,7 @@ test("finishing the roadmap with checks remaining offers 'analyze another job'",
 
   const area = document.getElementById("roadmap-area");
   assert.match(area.innerHTML, /Analyze another job/);
-  assert.equal(document.getElementById("nav-checks").textContent, "🎫 2/3", "header badge should refresh after roadmap completion");
+  assert.equal(document.getElementById("nav-checks").textContent, "👤 🎫 2/3", "header badge should refresh after roadmap completion");
 });
 
 test("finishing the roadmap at zero checks routes straight into buying more", async () => {
@@ -411,7 +411,7 @@ test("a successful analysis updates the header checks badge", async () => {
   const { document, window } = dom.window;
   window.goToAnalysis();
   await runAnalysis(window, document);
-  assert.equal(document.getElementById("nav-checks").textContent, "🎫 2/3");
+  assert.equal(document.getElementById("nav-checks").textContent, "👤 🎫 2/3");
 });
 
 test("hitting the free-check limit during analysis shows the buy-checks flow, not the results", async () => {

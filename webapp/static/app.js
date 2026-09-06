@@ -337,7 +337,7 @@ const I18N = {
   my_cvs_upload_label: {
     en: "Upload a new CV", uz: "Yangi CV yuklang", ru: "Загрузите новое резюме",
   },
-  nav_checks_badge: { en: "🎫 {remaining}/{quota}", uz: "🎫 {remaining}/{quota}", ru: "🎫 {remaining}/{quota}" },
+  nav_checks_badge: { en: "👤 🎫 {remaining}/{quota}", uz: "👤 🎫 {remaining}/{quota}", ru: "👤 🎫 {remaining}/{quota}" },
   post_roadmap_no_checks: {
     en: "You're out of free checks. Buy more to analyze another job:",
     uz: "Bepul tekshiruvlaringiz tugadi. Boshqa ish e'lonini tahlil qilish uchun ko'proq sotib oling:",
