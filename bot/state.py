@@ -86,8 +86,9 @@ def init_db() -> None:
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_applications_telegram_id ON applications (telegram_id)")
             # Replaces the hand-maintained COMPANIES list that used to be
-            # hardcoded (and duplicated) in bot/greenhouse_source.py and
-            # webapp/greenhouse_source.py. Edit webapp/greenhouse_companies.csv
+            # hardcoded (and duplicated between bot/ and webapp/, until the
+            # bot/ copy was deleted as dead code) in greenhouse_source.py.
+            # Edit webapp/greenhouse_companies.csv
             # and run webapp/scripts/sync_greenhouse_companies.py to add/
             # remove/rename a verified company - no deploy needed, takes
             # effect within webapp/db.py's cache TTL. Never delete a row on
