@@ -69,11 +69,14 @@
       <div class="hint" id="my-cvs-title"></div>
       <button id="btn-my-cvs-back" class="back-btn" onclick="showProfile()"></button>
     </div>
-    <div id="my-cvs-list"></div>
-    <div class="prompt-block" id="my-cvs-upload-label"></div>
-    <input type="file" id="new_cv_file" accept=".pdf,.docx" />
-    <button id="upload_new_cv_btn" onclick="uploadNewCv()"></button>
-    <div id="my-cvs-upload-result"></div>
+    <div id="my-cvs-list-section">
+      <div id="my-cvs-list"></div>
+      <div class="prompt-block" id="my-cvs-upload-label"></div>
+      <input type="file" id="new_cv_file" accept=".pdf,.docx" />
+      <button id="upload_new_cv_btn" onclick="uploadNewCv()"></button>
+      <div id="my-cvs-upload-result"></div>
+    </div>
+    <div id="my-cvs-detail" hidden></div>
   </div>
 
   <div id="my-checks-screen" hidden>

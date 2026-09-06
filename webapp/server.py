@@ -142,7 +142,13 @@ async def upload_cv(init_data: str = Form(...), file: UploadFile = File(...)):
     if not cv_text.strip():
         raise HTTPException(400, "Could not find any text in that file")
 
-    db.add_cv(user["id"], file.filename, cv_text)
+    try:
+        extracted_position = await hypothesis.extract_current_position(cv_text)
+    except Exception:
+        logger.exception("Position extraction failed - saving the CV anyway")
+        extracted_position = None
+
+    db.add_cv(user["id"], file.filename, cv_text, extracted_position)
     db.log_event(user["id"], "cv_uploaded")
     return {"saved": True}
 

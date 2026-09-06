@@ -86,19 +86,22 @@ def list_cvs(telegram_id: int) -> list[dict]:
     try:
         with conn, conn.cursor() as cur:
             cur.execute("""
-                SELECT id, label, is_active, created_at
+                SELECT id, label, is_active, extracted_position, created_at
                 FROM cvs WHERE telegram_id = %s ORDER BY created_at DESC
             """, (telegram_id,))
             rows = cur.fetchall()
         return [
-            {"id": r[0], "label": r[1], "is_active": r[2], "created_at": r[3].isoformat()}
+            {
+                "id": r[0], "label": r[1], "is_active": r[2],
+                "extracted_position": r[3], "created_at": r[4].isoformat(),
+            }
             for r in rows
         ]
     finally:
         pool.putconn(conn)
 
 
-def add_cv(telegram_id: int, label: str, cv_text: str) -> int:
+def add_cv(telegram_id: int, label: str, cv_text: str, extracted_position: str | None = None) -> int:
     """Adds a new CV and makes it the active one - matches the existing
     upload behavior (uploading becomes what the rest of the app uses
     immediately), while past CVs stay in the list to switch back to."""
@@ -112,11 +115,11 @@ def add_cv(telegram_id: int, label: str, cv_text: str) -> int:
             )
             cur.execute(
                 """
-                INSERT INTO cvs (telegram_id, label, cv_text, is_active)
-                VALUES (%s, %s, %s, true)
+                INSERT INTO cvs (telegram_id, label, cv_text, is_active, extracted_position)
+                VALUES (%s, %s, %s, true, %s)
                 RETURNING id
                 """,
-                (telegram_id, label, cv_text),
+                (telegram_id, label, cv_text, extracted_position),
             )
             return cur.fetchone()[0]
     finally:

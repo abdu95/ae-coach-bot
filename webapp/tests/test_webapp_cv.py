@@ -56,12 +56,14 @@ resp = client.post("/api/cv-status", json={"init_data": tampered})
 assert resp.status_code == 401, resp.text
 print("PASS: cv-status rejects tampered signature")
 
-# --- Test 4: upload-cv with a fake PDF -> parses, adds as a new (active) CV, returns saved:true ---
+# --- Test 4: upload-cv with a fake PDF -> parses, extracts position, adds as a new (active) CV ---
 import cv_parser  # noqa: E402
+import hypothesis  # noqa: E402
 with mock.patch.object(db, "ensure_user") as m_ensure, \
      mock.patch.object(db, "add_cv") as m_add, \
      mock.patch.object(db, "log_event") as m_log, \
-     mock.patch.object(cv_parser, "parse_cv", return_value="Extracted CV text here") as m_parse:
+     mock.patch.object(cv_parser, "parse_cv", return_value="Extracted CV text here") as m_parse, \
+     mock.patch.object(hypothesis, "extract_current_position", new=mock.AsyncMock(return_value="Data Analyst")) as m_extract:
     resp = client.post(
         "/api/upload-cv",
         data={"init_data": init_data},
@@ -71,9 +73,25 @@ with mock.patch.object(db, "ensure_user") as m_ensure, \
     assert resp.json() == {"saved": True}
     m_ensure.assert_called_once_with(777, "testuser", "Test")
     m_parse.assert_called_once()
-    m_add.assert_called_once_with(777, "resume.pdf", "Extracted CV text here")
+    m_extract.assert_called_once_with("Extracted CV text here")
+    m_add.assert_called_once_with(777, "resume.pdf", "Extracted CV text here", "Data Analyst")
     m_log.assert_called_once_with(777, "cv_uploaded")
-print("PASS: upload-cv parses and adds a new CV (labeled by filename), logs cv_uploaded")
+print("PASS: upload-cv parses, extracts a position label, adds a new CV, logs cv_uploaded")
+
+# --- Test 4b: position extraction failing must not block the upload itself ---
+with mock.patch.object(db, "ensure_user"), \
+     mock.patch.object(db, "add_cv") as m_add, \
+     mock.patch.object(db, "log_event"), \
+     mock.patch.object(cv_parser, "parse_cv", return_value="Extracted CV text here"), \
+     mock.patch.object(hypothesis, "extract_current_position", new=mock.AsyncMock(side_effect=Exception("boom"))):
+    resp = client.post(
+        "/api/upload-cv",
+        data={"init_data": init_data},
+        files={"file": ("resume.pdf", io.BytesIO(b"%PDF-fake"), "application/pdf")},
+    )
+    assert resp.status_code == 200, resp.text
+    m_add.assert_called_once_with(777, "resume.pdf", "Extracted CV text here", None)
+print("PASS: a failed position extraction still saves the CV, just without a position label")
 
 # --- Test 5: upload-cv rejects non-PDF/DOCX file types ---
 with mock.patch.object(db, "ensure_user"):

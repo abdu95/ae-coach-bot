@@ -31,8 +31,8 @@ client = TestClient(server.app)
 init_data = build_init_data('{"id":777,"first_name":"Test","username":"testuser"}', TOKEN)
 
 FAKE_CVS = [
-    {"id": 2, "label": "resume_v2.pdf", "is_active": True, "created_at": "2026-09-07T00:00:00"},
-    {"id": 1, "label": "resume_v1.pdf", "is_active": False, "created_at": "2026-09-01T00:00:00"},
+    {"id": 2, "label": "resume_v2.pdf", "is_active": True, "extracted_position": "Data Analyst", "created_at": "2026-09-07T00:00:00"},
+    {"id": 1, "label": "resume_v1.pdf", "is_active": False, "extracted_position": None, "created_at": "2026-09-01T00:00:00"},
 ]
 
 # --- Test 1: list CVs returns the user's saved CVs ---

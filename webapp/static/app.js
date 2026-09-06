@@ -338,6 +338,7 @@ const I18N = {
     en: "No CVs saved yet — upload one below.", uz: "Hali CV saqlanmagan — quyida yuklang.", ru: "Резюме ещё не сохранено — загрузите ниже.",
   },
   my_cvs_active_badge: { en: "Active", uz: "Faol", ru: "Активно" },
+  my_cvs_position_label: { en: "Position:", uz: "Lavozim:", ru: "Должность:" },
   my_cvs_set_active_btn: { en: "Use this CV", uz: "Shu CV'dan foydalanish", ru: "Использовать это резюме" },
   my_cvs_load_failed: {
     en: "Couldn't load your CVs.", uz: "CV'laringizni yuklab bo'lmadi.", ru: "Не удалось загрузить ваши резюме.",
@@ -348,7 +349,7 @@ const I18N = {
   my_cvs_upload_label: {
     en: "Upload a new CV", uz: "Yangi CV yuklang", ru: "Загрузите новое резюме",
   },
-  nav_checks_badge: { en: "👤 🎫 {remaining}/{quota}", uz: "👤 🎫 {remaining}/{quota}", ru: "👤 🎫 {remaining}/{quota}" },
+  nav_checks_badge: { en: "🎫 {remaining}/{quota}", uz: "🎫 {remaining}/{quota}", ru: "🎫 {remaining}/{quota}" },
   post_roadmap_no_checks: {
     en: "You're out of free checks. Buy more to analyze another job:",
     uz: "Bepul tekshiruvlaringiz tugadi. Boshqa ish e'lonini tahlil qilish uchun ko'proq sotib oling:",
@@ -664,47 +665,78 @@ async function uploadCV() {
   }
 }
 
-// ── My CVs ──────────────────────────────────────────────────────────
+// ── My CVs (mirrors the Applications list/detail pattern) ────────────
+let allCvs = [];
+
 async function showMyCvs() {
   showScreen("my-cvs-screen");
+  document.getElementById("my-cvs-detail").hidden = true;
+  document.getElementById("my-cvs-list-section").hidden = false;
   document.getElementById("my-cvs-upload-result").innerHTML = "";
   document.getElementById("new_cv_file").value = "";
   const listEl = document.getElementById("my-cvs-list");
   listEl.innerHTML = `<div class="hint">…</div>`;
   try {
     const data = await callApi("/api/cvs", {});
-    renderMyCvsList(data.cvs || []);
+    allCvs = data.cvs || [];
+    renderMyCvsList();
   } catch (err) {
     console.error("Loading CVs failed:", err);
     listEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("my_cvs_load_failed")))}</div>`;
   }
 }
 
-function renderMyCvsList(cvs) {
+// List shows only the two things asked for - filename and upload date.
+// Everything else (position, active status, actions) lives behind the
+// detail view, same split as the Applications list/detail.
+function renderMyCvsList() {
   const listEl = document.getElementById("my-cvs-list");
-  if (cvs.length === 0) {
+  if (allCvs.length === 0) {
     listEl.innerHTML = `<div class="hint">${escapeHtml(t("my_cvs_empty"))}</div>`;
     return;
   }
-  listEl.innerHTML = cvs.map(cv => `
-    <div class="card" style="margin-bottom:8px;">
+  listEl.innerHTML = allCvs.map(cv => `
+    <div class="card clickable" style="margin-bottom:8px;" onclick="openCvDetail(${cv.id})">
       <h3>${escapeHtml(cv.label)}</h3>
-      <div class="company">${escapeHtml(new Date(cv.created_at).toLocaleDateString())}${cv.is_active ? ' · <b>' + escapeHtml(t("my_cvs_active_badge")) + '</b>' : ''}</div>
-      <div class="row">
-        ${cv.is_active ? '' : `<button class="secondary" onclick="activateCv(${cv.id})">${escapeHtml(t("my_cvs_set_active_btn"))}</button>`}
-        <button class="danger" onclick="confirmDeleteCv(${cv.id})">${escapeHtml(t("delete_application_btn"))}</button>
-      </div>
-      <div id="cv-action-${cv.id}"></div>
+      <div class="company">${escapeHtml(new Date(cv.created_at).toLocaleDateString())}</div>
     </div>
   `).join("");
 }
 
+function openCvDetail(cvId) {
+  const cv = allCvs.find(c => c.id === cvId);
+  if (!cv) return;
+  document.getElementById("my-cvs-list-section").hidden = true;
+  const detailEl = document.getElementById("my-cvs-detail");
+  detailEl.hidden = false;
+
+  detailEl.innerHTML = `
+    <button class="back-btn" onclick="closeCvDetail()">${escapeHtml(t("back_link"))}</button>
+    <div class="card" style="margin-top:12px;">
+      <h3>${escapeHtml(cv.label)}</h3>
+      <div class="company">${escapeHtml(new Date(cv.created_at).toLocaleDateString())}</div>
+      ${cv.extracted_position ? `<div>${escapeHtml(t("my_cvs_position_label"))} <b>${escapeHtml(cv.extracted_position)}</b></div>` : ""}
+      ${cv.is_active ? `<div style="margin-top:8px;"><b>${escapeHtml(t("my_cvs_active_badge"))}</b></div>` : ""}
+    </div>
+    ${cv.is_active ? "" : `<button class="secondary" onclick="activateCv(${cv.id})">${escapeHtml(t("my_cvs_set_active_btn"))}</button>`}
+    <button class="danger" onclick="confirmDeleteCv(${cv.id})">${escapeHtml(t("delete_application_btn"))}</button>
+    <div id="cv-detail-action-result"></div>
+  `;
+  scrollToBottom();
+}
+
+function closeCvDetail() {
+  document.getElementById("my-cvs-detail").hidden = true;
+  document.getElementById("my-cvs-list-section").hidden = false;
+}
+
 async function activateCv(cvId) {
-  const el = document.getElementById(`cv-action-${cvId}`);
+  const el = document.getElementById("cv-detail-action-result");
   el.innerHTML = `<div class="hint">${escapeHtml(t("saving"))}</div>`;
   try {
     await callApi("/api/cvs/set-active", { cv_id: cvId });
-    showMyCvs();
+    await showMyCvs();
+    openCvDetail(cvId);
   } catch (err) {
     console.error("Set active CV failed:", err);
     el.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("my_cvs_activate_failed")))}</div>`;
@@ -712,22 +744,22 @@ async function activateCv(cvId) {
 }
 
 function confirmDeleteCv(cvId) {
-  const el = document.getElementById(`cv-action-${cvId}`);
+  const el = document.getElementById("cv-detail-action-result");
   el.innerHTML = `
     <div class="prompt-block">${escapeHtml(t("delete_confirm"))}</div>
     <div class="row">
       <button class="danger" onclick="deleteCvNow(${cvId})">${escapeHtml(t("delete_confirm_yes"))}</button>
-      <button class="secondary" onclick="document.getElementById('cv-action-${cvId}').innerHTML=''">${escapeHtml(t("delete_confirm_no"))}</button>
+      <button class="secondary" onclick="document.getElementById('cv-detail-action-result').innerHTML=''">${escapeHtml(t("delete_confirm_no"))}</button>
     </div>
   `;
 }
 
 async function deleteCvNow(cvId) {
-  const el = document.getElementById(`cv-action-${cvId}`);
+  const el = document.getElementById("cv-detail-action-result");
   el.innerHTML = `<div class="hint">${escapeHtml(t("saving"))}</div>`;
   try {
     await callApi("/api/cvs/delete", { cv_id: cvId });
-    showMyCvs();
+    await showMyCvs();
   } catch (err) {
     console.error("Delete CV failed:", err);
     el.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("delete_failed")))}</div>`;

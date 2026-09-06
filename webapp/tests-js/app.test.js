@@ -35,7 +35,7 @@ test("t() interpolates {vars} into the template", async () => {
   const dom = loadApp({ fetchImpl: defaultFetchMock({ "/api/cv-status": () => ({ has_cv: true, lang: "en" }) }) });
   await flush();
   const { window } = dom;
-  assert.equal(window.t("nav_checks_badge", { remaining: 2, quota: 3 }), "👤 🎫 2/3");
+  assert.equal(window.t("nav_checks_badge", { remaining: 2, quota: 3 }), "🎫 2/3");
 });
 
 test("checksLabel pluralizes in English", async () => {
@@ -376,7 +376,7 @@ test("finishing the roadmap with checks remaining offers 'analyze another job'",
 
   const area = document.getElementById("roadmap-area");
   assert.match(area.innerHTML, /Analyze another job/);
-  assert.equal(document.getElementById("nav-checks").textContent, "👤 🎫 2/3", "header badge should refresh after roadmap completion");
+  assert.equal(document.getElementById("nav-checks").textContent, "🎫 2/3", "header badge should refresh after roadmap completion");
 });
 
 test("finishing the roadmap at zero checks routes straight into buying more", async () => {
@@ -411,7 +411,7 @@ test("a successful analysis updates the header checks badge", async () => {
   const { document, window } = dom.window;
   window.goToAnalysis();
   await runAnalysis(window, document);
-  assert.equal(document.getElementById("nav-checks").textContent, "👤 🎫 2/3");
+  assert.equal(document.getElementById("nav-checks").textContent, "🎫 2/3");
 });
 
 test("hitting the free-check limit during analysis shows the buy-checks flow, not the results", async () => {
@@ -432,11 +432,11 @@ test("hitting the free-check limit during analysis shows the buy-checks flow, no
 // ── My CVs ────────────────────────────────────────────────────────────
 
 const FAKE_CVS = [
-  { id: 2, label: "resume_v2.pdf", is_active: true, created_at: "2026-09-07T00:00:00" },
-  { id: 1, label: "resume_v1.pdf", is_active: false, created_at: "2026-09-01T00:00:00" },
+  { id: 2, label: "resume_v2.pdf", is_active: true, extracted_position: "Data Analyst", created_at: "2026-09-07T00:00:00" },
+  { id: 1, label: "resume_v1.pdf", is_active: false, extracted_position: null, created_at: "2026-09-01T00:00:00" },
 ];
 
-test("My CVs screen lists saved CVs, marking the active one and offering 'use' only on the others", async () => {
+test("My CVs list shows only filename and date - no position/active/actions until you open one", async () => {
   const dom = loadApp({
     fetchImpl: defaultFetchMock({
       "/api/cv-status": () => ({ has_cv: true, lang: "en" }),
@@ -449,11 +449,39 @@ test("My CVs screen lists saved CVs, marking the active one and offering 'use' o
   const html = document.getElementById("my-cvs-list").innerHTML;
   assert.match(html, /resume_v2\.pdf/);
   assert.match(html, /resume_v1\.pdf/);
-  assert.match(html, /activateCv\(1\)/, "the inactive CV should offer a 'use this CV' action");
-  assert.ok(!html.includes("activateCv(2)"), "the already-active CV must not offer to activate itself");
+  assert.match(html, /openCvDetail\(1\)/, "each row must be clickable into a detail view");
+  assert.ok(!html.includes("Data Analyst"), "the list itself must not show the extracted position");
+  assert.ok(!html.includes("activateCv"), "the list itself must not show activate/delete actions");
 });
 
-test("activating a CV calls set-active and refreshes the list", async () => {
+test("opening a CV's detail shows filename, date, extracted position, and 'use this CV' only if inactive", async () => {
+  const dom = loadApp({
+    fetchImpl: defaultFetchMock({
+      "/api/cv-status": () => ({ has_cv: true, lang: "en" }),
+      "/api/cvs": () => ({ cvs: FAKE_CVS }),
+    }),
+  });
+  await flush();
+  const { document, window } = dom.window;
+  await window.showMyCvs();
+
+  window.openCvDetail(1); // inactive CV, no extracted position
+  let html = document.getElementById("my-cvs-detail").innerHTML;
+  assert.match(html, /resume_v1\.pdf/);
+  assert.match(html, /activateCv\(1\)/, "an inactive CV must offer 'use this CV'");
+  assert.match(html, /confirmDeleteCv\(1\)/, "delete must always be offered");
+  assert.equal(document.getElementById("my-cvs-list-section").hidden, true);
+
+  window.closeCvDetail();
+  assert.equal(document.getElementById("my-cvs-list-section").hidden, false);
+
+  window.openCvDetail(2); // active CV, has an extracted position
+  html = document.getElementById("my-cvs-detail").innerHTML;
+  assert.match(html, /Data Analyst/, "the extracted position must show in the detail view");
+  assert.ok(!html.includes("activateCv(2)"), "an already-active CV must not offer to activate itself");
+});
+
+test("activating a CV from its detail view calls set-active", async () => {
   let setActiveCalledWith = null;
   const dom = loadApp({
     fetchImpl: defaultFetchMock({
@@ -465,11 +493,12 @@ test("activating a CV calls set-active and refreshes the list", async () => {
   await flush();
   const { window } = dom.window;
   await window.showMyCvs();
+  window.openCvDetail(1);
   await window.activateCv(1);
   assert.equal(setActiveCalledWith, 1);
 });
 
-test("deleting a CV requires confirmation before calling the delete endpoint", async () => {
+test("deleting a CV from its detail view requires confirmation before calling the delete endpoint", async () => {
   let deleteCalled = false;
   const dom = loadApp({
     fetchImpl: defaultFetchMock({
@@ -481,10 +510,11 @@ test("deleting a CV requires confirmation before calling the delete endpoint", a
   await flush();
   const { document, window } = dom.window;
   await window.showMyCvs();
+  window.openCvDetail(1);
 
   window.confirmDeleteCv(1);
   assert.equal(deleteCalled, false, "delete must not fire before confirmation");
-  assert.match(document.getElementById("cv-action-1").innerHTML, /deleteCvNow\(1\)/);
+  assert.match(document.getElementById("cv-detail-action-result").innerHTML, /deleteCvNow\(1\)/);
 
   await window.deleteCvNow(1);
   assert.equal(deleteCalled, true);

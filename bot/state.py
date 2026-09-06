@@ -110,14 +110,16 @@ def init_db() -> None:
             # or switching the active one needs no changes anywhere else.
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS cvs (
-                    id          BIGSERIAL PRIMARY KEY,
-                    telegram_id BIGINT NOT NULL REFERENCES users(telegram_id),
-                    label       TEXT NOT NULL,
-                    cv_text     TEXT NOT NULL,
-                    is_active   BOOLEAN NOT NULL DEFAULT FALSE,
-                    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+                    id                 BIGSERIAL PRIMARY KEY,
+                    telegram_id        BIGINT NOT NULL REFERENCES users(telegram_id),
+                    label              TEXT NOT NULL,
+                    cv_text            TEXT NOT NULL,
+                    is_active          BOOLEAN NOT NULL DEFAULT FALSE,
+                    extracted_position TEXT,
+                    created_at         TIMESTAMPTZ NOT NULL DEFAULT now()
                 )
             """)
+            cur.execute("ALTER TABLE cvs ADD COLUMN IF NOT EXISTS extracted_position TEXT")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_cvs_telegram_id ON cvs (telegram_id)")
             cur.execute("""
                 CREATE UNIQUE INDEX IF NOT EXISTS idx_cvs_one_active_per_user
