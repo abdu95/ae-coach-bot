@@ -10,17 +10,14 @@
 <body>
   <div style="display:flex; justify-content:space-between; align-items:center;">
     <h2 id="greeting">AcceptedAI</h2>
-    <div style="display:flex; gap:12px; align-items:center;">
-      <button id="nav-checks" class="nav-chip" onclick="showProfile()" hidden></button>
-      <button id="nav-applications" class="nav-chip" onclick="showApplications()" hidden></button>
-    </div>
+    <button id="nav-checks" class="nav-chip" onclick="showChecksScreen()" hidden></button>
   </div>
 
   <div id="loading-gate" class="hint">Loading…</div>
 
   <div id="welcome-screen" hidden>
     <div class="hint" id="welcome-body"></div>
-    <button id="welcome-continue-btn" onclick="showScreen('home-screen')"></button>
+    <button id="welcome-continue-btn" onclick="activateTab('home')"></button>
   </div>
 
   <div id="cv-gate" hidden>
@@ -46,12 +43,25 @@
     </button>
   </div>
 
-  <div id="profile-screen" hidden>
+  <div id="checks-screen" hidden>
     <div class="screen-header">
-      <div class="hint" id="profile-title"></div>
-      <button id="btn-profile-back" class="back-btn" onclick="goHome()"></button>
+      <div class="hint" id="checks-title"></div>
+      <button id="btn-checks-back" class="back-btn" onclick="activateTab('home')"></button>
     </div>
-    <div id="profile-content"></div>
+    <div id="checks-content"></div>
+  </div>
+
+  <div id="profile-screen" hidden>
+    <div class="hint" id="profile-title"></div>
+    <button class="menu-option" onclick="showMyCvs()">
+      <div id="profile-my-cvs-label"></div>
+    </button>
+    <button class="menu-option" onclick="showMyChecksPlaceholder()">
+      <div id="profile-my-checks-label"></div>
+    </button>
+    <button class="menu-option" onclick="showApplications()">
+      <div id="profile-my-applications-label"></div>
+    </button>
   </div>
 
   <div id="my-cvs-screen" hidden>
@@ -66,11 +76,16 @@
     <div id="my-cvs-upload-result"></div>
   </div>
 
-  <div id="analysis-screen" hidden>
+  <div id="my-checks-screen" hidden>
     <div class="screen-header">
-      <div class="hint" id="analysis-title"></div>
-      <button id="btn-analysis-back" class="back-btn" onclick="goHome()"></button>
+      <div class="hint" id="my-checks-title"></div>
+      <button id="btn-my-checks-back" class="back-btn" onclick="showProfile()"></button>
     </div>
+    <div class="hint" id="my-checks-coming-soon"></div>
+  </div>
+
+  <div id="analysis-screen" hidden>
+    <div class="hint" id="analysis-title"></div>
     <div id="jd-input-box">
       <label for="jd_text" id="jd-label"></label>
       <textarea id="jd_text"></textarea>
@@ -80,10 +95,7 @@
   </div>
 
   <div id="title-screen" hidden>
-    <div class="screen-header">
-      <div class="hint" id="title-screen-hint"></div>
-      <button id="btn-title-back" class="back-btn" onclick="goHome()"></button>
-    </div>
+    <div class="hint" id="title-screen-hint"></div>
     <div class="row">
       <button id="btn-type-own" onclick="showManualTitle()"></button>
       <button id="btn-suggest-cv" class="secondary" onclick="suggestTitles()"></button>
@@ -120,7 +132,7 @@
   <div id="applications-screen" hidden>
     <div class="screen-header">
       <div class="hint" id="applications-title"></div>
-      <button id="btn-applications-back" class="back-btn" onclick="goHome()"></button>
+      <button id="btn-applications-back" class="back-btn" onclick="showProfile()"></button>
     </div>
     <div class="controls-row" id="applications-controls">
       <select id="applications-filter" onchange="renderApplications()"></select>
@@ -128,6 +140,25 @@
     </div>
     <div id="applications-list"></div>
     <div id="application-detail" hidden></div>
+  </div>
+
+  <div id="tab-bar" hidden>
+    <button class="tab-btn" id="tab-home" onclick="activateTab('home')">
+      <div class="tab-icon">🏠</div>
+      <div id="tab-home-label"></div>
+    </button>
+    <button class="tab-btn" id="tab-search" onclick="activateTab('search')">
+      <div class="tab-icon">🔍</div>
+      <div id="tab-search-label"></div>
+    </button>
+    <button class="tab-btn" id="tab-analyze" onclick="activateTab('analyze')">
+      <div class="tab-icon">📊</div>
+      <div id="tab-analyze-label"></div>
+    </button>
+    <button class="tab-btn" id="tab-profile" onclick="activateTab('profile')">
+      <div class="tab-icon">👤</div>
+      <div id="tab-profile-label"></div>
+    </button>
   </div>
 
   <script src="/static/app.js"></script>

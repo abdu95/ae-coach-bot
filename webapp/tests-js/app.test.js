@@ -507,3 +507,78 @@ test("uploading a new CV from the My CVs screen refreshes the list instead of na
   await flush();
   assert.equal(document.getElementById("my-cvs-screen").hidden, false, "should stay on My CVs, not navigate to home");
 });
+
+// ── Bottom tab bar ────────────────────────────────────────────────────
+
+test("checks-remaining and Profile are two separate screens, not bundled together", async () => {
+  const dom = loadApp({ fetchImpl: defaultFetchMock({ "/api/cv-status": () => ({ has_cv: true, lang: "en" }) }) });
+  await flush();
+  const { document, window } = dom.window;
+
+  window.showProfile();
+  assert.equal(document.getElementById("profile-screen").hidden, false);
+  assert.equal(document.getElementById("checks-screen").hidden, true);
+  assert.match(document.getElementById("profile-screen").innerHTML, /showMyCvs\(\)/);
+  assert.match(document.getElementById("profile-screen").innerHTML, /showApplications\(\)/);
+  assert.ok(!document.getElementById("profile-screen").innerHTML.includes("renderBuyChecks"),
+    "Profile itself must not render the checks-remaining/buy-more UI - that lives on checks-screen only");
+
+  await window.showChecksScreen();
+  assert.equal(document.getElementById("checks-screen").hidden, false);
+  assert.equal(document.getElementById("profile-screen").hidden, true);
+});
+
+test("tapping each tab shows the right screen and highlights only that tab", async () => {
+  const dom = loadApp({ fetchImpl: defaultFetchMock({ "/api/cv-status": () => ({ has_cv: true, lang: "en" }) }) });
+  await flush();
+  const { document, window } = dom.window;
+
+  const activeTabId = () => [...document.querySelectorAll(".tab-btn")].find(b => b.classList.contains("active"))?.id;
+
+  window.activateTab("search");
+  assert.equal(document.getElementById("title-screen").hidden, false);
+  assert.equal(activeTabId(), "tab-search");
+
+  window.activateTab("analyze");
+  assert.equal(document.getElementById("analysis-screen").hidden, false);
+  assert.equal(activeTabId(), "tab-analyze");
+
+  window.activateTab("profile");
+  assert.equal(document.getElementById("profile-screen").hidden, false);
+  assert.equal(activeTabId(), "tab-profile");
+
+  window.activateTab("home");
+  assert.equal(document.getElementById("home-screen").hidden, false);
+  assert.equal(activeTabId(), "tab-home");
+});
+
+test("Home's shortcut buttons highlight the same tab that tapping the tab bar directly would", async () => {
+  const dom = loadApp({ fetchImpl: defaultFetchMock({ "/api/cv-status": () => ({ has_cv: true, lang: "en" }) }) });
+  await flush();
+  const { document, window } = dom.window;
+
+  window.goToVacancySearch(); // Home screen's "Find vacancies" button calls this directly
+  assert.equal(document.getElementById("tab-search").classList.contains("active"), true);
+
+  window.goToAnalysis(); // Home screen's "Analyze CV" button
+  assert.equal(document.getElementById("tab-analyze").classList.contains("active"), true);
+});
+
+test("the tab bar is hidden during welcome/loading but visible everywhere else, including cv-gate", async () => {
+  const dom = loadApp({ fetchImpl: defaultFetchMock({ "/api/cv-status": () => ({ has_cv: false, lang: "en" }) }) });
+  await flush();
+  const { document, window } = dom.window;
+  assert.equal(document.getElementById("tab-bar").hidden, true, "hidden on welcome-screen");
+
+  window.showScreen("cv-gate");
+  assert.equal(document.getElementById("tab-bar").hidden, false, "visible on cv-gate so users can navigate away mid-upload");
+});
+
+test("Profile's My Checks entry shows a coming-soon placeholder, not a dead link", async () => {
+  const dom = loadApp({ fetchImpl: defaultFetchMock({ "/api/cv-status": () => ({ has_cv: true, lang: "en" }) }) });
+  await flush();
+  const { document, window } = dom.window;
+  window.showMyChecksPlaceholder();
+  assert.equal(document.getElementById("my-checks-screen").hidden, false);
+  assert.match(document.getElementById("my-checks-coming-soon").textContent, /[Cc]oming soon/);
+});

@@ -322,6 +322,17 @@ const I18N = {
   profile_buy_more_btn: { en: "💳 Buy more checks", uz: "💳 Ko'proq tekshiruv sotib olish", ru: "💳 Купить ещё проверок" },
   profile_my_cvs_btn: { en: "📄 My CVs", uz: "📄 Mening CV'larim", ru: "📄 Мои резюме" },
   profile_applications_btn: { en: "📋 My Applications", uz: "📋 Arizalarim", ru: "📋 Мои заявки" },
+  profile_my_checks_btn: { en: "📊 My Checks", uz: "📊 Mening tekshiruvlarim", ru: "📊 Мои проверки" },
+  tab_home_label: { en: "Home", uz: "Bosh sahifa", ru: "Главная" },
+  tab_search_label: { en: "Search", uz: "Qidirish", ru: "Поиск" },
+  tab_analyze_label: { en: "Analyze", uz: "Tahlil", ru: "Анализ" },
+  tab_profile_label: { en: "Profile", uz: "Profil", ru: "Профиль" },
+  checks_title: { en: "Checks", uz: "Tekshiruvlar", ru: "Проверки" },
+  my_checks_coming_soon: {
+    en: "Coming soon — a history of your past CV analyses will show up here.",
+    uz: "Tez orada — o'tgan CV tahlillaringiz tarixi shu yerda ko'rinadi.",
+    ru: "Скоро — здесь появится история ваших прошлых анализов резюме.",
+  },
   my_cvs_title: { en: "My CVs", uz: "Mening CV'larim", ru: "Мои резюме" },
   my_cvs_empty: {
     en: "No CVs saved yet — upload one below.", uz: "Hali CV saqlanmagan — quyida yuklang.", ru: "Резюме ещё не сохранено — загрузите ниже.",
@@ -365,7 +376,6 @@ function t(key, vars) {
 }
 
 function applyStaticTranslations() {
-  document.getElementById("nav-applications").textContent = t("nav_applications");
   document.getElementById("cv-gate-hint").textContent = t("cv_gate_hint");
   document.getElementById("cv-file-label").textContent = t("cv_file_label");
   document.getElementById("upload_btn").textContent = t("upload_cv_btn");
@@ -375,11 +385,9 @@ function applyStaticTranslations() {
   document.getElementById("home-vacancy-option").textContent = t("home_vacancy_option");
   document.getElementById("home-vacancy-hint").textContent = t("home_vacancy_hint");
   document.getElementById("analysis-title").textContent = t("analysis_title");
-  document.getElementById("btn-analysis-back").textContent = t("back_link");
   document.getElementById("jd-label").textContent = t("jd_label");
   document.getElementById("jd_text").placeholder = t("jd_placeholder");
   document.getElementById("analyze_btn").textContent = t("analyze_btn");
-  document.getElementById("btn-title-back").textContent = t("back_link");
   document.getElementById("title-screen-hint").textContent = t("title_screen_hint");
   document.getElementById("btn-type-own").textContent = t("type_own");
   document.getElementById("btn-suggest-cv").textContent = t("suggest_from_cv");
@@ -398,11 +406,22 @@ function applyStaticTranslations() {
   document.getElementById("welcome-body").textContent = t("welcome_body");
   document.getElementById("welcome-continue-btn").textContent = t("welcome_continue_btn");
   document.getElementById("profile-title").textContent = t("profile_title");
-  document.getElementById("btn-profile-back").textContent = t("back_link");
   document.getElementById("my-cvs-title").textContent = t("my_cvs_title");
   document.getElementById("btn-my-cvs-back").textContent = t("back_link");
   document.getElementById("my-cvs-upload-label").textContent = t("my_cvs_upload_label");
   document.getElementById("upload_new_cv_btn").textContent = t("upload_cv_btn");
+  document.getElementById("tab-home-label").textContent = t("tab_home_label");
+  document.getElementById("tab-search-label").textContent = t("tab_search_label");
+  document.getElementById("tab-analyze-label").textContent = t("tab_analyze_label");
+  document.getElementById("tab-profile-label").textContent = t("tab_profile_label");
+  document.getElementById("checks-title").textContent = t("checks_title");
+  document.getElementById("btn-checks-back").textContent = t("back_link");
+  document.getElementById("profile-my-cvs-label").textContent = t("profile_my_cvs_btn");
+  document.getElementById("profile-my-checks-label").textContent = t("profile_my_checks_btn");
+  document.getElementById("profile-my-applications-label").textContent = t("profile_applications_btn");
+  document.getElementById("my-checks-title").textContent = t("profile_my_checks_btn");
+  document.getElementById("btn-my-checks-back").textContent = t("back_link");
+  document.getElementById("my-checks-coming-soon").textContent = t("my_checks_coming_soon");
 
   const filterEl = document.getElementById("applications-filter");
   filterEl.innerHTML = ['all', 'applied', 'phone_screen', 'tech_interview', 'offer', 'rejected', 'ghosted']
@@ -431,10 +450,47 @@ const CHECK_QUANTITY_PRESETS = [1, 5, 10, 20, 50];
 const MIN_CHECKS_PURCHASE = 1;
 const MAX_CHECKS_PURCHASE = 100;
 
+const ALL_SCREENS = [
+  "loading-gate", "welcome-screen", "cv-gate", "home-screen", "checks-screen",
+  "profile-screen", "my-cvs-screen", "my-checks-screen", "analysis-screen",
+  "title-screen", "search-screen", "applications-screen",
+];
+
+// Maps a screen to the bottom tab it belongs to, so the right tab stays
+// highlighted regardless of how the screen was reached (tapping a tab
+// directly, or tapping one of Home's two shortcut buttons, which lead
+// to the exact same screens). Screens with no entry here (cv-gate,
+// checks-screen) don't change which tab is shown as active.
+const SCREEN_TO_TAB = {
+  "home-screen": "home",
+  "title-screen": "search", "search-screen": "search",
+  "analysis-screen": "analyze",
+  "profile-screen": "profile", "my-cvs-screen": "profile",
+  "my-checks-screen": "profile", "applications-screen": "profile",
+};
+
+const HIDE_TAB_BAR_ON = new Set(["loading-gate", "welcome-screen"]);
+
 function showScreen(id) {
-  for (const s of ["loading-gate", "welcome-screen", "cv-gate", "home-screen", "profile-screen", "my-cvs-screen", "analysis-screen", "title-screen", "search-screen", "applications-screen"]) {
+  for (const s of ALL_SCREENS) {
     document.getElementById(s).hidden = (s !== id);
   }
+  document.getElementById("tab-bar").hidden = HIDE_TAB_BAR_ON.has(id);
+  const tab = SCREEN_TO_TAB[id];
+  if (tab) {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.getElementById(`tab-${tab}`).classList.add("active");
+  }
+}
+
+// Single entry point for the bottom tab bar - each tab just re-runs the
+// same navigation a Home-screen shortcut button would, so both paths
+// into Search/Analyze always agree on where they land.
+function activateTab(tab) {
+  if (tab === "home") goHome();
+  else if (tab === "search") goToVacancySearch();
+  else if (tab === "analyze") goToAnalysis();
+  else if (tab === "profile") showProfile();
 }
 
 function goHome() { showScreen("home-screen"); }
@@ -504,7 +560,6 @@ async function checkCVAndRoute() {
     }
 
     showScreen(data.has_cv ? "home-screen" : "welcome-screen");
-    document.getElementById("nav-applications").hidden = false;
     refreshChecksHeader();
   } catch (err) {
     console.error("CV status check failed:", err);
@@ -514,9 +569,16 @@ async function checkCVAndRoute() {
 }
 checkCVAndRoute();
 
-async function showProfile() {
+// Profile is now a plain hub tab: My CVs / My Checks / My Applications.
+// Checks-remaining lives on its own screen (checks-screen, behind the
+// header's 🔔), not bundled in here - they're two different things.
+function showProfile() {
   showScreen("profile-screen");
-  const contentEl = document.getElementById("profile-content");
+}
+
+async function showChecksScreen() {
+  showScreen("checks-screen");
+  const contentEl = document.getElementById("checks-content");
   contentEl.innerHTML = `<div class="hint">…</div>`;
   try {
     const q = await callApi("/api/quota-status", {});
@@ -542,23 +604,14 @@ async function showProfile() {
       };
       contentEl.appendChild(btn);
     }
-
-    const cvsBtn = document.createElement("button");
-    cvsBtn.className = "secondary";
-    cvsBtn.style.marginTop = "12px";
-    cvsBtn.textContent = t("profile_my_cvs_btn");
-    cvsBtn.onclick = () => showMyCvs();
-    contentEl.appendChild(cvsBtn);
-
-    const appsBtn = document.createElement("button");
-    appsBtn.className = "secondary";
-    appsBtn.textContent = t("profile_applications_btn");
-    appsBtn.onclick = () => showApplications();
-    contentEl.appendChild(appsBtn);
   } catch (err) {
-    console.error("Couldn't load profile:", err);
+    console.error("Couldn't load checks status:", err);
     contentEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("couldnt_load_profile")))}</div>`;
   }
+}
+
+function showMyChecksPlaceholder() {
+  showScreen("my-checks-screen");
 }
 
 async function uploadCV() {
