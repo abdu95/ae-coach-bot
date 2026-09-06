@@ -102,7 +102,29 @@ def init_db() -> None:
                     created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
                 )
             """)
+            # Multiple saved CVs per user (the "My CVs" page), replacing the
+            # single user_state.data->>'cv_text' field. Exactly one row per
+            # user may have is_active=true at a time - that's the CV every
+            # other feature (analysis, vacancy scoring, applications) reads
+            # via webapp/db.py's get_active_cv_text(), so uploading a new CV
+            # or switching the active one needs no changes anywhere else.
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS cvs (
+                    id          BIGSERIAL PRIMARY KEY,
+                    telegram_id BIGINT NOT NULL REFERENCES users(telegram_id),
+                    label       TEXT NOT NULL,
+                    cv_text     TEXT NOT NULL,
+                    is_active   BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_cvs_telegram_id ON cvs (telegram_id)")
+            cur.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_cvs_one_active_per_user
+                ON cvs (telegram_id) WHERE is_active
+            """)
             _migrate_legacy_state(cur)
+            _migrate_legacy_cv_text(cur)
     finally:
         _pool.putconn(conn)
 
@@ -123,6 +145,21 @@ def _migrate_legacy_state(cur) -> None:
             updated_at
         FROM user_state
         ON CONFLICT (telegram_id) DO NOTHING
+    """)
+
+
+def _migrate_legacy_cv_text(cur) -> None:
+    """Backfill `cvs` from the legacy single-CV field (user_state's
+    data->>'cv_text') for anyone who uploaded a CV before the multi-CV
+    `cvs` table existed. Safe on every startup: only inserts for
+    telegram_ids with a non-empty legacy cv_text and no `cvs` row yet,
+    so it's a no-op once every pre-existing user has been copied over."""
+    cur.execute("""
+        INSERT INTO cvs (telegram_id, label, cv_text, is_active)
+        SELECT user_id, 'My CV', data->>'cv_text', true
+        FROM user_state
+        WHERE data->>'cv_text' IS NOT NULL AND data->>'cv_text' != ''
+          AND user_id NOT IN (SELECT telegram_id FROM cvs)
     """)
 
 
