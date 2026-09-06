@@ -6,6 +6,7 @@ reads/writes, never creates schema).
 
 import json
 import os
+import time
 
 import psycopg2
 from psycopg2.pool import SimpleConnectionPool
@@ -257,6 +258,34 @@ def log_event(telegram_id: int, event_type: str, metadata: dict | None = None) -
                 "INSERT INTO events (telegram_id, event_type, metadata) VALUES (%s, %s, %s)",
                 (telegram_id, event_type, json.dumps(metadata) if metadata is not None else None),
             )
+    finally:
+        pool.putconn(conn)
+
+
+_companies_cache: dict[str, str] | None = None
+_companies_cache_at: float = 0.0
+_COMPANIES_CACHE_TTL = 600  # 10 minutes
+
+
+def get_active_companies() -> dict[str, str]:
+    """Returns {slug: display_name} for active Greenhouse companies.
+    Cached in-process so a vacancy search doesn't hit Postgres every
+    call - editing webapp/greenhouse_companies.csv and running
+    scripts/sync_greenhouse_companies.py takes effect within
+    _COMPANIES_CACHE_TTL seconds, no deploy needed."""
+    global _companies_cache, _companies_cache_at
+    now = time.monotonic()
+    if _companies_cache is not None and (now - _companies_cache_at) < _COMPANIES_CACHE_TTL:
+        return _companies_cache
+
+    pool = get_pool()
+    conn = pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT slug, display_name FROM greenhouse_companies WHERE active = true")
+            _companies_cache = dict(cur.fetchall())
+            _companies_cache_at = now
+            return _companies_cache
     finally:
         pool.putconn(conn)
 

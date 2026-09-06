@@ -1,0 +1,129 @@
+company_slug,display_name,domain,greenhouse_board_url
+stripe,Stripe,Fintech,https://boards.greenhouse.io/stripe
+coinbase,Coinbase,Fintech,https://boards.greenhouse.io/coinbase
+robinhood,Robinhood,Fintech,https://boards.greenhouse.io/robinhood
+affirm,Affirm,Fintech,https://boards.greenhouse.io/affirm
+brex,Brex,Fintech,https://boards.greenhouse.io/brex
+chime,Chime,Fintech,https://boards.greenhouse.io/chime
+sofi,Sofi,Fintech,https://boards.greenhouse.io/sofi
+wise,Wise,Fintech,https://boards.greenhouse.io/wise
+block,Block,Fintech,https://boards.greenhouse.io/block
+mercury,Mercury,Fintech,https://boards.greenhouse.io/mercury
+gemini,Gemini,Fintech,https://boards.greenhouse.io/gemini
+betterment,Betterment,Fintech,https://boards.greenhouse.io/betterment
+carta,Carta,Fintech,https://boards.greenhouse.io/carta
+current,Current,Fintech,https://boards.greenhouse.io/current
+databricks,Databricks,Data / AI / Analytics tooling,https://boards.greenhouse.io/databricks
+scaleai,Scale AI,Data / AI / Analytics tooling,https://boards.greenhouse.io/scaleai
+anthropic,Anthropic,Data / AI / Analytics tooling,https://boards.greenhouse.io/anthropic
+mixpanel,Mixpanel,Data / AI / Analytics tooling,https://boards.greenhouse.io/mixpanel
+amplitude,Amplitude,Data / AI / Analytics tooling,https://boards.greenhouse.io/amplitude
+fivetran,Fivetran,Data / AI / Analytics tooling,https://boards.greenhouse.io/fivetran
+datadog,Datadog,Data / AI / Analytics tooling,https://boards.greenhouse.io/datadog
+newrelic,New Relic,Data / AI / Analytics tooling,https://boards.greenhouse.io/newrelic
+elastic,Elastic,Data / AI / Analytics tooling,https://boards.greenhouse.io/elastic
+mongodb,MongoDB,Data / AI / Analytics tooling,https://boards.greenhouse.io/mongodb
+starburst,Starburst,Data / AI / Analytics tooling,https://boards.greenhouse.io/starburst
+sigmacomputing,Sigma Computing,Data / AI / Analytics tooling,https://boards.greenhouse.io/sigmacomputing
+collibra,Collibra,Data / AI / Analytics tooling,https://boards.greenhouse.io/collibra
+togetherai,Together AI,Data / AI / Analytics tooling,https://boards.greenhouse.io/togetherai
+gitlab,GitLab,Dev tools / infra,https://boards.greenhouse.io/gitlab
+vercel,Vercel,Dev tools / infra,https://boards.greenhouse.io/vercel
+postman,Postman,Dev tools / infra,https://boards.greenhouse.io/postman
+circleci,Circleci,Dev tools / infra,https://boards.greenhouse.io/circleci
+pagerduty,Pagerduty,Dev tools / infra,https://boards.greenhouse.io/pagerduty
+twilio,Twilio,Dev tools / infra,https://boards.greenhouse.io/twilio
+cloudflare,Cloudflare,Dev tools / infra,https://boards.greenhouse.io/cloudflare
+fastly,Fastly,Dev tools / infra,https://boards.greenhouse.io/fastly
+launchdarkly,LaunchDarkly,Dev tools / infra,https://boards.greenhouse.io/launchdarkly
+warp,Warp,Dev tools / infra,https://boards.greenhouse.io/warp
+planetscale,PlanetScale,Dev tools / infra,https://boards.greenhouse.io/planetscale
+cockroachlabs,Cockroach Labs,Dev tools / infra,https://boards.greenhouse.io/cockroachlabs
+webflow,Webflow,Dev tools / infra,https://boards.greenhouse.io/webflow
+chainguard,Chainguard,Dev tools / infra,https://boards.greenhouse.io/chainguard
+instacart,Instacart,E-commerce / retail,https://boards.greenhouse.io/instacart
+faire,Faire,E-commerce / retail,https://boards.greenhouse.io/faire
+stockx,Stockx,E-commerce / retail,https://boards.greenhouse.io/stockx
+glossier,Glossier,E-commerce / retail,https://boards.greenhouse.io/glossier
+bombas,Bombas,E-commerce / retail,https://boards.greenhouse.io/bombas
+carvana,Carvana,E-commerce / retail,https://boards.greenhouse.io/carvana
+doordashusa,DoorDash,E-commerce / retail,https://boards.greenhouse.io/doordashusa
+flexport,Flexport,E-commerce / retail,https://boards.greenhouse.io/flexport
+narvar,Narvar,E-commerce / retail,https://boards.greenhouse.io/narvar
+squarespace,Squarespace,E-commerce / retail,https://boards.greenhouse.io/squarespace
+asana,Asana,Productivity / HR tech,https://boards.greenhouse.io/asana
+figma,Figma,Productivity / HR tech,https://boards.greenhouse.io/figma
+calendly,Calendly,Productivity / HR tech,https://boards.greenhouse.io/calendly
+gusto,Gusto,Productivity / HR tech,https://boards.greenhouse.io/gusto
+airtable,Airtable,Productivity / HR tech,https://boards.greenhouse.io/airtable
+remote,Remote,Productivity / HR tech,https://boards.greenhouse.io/remote
+lattice,Lattice,Productivity / HR tech,https://boards.greenhouse.io/lattice
+cultureamp,Culture Amp,Productivity / HR tech,https://boards.greenhouse.io/cultureamp
+dropbox,Dropbox,Productivity / HR tech,https://boards.greenhouse.io/dropbox
+doximity,Doximity,Healthtech / biotech,https://boards.greenhouse.io/doximity
+oscar,Oscar,Healthtech / biotech,https://boards.greenhouse.io/oscar
+calm,Calm,Healthtech / biotech,https://boards.greenhouse.io/calm
+forward,Forward,Healthtech / biotech,https://boards.greenhouse.io/forward
+komodohealth,Komodo Health,Healthtech / biotech,https://boards.greenhouse.io/komodohealth
+truveta,Truveta,Healthtech / biotech,https://boards.greenhouse.io/truveta
+suki,Suki,Healthtech / biotech,https://boards.greenhouse.io/suki
+klaviyo,Klaviyo,Marketing / CRM,https://boards.greenhouse.io/klaviyo
+braze,Braze,Marketing / CRM,https://boards.greenhouse.io/braze
+attentive,Attentive,Marketing / CRM,https://boards.greenhouse.io/attentive
+iterable,Iterable,Marketing / CRM,https://boards.greenhouse.io/iterable
+customerio,Customer.io,Marketing / CRM,https://boards.greenhouse.io/customerio
+salesloft,Salesloft,Marketing / CRM,https://boards.greenhouse.io/salesloft
+hubspotjobs,HubSpot,Marketing / CRM,https://boards.greenhouse.io/hubspotjobs
+duolingo,Duolingo,EdTech,https://boards.greenhouse.io/duolingo
+coursera,Coursera,EdTech,https://boards.greenhouse.io/coursera
+udemy,Udemy,EdTech,https://boards.greenhouse.io/udemy
+generalassembly,General Assembly,EdTech,https://boards.greenhouse.io/generalassembly
+springboard,Springboard,EdTech,https://boards.greenhouse.io/springboard
+outschool,Outschool,EdTech,https://boards.greenhouse.io/outschool
+discord,Discord,Gaming,https://boards.greenhouse.io/discord
+roblox,Roblox,Gaming,https://boards.greenhouse.io/roblox
+riotgames,Riotgames,Gaming,https://boards.greenhouse.io/riotgames
+scopely,Scopely,Gaming,https://boards.greenhouse.io/scopely
+epicgames,Epicgames,Gaming,https://boards.greenhouse.io/epicgames
+okta,Okta,Security,https://boards.greenhouse.io/okta
+tanium,Tanium,Security,https://boards.greenhouse.io/tanium
+netskope,Netskope,Security,https://boards.greenhouse.io/netskope
+orcasecurity,Orca Security,Security,https://boards.greenhouse.io/orcasecurity
+abnormalsecurity,Abnormal Security,Security,https://boards.greenhouse.io/abnormalsecurity
+lyft,Lyft,Transportation,https://boards.greenhouse.io/lyft
+waymo,Waymo,Transportation,https://boards.greenhouse.io/waymo
+samsara,Samsara,Transportation,https://boards.greenhouse.io/samsara
+motive,Motive,Transportation,https://boards.greenhouse.io/motive
+project44,project44,Transportation,https://boards.greenhouse.io/project44
+airbnb,Airbnb,Consumer / social,https://boards.greenhouse.io/airbnb
+pinterest,Pinterest,Consumer / social,https://boards.greenhouse.io/pinterest
+reddit,Reddit,Consumer / social,https://boards.greenhouse.io/reddit
+freeformfuturecorp,Freeform,Manufacturing / industrial / robotics,https://boards.greenhouse.io/freeformfuturecorp
+formlabs,Formlabs,Manufacturing / industrial / robotics,https://boards.greenhouse.io/formlabs
+markforged,Markforged,Manufacturing / industrial / robotics,https://boards.greenhouse.io/markforged
+tulip,Tulip,Manufacturing / industrial / robotics,https://boards.greenhouse.io/tulip
+fictiv,Fictiv,Manufacturing / industrial / robotics,https://boards.greenhouse.io/fictiv
+xometry,Xometry,Manufacturing / industrial / robotics,https://boards.greenhouse.io/xometry
+pathrobotics,Path Robotics,Manufacturing / industrial / robotics,https://boards.greenhouse.io/pathrobotics
+apptronik,Apptronik,Manufacturing / industrial / robotics,https://boards.greenhouse.io/apptronik
+figureai,Figure AI,Manufacturing / industrial / robotics,https://boards.greenhouse.io/figureai
+vardaspace,Varda Space,Aerospace / defense,https://boards.greenhouse.io/vardaspace
+astranis,Astranis,Aerospace / defense,https://boards.greenhouse.io/astranis
+planetlabs,Planet Labs,Aerospace / defense,https://boards.greenhouse.io/planetlabs
+sunnova,Sunnova,Energy / cleantech,https://boards.greenhouse.io/sunnova
+oklo,Oklo,Energy / cleantech,https://boards.greenhouse.io/oklo
+quaise,Quaise,Energy / cleantech,https://boards.greenhouse.io/quaise
+fervoenergy,Fervo Energy,Energy / cleantech,https://boards.greenhouse.io/fervoenergy
+lucidmotors,Lucid Motors,Automotive / EV,https://boards.greenhouse.io/lucidmotors
+nuro,Nuro,Automotive / EV,https://boards.greenhouse.io/nuro
+carbonrobotics,Carbon Robotics,Agriculture / agtech,https://boards.greenhouse.io/carbonrobotics
+pivotbio,Pivot Bio,Agriculture / agtech,https://boards.greenhouse.io/pivotbio
+coalition,Coalition,Insurance,https://boards.greenhouse.io/coalition
+pieinsurance,Pie Insurance,Insurance,https://boards.greenhouse.io/pieinsurance
+pacaso,Pacaso,"One-off domains (proptech, media, climate, marketplace, construction, telecom, food)",https://boards.greenhouse.io/pacaso
+masterclass,Masterclass,"One-off domains (proptech, media, climate, marketplace, construction, telecom, food)",https://boards.greenhouse.io/masterclass
+watershed,Watershed,"One-off domains (proptech, media, climate, marketplace, construction, telecom, food)",https://boards.greenhouse.io/watershed
+scout24,Scout24,"One-off domains (proptech, media, climate, marketplace, construction, telecom, food)",https://boards.greenhouse.io/scout24
+hover,Hover,"One-off domains (proptech, media, climate, marketplace, construction, telecom, food)",https://boards.greenhouse.io/hover
+tucows,Tucows,"One-off domains (proptech, media, climate, marketplace, construction, telecom, food)",https://boards.greenhouse.io/tucows
+misfitsmarket,Misfits Market,"One-off domains (proptech, media, climate, marketplace, construction, telecom, food)",https://boards.greenhouse.io/misfitsmarket

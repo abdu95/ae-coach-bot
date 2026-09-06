@@ -4,17 +4,21 @@ Vacancy search backed by Greenhouse's public per-company job board API
 returned link points at a posting Greenhouse itself currently serves, so
 it can't go stale/dead the way an LLM-found link occasionally did.
 
-COMPANIES is a hand-verified list (128 companies across 22 domains,
+The company list (128 companies across 22 domains as of 2026-09-06,
 each individually confirmed live via a real API call before being
-hardcoded here - not guessed from memory, and not assumed just because
-a company is well-known or Fortune-500-scale). That verification step
-matters: most old-economy enterprises (banks, retailers, industrials)
-run on Workday/SAP SuccessFactors/Oracle/iCIMS, not Greenhouse -
-Greenhouse skews toward VC-backed tech (per landbase.com's 2026 count,
-~11.5k companies on Greenhouse, plurality "Software Development",
-median company size 51-200 employees). So "find 100 Fortune 500s on
-Greenhouse" isn't a realistic bar for most domains; this list reflects
-real, verified coverage rather than a target headcount.
+added - not guessed from memory, and not assumed just because a
+company is well-known or Fortune-500-scale) now lives in the
+`greenhouse_companies` DB table (see db.get_active_companies()),
+not hardcoded here - edit webapp/greenhouse_companies.csv and run
+scripts/sync_greenhouse_companies.py to change it, no deploy needed.
+That verification step matters: most old-economy enterprises (banks,
+retailers, industrials) run on Workday/SAP SuccessFactors/Oracle/
+iCIMS, not Greenhouse - Greenhouse skews toward VC-backed tech (per
+landbase.com's 2026 count, ~11.5k companies on Greenhouse, plurality
+"Software Development", median company size 51-200 employees). So
+"find 100 Fortune 500s on Greenhouse" isn't a realistic bar for most
+domains; the list reflects real, verified coverage rather than a
+target headcount.
 
 Scaling further (hundreds/thousands more companies) is real ingestion
 infrastructure (deduping, refresh jobs, maybe scraping other job
@@ -35,73 +39,7 @@ import re
 
 import httpx
 
-COMPANIES = [
-    # Fintech (14)
-    "stripe", "coinbase", "robinhood", "affirm", "brex", "chime", "sofi", "wise",
-    "block", "mercury", "gemini", "betterment", "carta", "current",
-    # Data / AI / Analytics tooling (14)
-    "databricks", "scaleai", "anthropic", "mixpanel", "amplitude", "fivetran",
-    "datadog", "newrelic", "elastic", "mongodb", "starburst", "sigmacomputing",
-    "collibra", "togetherai",
-    # Dev tools / infra (14)
-    "gitlab", "vercel", "postman", "circleci", "pagerduty", "twilio", "cloudflare",
-    "fastly", "launchdarkly", "warp", "planetscale", "cockroachlabs", "webflow",
-    "chainguard",
-    # E-commerce / retail (10)
-    "instacart", "faire", "stockx", "glossier", "bombas", "carvana", "doordashusa",
-    "flexport", "narvar", "squarespace",
-    # Productivity / HR tech (9)
-    "asana", "figma", "calendly", "gusto", "airtable", "remote", "lattice",
-    "cultureamp", "dropbox",
-    # Healthtech / biotech (7)
-    "doximity", "oscar", "calm", "forward", "komodohealth", "truveta", "suki",
-    # Marketing / CRM (7)
-    "klaviyo", "braze", "attentive", "iterable", "customerio", "salesloft",
-    "hubspotjobs",
-    # EdTech (6)
-    "duolingo", "coursera", "udemy", "generalassembly", "springboard", "outschool",
-    # Gaming (5)
-    "discord", "roblox", "riotgames", "scopely", "epicgames",
-    # Security (5)
-    "okta", "tanium", "netskope", "orcasecurity", "abnormalsecurity",
-    # Transportation (5)
-    "lyft", "waymo", "samsara", "motive", "project44",
-    # Consumer / social (3)
-    "airbnb", "pinterest", "reddit",
-    # Manufacturing / industrial / robotics (9)
-    "freeformfuturecorp", "formlabs", "markforged", "tulip", "fictiv", "xometry",
-    "pathrobotics", "apptronik", "figureai",
-    # Aerospace / defense (3)
-    "vardaspace", "astranis", "planetlabs",
-    # Energy / cleantech (4)
-    "sunnova", "oklo", "quaise", "fervoenergy",
-    # Automotive / EV (2)
-    "lucidmotors", "nuro",
-    # Agriculture / agtech (2)
-    "carbonrobotics", "pivotbio",
-    # Insurance (2)
-    "coalition", "pieinsurance",
-    # One-off domains (proptech, media, climate, marketplace, construction, telecom, food)
-    "pacaso", "masterclass", "watershed", "scout24", "hover", "tucows", "misfitsmarket",
-]
-
-_DISPLAY_NAMES = {
-    "scaleai": "Scale AI", "cockroachlabs": "Cockroach Labs", "mongodb": "MongoDB",
-    "gitlab": "GitLab", "sigmacomputing": "Sigma Computing", "komodohealth": "Komodo Health",
-    "abnormalsecurity": "Abnormal Security", "orcasecurity": "Orca Security",
-    "launchdarkly": "LaunchDarkly", "cultureamp": "Culture Amp",
-    "generalassembly": "General Assembly", "hubspotjobs": "HubSpot",
-    "doordashusa": "DoorDash", "togetherai": "Together AI", "planetscale": "PlanetScale",
-    "newrelic": "New Relic", "customerio": "Customer.io", "project44": "project44",
-    "freeformfuturecorp": "Freeform", "pathrobotics": "Path Robotics", "figureai": "Figure AI",
-    "vardaspace": "Varda Space", "planetlabs": "Planet Labs", "lucidmotors": "Lucid Motors",
-    "carbonrobotics": "Carbon Robotics", "pivotbio": "Pivot Bio", "pieinsurance": "Pie Insurance",
-    "fervoenergy": "Fervo Energy", "misfitsmarket": "Misfits Market",
-}
-
-
-def _display_name(slug: str) -> str:
-    return _DISPLAY_NAMES.get(slug, slug.capitalize())
+import db  # local to this folder
 
 
 def _strip_html(text: str) -> str:
@@ -170,14 +108,15 @@ async def search_vacancies(job_title: str, location: str, work_setup: str,
     preferring the strongest title-match tier available and, within a
     tier, the most recently updated posting."""
     seen = {c.lower() for c in (seen_companies or [])}
-    slugs = [s for s in COMPANIES if _display_name(s).lower() not in seen]
+    companies = db.get_active_companies()
+    slugs = [s for s, name in companies.items() if name.lower() not in seen]
 
     async with httpx.AsyncClient(timeout=8.0) as client:
         results = await asyncio.gather(*[_fetch_company_jobs(client, s) for s in slugs])
 
     candidates = []
     for slug, jobs in zip(slugs, results):
-        company_name = _display_name(slug)
+        company_name = companies[slug]
         for job in jobs:
             title = job.get("title", "")
             loc = (job.get("location") or {}).get("name", "")

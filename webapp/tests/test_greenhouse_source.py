@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import greenhouse_source as gs  # noqa: E402
+import db  # noqa: E402
 
 FAKE_JOBS_BY_COMPANY = {
     "stripe": [
@@ -39,7 +40,7 @@ async def fake_fetch(client, slug):
 
 
 async def main():
-    with mock.patch.object(gs, "COMPANIES", ["stripe", "airbnb"]), \
+    with mock.patch.object(db, "get_active_companies", return_value={"stripe": "Stripe", "airbnb": "Airbnb"}), \
          mock.patch.object(gs, "_fetch_company_jobs", new=fake_fetch):
 
         # Test 1: strict match wins over a loose "Engineer" substring match
@@ -87,7 +88,9 @@ async def main():
         print("PASS: no match returns an empty list")
 
     # Test 8: multi-result - up to max_results, one per company, most-recent-first within tier
-    with mock.patch.object(gs, "COMPANIES", ["stripe", "airbnb", "reddit", "coinbase"]), \
+    with mock.patch.object(db, "get_active_companies", return_value={
+             "stripe": "Stripe", "airbnb": "Airbnb", "reddit": "Reddit", "coinbase": "Coinbase",
+         }), \
          mock.patch.object(gs, "_fetch_company_jobs", new=fake_fetch):
         result8 = await gs.search_vacancies("Analytics Engineer", "Any", "Any", "Any")
         assert len(result8) == 3, result8  # capped at default max_results=3
