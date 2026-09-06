@@ -33,7 +33,7 @@ init_data = build_init_data('{"id":777,"first_name":"Test","username":"testuser"
 
 # --- Test 1: cv-status with no CV -> has_cv False, ensure_user called ---
 with mock.patch.object(db, "ensure_user") as m_ensure, \
-     mock.patch.object(db, "get_cv_text", return_value=None) as m_get, \
+     mock.patch.object(db, "get_active_cv_text", return_value=None) as m_get, \
      mock.patch.object(db, "get_user_language", return_value="en"):
     resp = client.post("/api/cv-status", json={"init_data": init_data})
     assert resp.status_code == 200, resp.text
@@ -44,7 +44,7 @@ print("PASS: cv-status (no CV) ensures user and returns has_cv=False")
 
 # --- Test 2: cv-status with a CV on file -> has_cv True ---
 with mock.patch.object(db, "ensure_user"), \
-     mock.patch.object(db, "get_cv_text", return_value="Some CV text"), \
+     mock.patch.object(db, "get_active_cv_text", return_value="Some CV text"), \
      mock.patch.object(db, "get_user_language", return_value="ru"):
     resp = client.post("/api/cv-status", json={"init_data": init_data})
     assert resp.json() == {"has_cv": True, "lang": "ru"}
@@ -56,10 +56,10 @@ resp = client.post("/api/cv-status", json={"init_data": tampered})
 assert resp.status_code == 401, resp.text
 print("PASS: cv-status rejects tampered signature")
 
-# --- Test 4: upload-cv with a fake PDF -> parses, saves, returns saved:true ---
+# --- Test 4: upload-cv with a fake PDF -> parses, adds as a new (active) CV, returns saved:true ---
 import cv_parser  # noqa: E402
 with mock.patch.object(db, "ensure_user") as m_ensure, \
-     mock.patch.object(db, "save_cv_text") as m_save, \
+     mock.patch.object(db, "add_cv") as m_add, \
      mock.patch.object(db, "log_event") as m_log, \
      mock.patch.object(cv_parser, "parse_cv", return_value="Extracted CV text here") as m_parse:
     resp = client.post(
@@ -71,9 +71,9 @@ with mock.patch.object(db, "ensure_user") as m_ensure, \
     assert resp.json() == {"saved": True}
     m_ensure.assert_called_once_with(777, "testuser", "Test")
     m_parse.assert_called_once()
-    m_save.assert_called_once_with(777, "Extracted CV text here")
+    m_add.assert_called_once_with(777, "resume.pdf", "Extracted CV text here")
     m_log.assert_called_once_with(777, "cv_uploaded")
-print("PASS: upload-cv parses and saves correctly, logs cv_uploaded (same name bot.py's /stats reads)")
+print("PASS: upload-cv parses and adds a new CV (labeled by filename), logs cv_uploaded")
 
 # --- Test 5: upload-cv rejects non-PDF/DOCX file types ---
 with mock.patch.object(db, "ensure_user"):
@@ -101,7 +101,7 @@ print("PASS: upload-cv rejects empty-text extraction")
 # --- Test 7: suggest-titles with a CV on file -> returns titles ---
 import hypothesis  # noqa: E402
 with mock.patch.object(db, "ensure_user"), \
-     mock.patch.object(db, "get_cv_text", return_value="Some CV text"), \
+     mock.patch.object(db, "get_active_cv_text", return_value="Some CV text"), \
      mock.patch.object(hypothesis, "suggest_job_titles", new=mock.AsyncMock(
          return_value=["Data Analyst", "BI Developer", "Analytics Engineer", "Data Engineer", "Data Scientist"])):
     resp = client.post("/api/suggest-titles", json={"init_data": init_data})
@@ -111,7 +111,7 @@ print("PASS: suggest-titles returns 5 titles when a CV is on file")
 
 # --- Test 8: suggest-titles with no CV on file -> 400 ---
 with mock.patch.object(db, "ensure_user"), \
-     mock.patch.object(db, "get_cv_text", return_value=None):
+     mock.patch.object(db, "get_active_cv_text", return_value=None):
     resp = client.post("/api/suggest-titles", json={"init_data": init_data})
     assert resp.status_code == 400, resp.text
 print("PASS: suggest-titles requires a CV on file")
@@ -135,7 +135,7 @@ TEST_VACANCY = {
 # --- Test 10: score-vacancy uses on-file CV, returns score dict ---
 import scoring  # noqa: E402
 with mock.patch.object(db, "ensure_user"), \
-     mock.patch.object(db, "get_cv_text", return_value="Some CV text"), \
+     mock.patch.object(db, "get_active_cv_text", return_value="Some CV text"), \
      mock.patch.object(scoring, "score_vacancy", new=mock.AsyncMock(
          return_value={"score": 75, "matched": ["SQL"], "missing": ["Tableau"], "verdict": "Decent fit"})) as m_score:
     resp = client.post("/api/score-vacancy", json={"init_data": init_data, "vacancy": TEST_VACANCY})
@@ -145,7 +145,7 @@ with mock.patch.object(db, "ensure_user"), \
 print("PASS: score-vacancy scores against on-file CV")
 
 # --- Test 11: score-vacancy with no CV on file -> 400 ---
-with mock.patch.object(db, "ensure_user"), mock.patch.object(db, "get_cv_text", return_value=None):
+with mock.patch.object(db, "ensure_user"), mock.patch.object(db, "get_active_cv_text", return_value=None):
     resp = client.post("/api/score-vacancy", json={"init_data": init_data, "vacancy": TEST_VACANCY})
     assert resp.status_code == 400, resp.text
 print("PASS: score-vacancy requires a CV on file")
@@ -154,7 +154,7 @@ print("PASS: score-vacancy requires a CV on file")
 import cv_fixes  # noqa: E402
 fake_fixes = [{"issue": "x", "before": "y", "after": "z"}] * 5
 with mock.patch.object(db, "ensure_user"), \
-     mock.patch.object(db, "get_cv_text", return_value="Some CV text"), \
+     mock.patch.object(db, "get_active_cv_text", return_value="Some CV text"), \
      mock.patch.object(cv_fixes, "generate_cv_fixes", new=mock.AsyncMock(return_value=fake_fixes)) as m_fixes:
     resp = client.post("/api/cv-recommendations", json={
         "init_data": init_data, "vacancy": TEST_VACANCY, "level": "Senior",
@@ -166,7 +166,7 @@ print("PASS: cv-recommendations passes level/vacancy/cv through correctly")
 
 # --- Test 13: apply saves with score, reads cv_text fresh from db (not trusting client) ---
 with mock.patch.object(db, "ensure_user") as m_ensure, \
-     mock.patch.object(db, "get_cv_text", return_value="The current CV on file"), \
+     mock.patch.object(db, "get_active_cv_text", return_value="The current CV on file"), \
      mock.patch.object(db, "save_application") as m_save:
     resp = client.post("/api/apply", json={
         "init_data": init_data, "vacancy": TEST_VACANCY,
@@ -180,7 +180,7 @@ print("PASS: apply saves the application using the current on-file CV, not clien
 
 # --- Test 14: apply without a score (direct-apply path) ---
 with mock.patch.object(db, "ensure_user"), \
-     mock.patch.object(db, "get_cv_text", return_value="cv"), \
+     mock.patch.object(db, "get_active_cv_text", return_value="cv"), \
      mock.patch.object(db, "save_application") as m_save:
     resp = client.post("/api/apply", json={"init_data": init_data, "vacancy": TEST_VACANCY, "score": None})
     assert resp.status_code == 200, resp.text

@@ -120,7 +120,7 @@ class CVStatusRequest(BaseModel):
 @app.post("/api/cv-status")
 async def cv_status(req: CVStatusRequest):
     user = authenticate(req.init_data)
-    cv_text = db.get_cv_text(user["id"])
+    cv_text = db.get_active_cv_text(user["id"])
     lang = db.get_user_language(user["id"])
     return {"has_cv": bool(cv_text), "lang": lang}
 
@@ -142,9 +142,47 @@ async def upload_cv(init_data: str = Form(...), file: UploadFile = File(...)):
     if not cv_text.strip():
         raise HTTPException(400, "Could not find any text in that file")
 
-    db.save_cv_text(user["id"], cv_text)
+    db.add_cv(user["id"], file.filename, cv_text)
     db.log_event(user["id"], "cv_uploaded")
     return {"saved": True}
+
+
+class ListCvsRequest(BaseModel):
+    init_data: str
+
+
+@app.post("/api/cvs")
+async def list_cvs(req: ListCvsRequest):
+    user = authenticate(req.init_data)
+    return {"cvs": db.list_cvs(user["id"])}
+
+
+class SetActiveCvRequest(BaseModel):
+    init_data: str
+    cv_id: int
+
+
+@app.post("/api/cvs/set-active")
+async def set_active_cv(req: SetActiveCvRequest):
+    user = authenticate(req.init_data)
+    found = db.set_active_cv(user["id"], req.cv_id)
+    if not found:
+        raise HTTPException(404, "CV not found")
+    return {"updated": True}
+
+
+class DeleteCvRequest(BaseModel):
+    init_data: str
+    cv_id: int
+
+
+@app.post("/api/cvs/delete")
+async def delete_cv(req: DeleteCvRequest):
+    user = authenticate(req.init_data)
+    found = db.delete_cv(user["id"], req.cv_id)
+    if not found:
+        raise HTTPException(404, "CV not found")
+    return {"deleted": True}
 
 
 class SuggestTitlesRequest(BaseModel):
@@ -154,7 +192,7 @@ class SuggestTitlesRequest(BaseModel):
 @app.post("/api/suggest-titles")
 async def suggest_titles(req: SuggestTitlesRequest):
     user = authenticate(req.init_data)
-    cv_text = db.get_cv_text(user["id"])
+    cv_text = db.get_active_cv_text(user["id"])
     if not cv_text:
         raise HTTPException(400, "No CV on file - upload one first")
 
@@ -183,7 +221,7 @@ class ScoreRequest(BaseModel):
 @app.post("/api/score-vacancy")
 async def score_vacancy_endpoint(req: ScoreRequest):
     user = authenticate(req.init_data)
-    cv_text = db.get_cv_text(user["id"])
+    cv_text = db.get_active_cv_text(user["id"])
     if not cv_text:
         raise HTTPException(400, "No CV on file - upload one first")
 
@@ -205,7 +243,7 @@ class RecommendationsRequest(BaseModel):
 @app.post("/api/cv-recommendations")
 async def cv_recommendations(req: RecommendationsRequest):
     user = authenticate(req.init_data)
-    cv_text = db.get_cv_text(user["id"])
+    cv_text = db.get_active_cv_text(user["id"])
     if not cv_text:
         raise HTTPException(400, "No CV on file - upload one first")
 
@@ -227,7 +265,7 @@ class ApplyRequest(BaseModel):
 @app.post("/api/apply")
 async def apply(req: ApplyRequest):
     user = authenticate(req.init_data)
-    cv_text = db.get_cv_text(user["id"]) or ""
+    cv_text = db.get_active_cv_text(user["id"]) or ""
 
     try:
         db.save_application(user["id"], req.vacancy.model_dump(), cv_text, req.score)
@@ -292,7 +330,7 @@ class AnalyzeRequest(BaseModel):
 @app.post("/api/cv-jd-analysis")
 async def cv_jd_analysis(req: AnalyzeRequest):
     user = authenticate(req.init_data)
-    cv_text = db.get_cv_text(user["id"])
+    cv_text = db.get_active_cv_text(user["id"])
     if not cv_text:
         raise HTTPException(400, "No CV on file - upload one first")
 
@@ -337,7 +375,7 @@ class RoadmapItemRequest(BaseModel):
 @app.post("/api/roadmap-item")
 async def roadmap_item(req: RoadmapItemRequest):
     user = authenticate(req.init_data)
-    cv_text = db.get_cv_text(user["id"])
+    cv_text = db.get_active_cv_text(user["id"])
     if not cv_text:
         raise HTTPException(400, "No CV on file - upload one first")
 

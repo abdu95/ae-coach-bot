@@ -428,3 +428,82 @@ test("hitting the free-check limit during analysis shows the buy-checks flow, no
   assert.ok(document.getElementById("buy-checks-box"), "should route straight to buying more checks");
   assert.equal(document.getElementById("jd-input-box").hidden, true);
 });
+
+// ── My CVs ────────────────────────────────────────────────────────────
+
+const FAKE_CVS = [
+  { id: 2, label: "resume_v2.pdf", is_active: true, created_at: "2026-09-07T00:00:00" },
+  { id: 1, label: "resume_v1.pdf", is_active: false, created_at: "2026-09-01T00:00:00" },
+];
+
+test("My CVs screen lists saved CVs, marking the active one and offering 'use' only on the others", async () => {
+  const dom = loadApp({
+    fetchImpl: defaultFetchMock({
+      "/api/cv-status": () => ({ has_cv: true, lang: "en" }),
+      "/api/cvs": () => ({ cvs: FAKE_CVS }),
+    }),
+  });
+  await flush();
+  const { document, window } = dom.window;
+  await window.showMyCvs();
+  const html = document.getElementById("my-cvs-list").innerHTML;
+  assert.match(html, /resume_v2\.pdf/);
+  assert.match(html, /resume_v1\.pdf/);
+  assert.match(html, /activateCv\(1\)/, "the inactive CV should offer a 'use this CV' action");
+  assert.ok(!html.includes("activateCv(2)"), "the already-active CV must not offer to activate itself");
+});
+
+test("activating a CV calls set-active and refreshes the list", async () => {
+  let setActiveCalledWith = null;
+  const dom = loadApp({
+    fetchImpl: defaultFetchMock({
+      "/api/cv-status": () => ({ has_cv: true, lang: "en" }),
+      "/api/cvs": () => ({ cvs: FAKE_CVS }),
+      "/api/cvs/set-active": (body) => { setActiveCalledWith = body.cv_id; return { updated: true }; },
+    }),
+  });
+  await flush();
+  const { window } = dom.window;
+  await window.showMyCvs();
+  await window.activateCv(1);
+  assert.equal(setActiveCalledWith, 1);
+});
+
+test("deleting a CV requires confirmation before calling the delete endpoint", async () => {
+  let deleteCalled = false;
+  const dom = loadApp({
+    fetchImpl: defaultFetchMock({
+      "/api/cv-status": () => ({ has_cv: true, lang: "en" }),
+      "/api/cvs": () => ({ cvs: FAKE_CVS }),
+      "/api/cvs/delete": () => { deleteCalled = true; return { deleted: true }; },
+    }),
+  });
+  await flush();
+  const { document, window } = dom.window;
+  await window.showMyCvs();
+
+  window.confirmDeleteCv(1);
+  assert.equal(deleteCalled, false, "delete must not fire before confirmation");
+  assert.match(document.getElementById("cv-action-1").innerHTML, /deleteCvNow\(1\)/);
+
+  await window.deleteCvNow(1);
+  assert.equal(deleteCalled, true);
+});
+
+test("uploading a new CV from the My CVs screen refreshes the list instead of navigating away", async () => {
+  const dom = loadApp({
+    fetchImpl: defaultFetchMock({
+      "/api/cv-status": () => ({ has_cv: true, lang: "en" }),
+      "/api/cvs": () => ({ cvs: FAKE_CVS }),
+      "/api/upload-cv": () => ({ saved: true }),
+    }),
+  });
+  await flush();
+  const { document, window } = dom.window;
+  await window.showMyCvs();
+  const file = new window.File(["cv text"], "new_resume.pdf", { type: "application/pdf" });
+  Object.defineProperty(document.getElementById("new_cv_file"), "files", { value: [file] });
+  await window.uploadNewCv();
+  await flush();
+  assert.equal(document.getElementById("my-cvs-screen").hidden, false, "should stay on My CVs, not navigate to home");
+});

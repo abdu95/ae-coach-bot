@@ -320,6 +320,23 @@ const I18N = {
     ru: "У вас осталось {remaining} из {quota} бесплатных проверок.",
   },
   profile_buy_more_btn: { en: "💳 Buy more checks", uz: "💳 Ko'proq tekshiruv sotib olish", ru: "💳 Купить ещё проверок" },
+  profile_my_cvs_btn: { en: "📄 My CVs", uz: "📄 Mening CV'larim", ru: "📄 Мои резюме" },
+  profile_applications_btn: { en: "📋 My Applications", uz: "📋 Arizalarim", ru: "📋 Мои заявки" },
+  my_cvs_title: { en: "My CVs", uz: "Mening CV'larim", ru: "Мои резюме" },
+  my_cvs_empty: {
+    en: "No CVs saved yet — upload one below.", uz: "Hali CV saqlanmagan — quyida yuklang.", ru: "Резюме ещё не сохранено — загрузите ниже.",
+  },
+  my_cvs_active_badge: { en: "Active", uz: "Faol", ru: "Активно" },
+  my_cvs_set_active_btn: { en: "Use this CV", uz: "Shu CV'dan foydalanish", ru: "Использовать это резюме" },
+  my_cvs_load_failed: {
+    en: "Couldn't load your CVs.", uz: "CV'laringizni yuklab bo'lmadi.", ru: "Не удалось загрузить ваши резюме.",
+  },
+  my_cvs_activate_failed: {
+    en: "Couldn't switch CVs, try again.", uz: "CV'ni almashtirib bo'lmadi, qaytadan urinib ko'ring.", ru: "Не удалось переключить резюме, попробуйте снова.",
+  },
+  my_cvs_upload_label: {
+    en: "Upload a new CV", uz: "Yangi CV yuklang", ru: "Загрузите новое резюме",
+  },
   nav_checks_badge: { en: "🎫 {remaining}/{quota}", uz: "🎫 {remaining}/{quota}", ru: "🎫 {remaining}/{quota}" },
   post_roadmap_no_checks: {
     en: "You're out of free checks. Buy more to analyze another job:",
@@ -382,6 +399,10 @@ function applyStaticTranslations() {
   document.getElementById("welcome-continue-btn").textContent = t("welcome_continue_btn");
   document.getElementById("profile-title").textContent = t("profile_title");
   document.getElementById("btn-profile-back").textContent = t("back_link");
+  document.getElementById("my-cvs-title").textContent = t("my_cvs_title");
+  document.getElementById("btn-my-cvs-back").textContent = t("back_link");
+  document.getElementById("my-cvs-upload-label").textContent = t("my_cvs_upload_label");
+  document.getElementById("upload_new_cv_btn").textContent = t("upload_cv_btn");
 
   const filterEl = document.getElementById("applications-filter");
   filterEl.innerHTML = ['all', 'applied', 'phone_screen', 'tech_interview', 'offer', 'rejected', 'ghosted']
@@ -411,7 +432,7 @@ const MIN_CHECKS_PURCHASE = 1;
 const MAX_CHECKS_PURCHASE = 100;
 
 function showScreen(id) {
-  for (const s of ["loading-gate", "welcome-screen", "cv-gate", "home-screen", "profile-screen", "analysis-screen", "title-screen", "search-screen", "applications-screen"]) {
+  for (const s of ["loading-gate", "welcome-screen", "cv-gate", "home-screen", "profile-screen", "my-cvs-screen", "analysis-screen", "title-screen", "search-screen", "applications-screen"]) {
     document.getElementById(s).hidden = (s !== id);
   }
 }
@@ -521,6 +542,19 @@ async function showProfile() {
       };
       contentEl.appendChild(btn);
     }
+
+    const cvsBtn = document.createElement("button");
+    cvsBtn.className = "secondary";
+    cvsBtn.style.marginTop = "12px";
+    cvsBtn.textContent = t("profile_my_cvs_btn");
+    cvsBtn.onclick = () => showMyCvs();
+    contentEl.appendChild(cvsBtn);
+
+    const appsBtn = document.createElement("button");
+    appsBtn.className = "secondary";
+    appsBtn.textContent = t("profile_applications_btn");
+    appsBtn.onclick = () => showApplications();
+    contentEl.appendChild(appsBtn);
   } catch (err) {
     console.error("Couldn't load profile:", err);
     contentEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("couldnt_load_profile")))}</div>`;
@@ -568,6 +602,118 @@ async function uploadCV() {
     } else {
       showScreen("home-screen");
     }
+  } catch (err) {
+    console.error("CV upload failed:", err);
+    resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("upload_failed")))}</div>`;
+  } finally {
+    clearTimeout(timeout);
+    btn.disabled = false;
+  }
+}
+
+// ── My CVs ──────────────────────────────────────────────────────────
+async function showMyCvs() {
+  showScreen("my-cvs-screen");
+  document.getElementById("my-cvs-upload-result").innerHTML = "";
+  document.getElementById("new_cv_file").value = "";
+  const listEl = document.getElementById("my-cvs-list");
+  listEl.innerHTML = `<div class="hint">…</div>`;
+  try {
+    const data = await callApi("/api/cvs", {});
+    renderMyCvsList(data.cvs || []);
+  } catch (err) {
+    console.error("Loading CVs failed:", err);
+    listEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("my_cvs_load_failed")))}</div>`;
+  }
+}
+
+function renderMyCvsList(cvs) {
+  const listEl = document.getElementById("my-cvs-list");
+  if (cvs.length === 0) {
+    listEl.innerHTML = `<div class="hint">${escapeHtml(t("my_cvs_empty"))}</div>`;
+    return;
+  }
+  listEl.innerHTML = cvs.map(cv => `
+    <div class="card" style="margin-bottom:8px;">
+      <h3>${escapeHtml(cv.label)}</h3>
+      <div class="company">${escapeHtml(new Date(cv.created_at).toLocaleDateString())}${cv.is_active ? ' · <b>' + escapeHtml(t("my_cvs_active_badge")) + '</b>' : ''}</div>
+      <div class="row">
+        ${cv.is_active ? '' : `<button class="secondary" onclick="activateCv(${cv.id})">${escapeHtml(t("my_cvs_set_active_btn"))}</button>`}
+        <button class="danger" onclick="confirmDeleteCv(${cv.id})">${escapeHtml(t("delete_application_btn"))}</button>
+      </div>
+      <div id="cv-action-${cv.id}"></div>
+    </div>
+  `).join("");
+}
+
+async function activateCv(cvId) {
+  const el = document.getElementById(`cv-action-${cvId}`);
+  el.innerHTML = `<div class="hint">${escapeHtml(t("saving"))}</div>`;
+  try {
+    await callApi("/api/cvs/set-active", { cv_id: cvId });
+    showMyCvs();
+  } catch (err) {
+    console.error("Set active CV failed:", err);
+    el.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("my_cvs_activate_failed")))}</div>`;
+  }
+}
+
+function confirmDeleteCv(cvId) {
+  const el = document.getElementById(`cv-action-${cvId}`);
+  el.innerHTML = `
+    <div class="prompt-block">${escapeHtml(t("delete_confirm"))}</div>
+    <div class="row">
+      <button class="danger" onclick="deleteCvNow(${cvId})">${escapeHtml(t("delete_confirm_yes"))}</button>
+      <button class="secondary" onclick="document.getElementById('cv-action-${cvId}').innerHTML=''">${escapeHtml(t("delete_confirm_no"))}</button>
+    </div>
+  `;
+}
+
+async function deleteCvNow(cvId) {
+  const el = document.getElementById(`cv-action-${cvId}`);
+  el.innerHTML = `<div class="hint">${escapeHtml(t("saving"))}</div>`;
+  try {
+    await callApi("/api/cvs/delete", { cv_id: cvId });
+    showMyCvs();
+  } catch (err) {
+    console.error("Delete CV failed:", err);
+    el.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("delete_failed")))}</div>`;
+  }
+}
+
+async function uploadNewCv() {
+  const fileInput = document.getElementById("new_cv_file");
+  const resultEl = document.getElementById("my-cvs-upload-result");
+  const btn = document.getElementById("upload_new_cv_btn");
+  const file = fileInput.files[0];
+
+  if (!file) {
+    resultEl.innerHTML = `<div class="error">${escapeHtml(t("choose_file_first"))}</div>`;
+    return;
+  }
+
+  btn.disabled = true;
+  resultEl.innerHTML = `<div class="hint">${escapeHtml(t("reading_cv"))}</div>`;
+
+  const formData = new FormData();
+  formData.append("init_data", tg.initData);
+  formData.append("file", file);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 45000);
+  try {
+    const res = await fetch("/api/upload-cv", { method: "POST", body: formData, signal: controller.signal });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      console.error("Upload failed:", res.status, body);
+      const err = new Error(body.detail || "");
+      if (res.status === 401) err.sessionExpired = true;
+      throw err;
+    }
+    state.hasCv = true;
+    fileInput.value = "";
+    resultEl.innerHTML = "";
+    showMyCvs();
   } catch (err) {
     console.error("CV upload failed:", err);
     resultEl.innerHTML = `<div class="error">⚠️ ${escapeHtml(friendlyError(err, t("upload_failed")))}</div>`;

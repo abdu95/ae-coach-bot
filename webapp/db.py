@@ -64,33 +64,109 @@ def get_user_language(telegram_id: int) -> str:
         pool.putconn(conn)
 
 
-def get_cv_text(telegram_id: int) -> str | None:
+def get_active_cv_text(telegram_id: int) -> str | None:
+    """The CV every analysis/vacancy/application feature actually reads -
+    whichever one is_active in `cvs`. Switching the active CV (or
+    uploading a new one, which becomes active automatically) changes
+    what every other feature sees with no changes needed there."""
     pool = get_pool()
     conn = pool.getconn()
     try:
         with conn, conn.cursor() as cur:
-            cur.execute("SELECT data->>'cv_text' FROM user_state WHERE user_id = %s", (telegram_id,))
+            cur.execute("SELECT cv_text FROM cvs WHERE telegram_id = %s AND is_active = true", (telegram_id,))
             row = cur.fetchone()
-            return row[0] if row and row[0] else None
+            return row[0] if row else None
     finally:
         pool.putconn(conn)
 
 
-def save_cv_text(telegram_id: int, cv_text: str) -> None:
-    """Merges cv_text into user_state's JSONB blob without touching any
-    other field (jsonb `||` is a shallow top-level merge) - safe even if
-    the bot's chat flow also reads/writes this same row concurrently."""
+def list_cvs(telegram_id: int) -> list[dict]:
     pool = get_pool()
     conn = pool.getconn()
     try:
         with conn, conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO user_state (user_id, data, updated_at)
-                VALUES (%s, jsonb_build_object('cv_text', %s::text), now())
-                ON CONFLICT (user_id) DO UPDATE
-                SET data = user_state.data || jsonb_build_object('cv_text', %s::text),
-                    updated_at = now()
-            """, (telegram_id, cv_text, cv_text))
+                SELECT id, label, is_active, created_at
+                FROM cvs WHERE telegram_id = %s ORDER BY created_at DESC
+            """, (telegram_id,))
+            rows = cur.fetchall()
+        return [
+            {"id": r[0], "label": r[1], "is_active": r[2], "created_at": r[3].isoformat()}
+            for r in rows
+        ]
+    finally:
+        pool.putconn(conn)
+
+
+def add_cv(telegram_id: int, label: str, cv_text: str) -> int:
+    """Adds a new CV and makes it the active one - matches the existing
+    upload behavior (uploading becomes what the rest of the app uses
+    immediately), while past CVs stay in the list to switch back to."""
+    pool = get_pool()
+    conn = pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                "UPDATE cvs SET is_active = false WHERE telegram_id = %s AND is_active = true",
+                (telegram_id,),
+            )
+            cur.execute(
+                """
+                INSERT INTO cvs (telegram_id, label, cv_text, is_active)
+                VALUES (%s, %s, %s, true)
+                RETURNING id
+                """,
+                (telegram_id, label, cv_text),
+            )
+            return cur.fetchone()[0]
+    finally:
+        pool.putconn(conn)
+
+
+def set_active_cv(telegram_id: int, cv_id: int) -> bool:
+    """Returns False if cv_id doesn't exist or isn't owned by this
+    telegram_id - never leaks whether some other user's cv_id exists."""
+    pool = get_pool()
+    conn = pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM cvs WHERE id = %s AND telegram_id = %s", (cv_id, telegram_id))
+            if not cur.fetchone():
+                return False
+            cur.execute(
+                "UPDATE cvs SET is_active = false WHERE telegram_id = %s AND is_active = true",
+                (telegram_id,),
+            )
+            cur.execute("UPDATE cvs SET is_active = true WHERE id = %s", (cv_id,))
+            return True
+    finally:
+        pool.putconn(conn)
+
+
+def delete_cv(telegram_id: int, cv_id: int) -> bool:
+    """Returns False if not found/not owned. If the deleted CV was the
+    active one, auto-promotes the most recently added remaining CV so
+    the rest of the app isn't suddenly left with no active CV."""
+    pool = get_pool()
+    conn = pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("SELECT is_active FROM cvs WHERE id = %s AND telegram_id = %s", (cv_id, telegram_id))
+            row = cur.fetchone()
+            if not row:
+                return False
+            was_active = row[0]
+            cur.execute("DELETE FROM cvs WHERE id = %s", (cv_id,))
+            if was_active:
+                cur.execute(
+                    """
+                    UPDATE cvs SET is_active = true WHERE id = (
+                        SELECT id FROM cvs WHERE telegram_id = %s ORDER BY created_at DESC LIMIT 1
+                    )
+                    """,
+                    (telegram_id,),
+                )
+            return True
     finally:
         pool.putconn(conn)
 
