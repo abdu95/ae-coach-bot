@@ -85,6 +85,22 @@ def init_db() -> None:
                 )
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_applications_telegram_id ON applications (telegram_id)")
+            # Replaces the hand-maintained COMPANIES list that used to be
+            # hardcoded (and duplicated) in bot/greenhouse_source.py and
+            # webapp/greenhouse_source.py. Edit webapp/greenhouse_companies.csv
+            # and run webapp/scripts/sync_greenhouse_companies.py to add/
+            # remove/rename a verified company - no deploy needed, takes
+            # effect within webapp/db.py's cache TTL. Never delete a row on
+            # removal, only deactivate - keeps history of what was tried.
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS greenhouse_companies (
+                    slug         TEXT PRIMARY KEY,
+                    display_name TEXT NOT NULL,
+                    domain       TEXT,
+                    active       BOOLEAN NOT NULL DEFAULT TRUE,
+                    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
             _migrate_legacy_state(cur)
     finally:
         _pool.putconn(conn)
