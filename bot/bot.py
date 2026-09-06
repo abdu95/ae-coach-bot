@@ -136,6 +136,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
     acct = state.account_stats()
     pilot = state.pilot_stats()
+    payments = state.payment_stats()
     ev = state.event_stats(
         ["started", "name_provided", "cv_uploaded", "check_completed",
          "roadmap_requested", "limit_reached", "reset"]
@@ -159,6 +160,8 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"{line('Limit reached', 'limit_reached')}\n"
         f"{line('Reset', 'reset')}\n\n"
         f"Waitlist — {acct['waitlist']}\n\n"
+        f"💰 Payments — {payments['count']} paid orders · {payments['unique_payers']} unique payers · "
+        f"{payments['total_uzs']:,} UZS total (bot chat + Mini App combined, same `orders` table)\n\n"
         f"🎓 School21 pilot — {pilot['users']} users · {pilot['checks']} checks · avg {pilot['avg']}/user\n"
         f"🏃 Chashma marathon — {chashma_count} users",
         parse_mode=ParseMode.HTML,

@@ -403,6 +403,23 @@ def pilot_count() -> int:
         _pool.putconn(conn)
 
 
+def payment_stats() -> dict:
+    """Reads directly from `orders` (state='paid') rather than an event
+    log, so it's accurate from day one - covers every payment ever made,
+    including ones from before any payment-specific event existed."""
+    conn = _pool.getconn()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute("""
+                SELECT count(*), count(DISTINCT telegram_id), coalesce(sum(amount), 0)
+                FROM orders WHERE state = 'paid'
+            """)
+            count, unique_payers, total_tiyin = cur.fetchone()
+    finally:
+        _pool.putconn(conn)
+    return {"count": count, "unique_payers": unique_payers, "total_uzs": total_tiyin // 100}
+
+
 def pilot_stats() -> dict:
     conn = _pool.getconn()
     try:
