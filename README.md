@@ -1,18 +1,16 @@
-# AE Career Coach — Telegram Bot
+# AcceptedAI — Telegram Bot (launcher)
 
-Analyses a candidate's CV against a job description and delivers a personalised Analytics Engineering career roadmap.
+This bot is a thin launcher: language picker, one-time name capture, admin/pilot commands, and a single
+"Open AcceptedAI" button that opens the Mini App. Every actual feature — CV-vs-JD analysis + roadmap,
+vacancy search + application tracking, and payment — lives in the Mini App, in the sister repo
+[`vacancy-webapp`](https://github.com/abdu95/vacancy-webapp) (its own Railway service).
 
 ## Flow
 
 ```
-/start
-  → User pastes job description
-  → User uploads CV (PDF)
-  → Step 1: ATS Score        [Continue →]
-  → Step 2: XYZ Formula Check [Continue →]
-  → Step 3: Tool Radar        [Continue →]
-  → Step 4: Level Assessment  [Continue →]
-  → Step 5: Full Roadmap (with live job search)
+/start (or /app, /reset, or any stray message)
+  → language picker (first time) + one-time name capture
+  → short explainer + "Open AcceptedAI" button → opens the Mini App
 ```
 
 ## Local Setup
@@ -55,11 +53,15 @@ python bot.py
 
 1. Push to GitHub
 2. Go to https://railway.app → New Project → Deploy from GitHub
-3. Select your repo
-4. In the bot service's Settings → Source, set **Root Directory** to `bot` — the repo also has a separate `webapp/` service (Telegram Mini App), and without this the build can pick up the wrong dependencies/start command from it
+3. Select this repo
+4. In the bot service's Settings → Source, set **Root Directory** to `bot`
 5. In the same project: New → Database → Add PostgreSQL
-6. In the bot service's Variables tab, add a reference to the Postgres `DATABASE_URL` (Railway's "Add Reference" option), plus `TELEGRAM_TOKEN` and `ANTHROPIC_API_KEY`
+6. In the bot service's Variables tab, add a reference to the Postgres `DATABASE_URL` (Railway's "Add Reference" option), plus `TELEGRAM_TOKEN`, `MINI_APP_URL` (the Mini App's public URL), and `ADMIN_IDS`
 7. Railway auto-detects Python and runs `python bot.py`
+
+The Mini App (`vacancy-webapp`) is a separate Railway project/service deployed from its own repo —
+see that repo's README for its setup. Both share the same Postgres instance (add a `DATABASE_URL`
+reference on that service too).
 
 No Dockerfile needed. Free tier is enough for low-traffic usage.
 
@@ -67,16 +69,11 @@ No Dockerfile needed. Free tier is enough for low-traffic usage.
 
 | File | Purpose |
 |---|---|
-| `bot/bot.py` | Main entry point, all Telegram handlers |
-| `bot/coach.py` | Anthropic API calls (analyze + roadmap) |
-| `bot/state.py` | Per-user conversation state (Postgres-backed, in-memory cache) |
-| `bot/prompts.py` | All Claude prompts per level |
-| `bot/formatter.py` | Format outputs as Telegram HTML |
-| `bot/vacancy_source.py` | Swappable vacancy-search interface used by the bot |
-| `webapp/` | Telegram Mini App (separate Railway service) for vacancy search |
+| `bot/bot.py` | Main entry point — launcher flow, admin/pilot/marketing commands |
+| `bot/state.py` | Per-user account state (Postgres-backed, in-memory cache), quota, orders, stats |
+| `bot/i18n.py` | uz/ru/en strings |
 
 ## Notes
 
-- State is cached in memory but persisted to Postgres as JSONB (one row per user) — survives restarts/redeploys. Requires `DATABASE_URL`.
-- Step 5 uses Anthropic's built-in web search tool to find live job openings.
-- `/reset` clears a user's state and restarts the flow.
+- State is cached in memory but persisted to Postgres as JSONB/relational tables (one row per user/event) — survives restarts/redeploys. Requires `DATABASE_URL`.
+- `/reset` clears a user's cached name/session and re-sends the launcher.
