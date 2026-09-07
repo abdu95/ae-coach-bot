@@ -2,3 +2,4 @@
 __pycache__/
 *.pyc
 usage.log
+.DS_Store

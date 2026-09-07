@@ -58,29 +58,31 @@ ASK_NAME = {
 STATS_AND_PRIVACY = {
     "en": (
         "Alright {name}, we've got about 7 seconds — that's how much time recruiters "
-        "spend scanning a CV on average. Also, in a recent study, 43% of rejections came "
-        "from preventable issues — bad formatting, missing keywords, parsing errors — "
-        "not real experience gaps.\n\n"
+        "spend scanning a CV on average. And a lot of good candidates get filtered out "
+        "by fixable issues — bad formatting, missing keywords, parsing errors — not real "
+        "experience gaps.\n\n"
         "🔒 Btw, don't worry about privacy: your CV is only used to generate your report. "
-        "It's never shared with recruiters or anyone else — wipe it anytime with /reset."
+        "It's never shared with recruiters or anyone else — delete it anytime from My CVs "
+        "in the app."
     ),
     "uz": (
         "Xo'p, {name}, bizda taxminan 7 soniya bor — ish beruvchilar CV'ga o'rtacha shuncha "
-        "vaqt ajratishadi. Yana, so'nggi tadqiqotga ko'ra, rad javoblarining 43% aslida "
-        "tajriba yetishmasligidan emas — balki noto'g'ri formatlash, kalit so'zlar yo'qligi "
-        "va CV'ni tizim o'qiy olmasligidan kelib chiqadi.\n\n"
+        "vaqt ajratishadi. Va ko'plab munosib nomzodlar tuzatsa bo'ladigan muammolar "
+        "tufayli chetlab o'tiladi — noto'g'ri formatlash, kalit so'zlar yo'qligi, tizim "
+        "CV'ni o'qiy olmasligi — bu haqiqiy tajriba yetishmovchiligi emas.\n\n"
         "🔒 Aytgancha, maxfiylik haqida xavotir olmang: CV'ingiz faqat hisobot tayyorlash "
         "uchun ishlatiladi. U ish beruvchilarga yoki boshqa hech kimga berilmaydi — "
-        "xohlagan vaqtda /reset bilan o'chirib tashlashingiz mumkin."
+        "ilovadagi \"Mening CV'larim\" bo'limidan xohlagan vaqtda o'chirib tashlashingiz "
+        "mumkin."
     ),
     "ru": (
         "Хорошо, {name}, у нас есть около 7 секунд — именно столько рекрутёры в среднем "
-        "тратят на просмотр резюме. Также, по данным недавнего исследования, 43% отказов "
-        "связаны не с нехваткой опыта, а с исправимыми проблемами — плохим форматированием, "
-        "отсутствием ключевых слов и ошибками при разборе резюме системой.\n\n"
+        "тратят на просмотр резюме. И многие достойные кандидаты отсеиваются из-за "
+        "исправимых проблем — плохого форматирования, отсутствия ключевых слов, ошибок "
+        "при разборе резюме системой — а не из-за нехватки опыта.\n\n"
         "🔒 Кстати, не переживайте насчёт конфиденциальности: ваше резюме используется "
         "только для подготовки отчёта. Оно не передаётся рекрутёрам и никому другому — "
-        "можете удалить его в любой момент командой /reset."
+        "вы можете удалить его в любой момент в разделе «Мои резюме» в приложении."
     ),
 }
 
