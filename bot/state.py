@@ -48,6 +48,14 @@ def init_db() -> None:
                 )
             """)
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT")
+            # Daily proactive vacancy alerts: a saved title+location per user
+            # (edited in the Mini App's Profile > Vacancy Alerts screen) plus
+            # an explicit opt-in flag, defaulting FALSE - setting the search
+            # criteria alone should not silently start sending daily
+            # messages, unsolicited pushes are exactly what gets a bot muted.
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS saved_job_title TEXT")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS saved_location TEXT")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS vacancy_alerts_enabled BOOLEAN NOT NULL DEFAULT FALSE")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS events (
                     id          BIGSERIAL PRIMARY KEY,
@@ -148,6 +156,21 @@ def init_db() -> None:
                 )
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_cv_analyses_telegram_id ON cv_analyses (telegram_id)")
+            # Dedup for daily vacancy alerts: one row per (user, vacancy) the
+            # daily job has already sent, so the next run only alerts on
+            # genuinely new postings instead of re-sending the same ones
+            # every day. Keyed on the posting's URL (stable/unique per
+            # Greenhouse job), not title+company (postings get retitled).
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS alerted_vacancies (
+                    id          BIGSERIAL PRIMARY KEY,
+                    telegram_id BIGINT NOT NULL REFERENCES users(telegram_id),
+                    vacancy_url TEXT NOT NULL,
+                    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    UNIQUE (telegram_id, vacancy_url)
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_alerted_vacancies_telegram_id ON alerted_vacancies (telegram_id)")
             _migrate_legacy_state(cur)
             _migrate_legacy_cv_text(cur)
     finally:
