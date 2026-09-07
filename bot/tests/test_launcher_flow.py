@@ -4,39 +4,18 @@ import sys
 import unittest.mock as mock
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
 os.environ["TELEGRAM_TOKEN"] = "dummy:token"
 os.environ["ANTHROPIC_API_KEY"] = "dummy"
 os.environ["MINI_APP_URL"] = "https://example.test/app"
 
 import state  # noqa: E402
+from _helpers import FakeMessage, patch_state_for_bot_tests  # noqa: E402
 
 _fake_users = {}
-state.get = lambda uid: _fake_users.setdefault(uid, state._empty())
-
-
-def _fake_reset(uid):
-    current = _fake_users.get(uid, state._empty())
-    fresh = state._empty()
-    for key in ("lang", "usage_count", "waitlisted", "name"):
-        fresh[key] = current.get(key, fresh[key])
-    _fake_users[uid] = fresh
-    return fresh
-
-
-state.reset = _fake_reset
-state.log_event = lambda *a, **k: None
-state.persisting = lambda f: f
-state.set_source = mock.Mock()
+patch_state_for_bot_tests(state, _fake_users)
 
 import bot  # noqa: E402
-
-
-class FakeMessage:
-    def __init__(self):
-        self.sent = []
-
-    async def reply_text(self, text, parse_mode=None, reply_markup=None):
-        self.sent.append({"text": text, "markup": reply_markup})
 
 
 def buttons_of(markup):

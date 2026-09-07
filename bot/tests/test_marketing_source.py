@@ -4,27 +4,17 @@ import sys
 import unittest.mock as mock
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
 os.environ["TELEGRAM_TOKEN"] = "dummy:token"
 os.environ["ANTHROPIC_API_KEY"] = "dummy"
 
 import state  # noqa: E402
+from _helpers import FakeMessage, patch_state_for_bot_tests  # noqa: E402
 
 _fake_users = {}
-state.get = lambda uid: _fake_users.setdefault(uid, state._empty())
-state.reset = lambda uid: _fake_users.__setitem__(uid, state._empty())
-state.log_event = lambda *a, **k: None
-state.persisting = lambda f: f
-state.set_source = mock.Mock()
+patch_state_for_bot_tests(state, _fake_users)
 
 import bot  # noqa: E402
-
-
-class FakeMessage:
-    def __init__(self):
-        self.sent = []
-
-    async def reply_text(self, text, parse_mode=None, reply_markup=None):
-        self.sent.append(text)
 
 
 async def main():
