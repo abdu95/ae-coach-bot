@@ -125,6 +125,29 @@ def init_db() -> None:
                 CREATE UNIQUE INDEX IF NOT EXISTS idx_cvs_one_active_per_user
                 ON cvs (telegram_id) WHERE is_active
             """)
+            # "My Checks" - analysis history. One row per completed
+            # /api/cv-jd-analysis call (written immediately, before the user
+            # even starts the roadmap, since the analysis itself is already
+            # worth keeping); roadmap_items fills in as each roadmap step
+            # completes, keyed by item number as a JSON string key
+            # (e.g. {"1": {"title": "CV Fixes", "fixes": [...]}}). Without
+            # this, closing the Mini App loses every past analysis for good -
+            # unlike the old chat flow, where Telegram's own message history
+            # let a user scroll back and re-read a result anytime.
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS cv_analyses (
+                    id             BIGSERIAL PRIMARY KEY,
+                    telegram_id    BIGINT NOT NULL REFERENCES users(telegram_id),
+                    jd_text        TEXT NOT NULL,
+                    ats            JSONB NOT NULL,
+                    xyz            JSONB NOT NULL,
+                    tools          JSONB NOT NULL,
+                    level          JSONB NOT NULL,
+                    roadmap_items  JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_cv_analyses_telegram_id ON cv_analyses (telegram_id)")
             _migrate_legacy_state(cur)
             _migrate_legacy_cv_text(cur)
     finally:
