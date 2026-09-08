@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
@@ -31,6 +32,12 @@ PILOT_QUOTA = int(os.getenv("PILOT_QUOTA", "10"))
 PILOT_CAP = int(os.getenv("PILOT_CAP", "10"))
 MINI_APP_URL = os.getenv("MINI_APP_URL", "")
 
+# A genericized (no real user's name in it) screenshot of the app's home
+# screen, annotated in the launcher caption below - real feedback (Gayrat)
+# was that navigation wasn't obvious on first open, so this shows what
+# you'll land on and where to go before you ever tap through.
+ONBOARDING_SCREENSHOT = Path(__file__).resolve().parent / "assets" / "onboarding_screenshot.png"
+
 
 LANG_BUTTONS = {
     "uz": ("🇺🇿 O'zbek", "lang_uz"),
@@ -61,16 +68,23 @@ async def send_launcher(message, user: dict) -> None:
     """The bot's entire product surface: a short explainer plus one button
     that opens the Mini App. Everything else (CV analysis, vacancy search,
     tracking, payment) lives inside the app - this is reused by /start,
-    /app, /reset, and as the fallback for any stray text message."""
+    /app, /reset, and as the fallback for any stray text message.
+
+    Sent as a photo (the onboarding screenshot) with the explainer as its
+    caption, not a plain text message - a real user reported not knowing
+    where to go on first open, so showing what the home screen actually
+    looks like before they tap through is worth more than describing it."""
     markup = app_open_markup(user["lang"])
     if markup is None:
         await message.reply_text(i18n.t("app_not_configured", user["lang"]))
         return
-    await message.reply_text(
-        i18n.t("app_intro", user["lang"]),
-        parse_mode=ParseMode.HTML,
-        reply_markup=markup,
-    )
+    with open(ONBOARDING_SCREENSHOT, "rb") as photo:
+        await message.reply_photo(
+            photo=photo,
+            caption=i18n.t("app_intro", user["lang"]),
+            parse_mode=ParseMode.HTML,
+            reply_markup=markup,
+        )
 
 
 # ── Commands ──────────────────────────────────────────────────────────────────

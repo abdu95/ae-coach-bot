@@ -357,7 +357,11 @@ APP_INTRO = {
         "📊 Analyze your CV against a job description — ATS score, bullet-point fixes, "
         "and a step-by-step roadmap\n"
         "🔍 Search live vacancies and track every application\n\n"
-        "Everything happens in the app below 👇"
+        "Here's what you'll see when you open it:\n"
+        "1️⃣ Two ways to start — search vacancies, or compare your CV to a job post\n"
+        "2️⃣ The badge top-right shows your free checks left\n"
+        "3️⃣ Use the tabs at the bottom anytime — Home, Search, Analyze, Profile\n\n"
+        "Tap below to open it now 👇"
     ),
     "uz": (
         "👋 <b>Accepted AI</b>\n\n"
@@ -365,7 +369,13 @@ APP_INTRO = {
         "📊 CV'ingizni ish e'loniga solishtiring — ATS bali, band tuzatishlari va "
         "bosqichma-bosqich reja\n"
         "🔍 Joriy vakansiyalarni qidiring va har bir arizani kuzating\n\n"
-        "Hammasi quyidagi ilova ichida 👇"
+        "Ilovani ochganingizda quyidagini ko'rasiz:\n"
+        "1️⃣ Ikki yo'l bilan boshlashingiz mumkin — vakansiya qidirish yoki CV'ingizni "
+        "ish e'loniga solishtirish\n"
+        "2️⃣ Yuqori o'ng burchakdagi belgi qancha bepul tekshiruv qolganini ko'rsatadi\n"
+        "3️⃣ Pastdagi bo'limlardan istalgan vaqtda foydalaning — Bosh sahifa, Qidirish, "
+        "Tahlil, Profil\n\n"
+        "Hoziroq ochish uchun pastdagi tugmani bosing 👇"
     ),
     "ru": (
         "👋 <b>Accepted AI</b>\n\n"
@@ -373,7 +383,12 @@ APP_INTRO = {
         "📊 Сравню ваше резюме с вакансией — ATS-балл, исправления формулировок и "
         "пошаговый план\n"
         "🔍 Поиск актуальных вакансий и отслеживание каждой заявки\n\n"
-        "Всё это — в приложении ниже 👇"
+        "Вот что вы увидите, когда откроете приложение:\n"
+        "1️⃣ Два способа начать — искать вакансии или сравнить резюме с вакансией\n"
+        "2️⃣ Значок в правом верхнем углу показывает, сколько бесплатных проверок у вас "
+        "осталось\n"
+        "3️⃣ Используйте вкладки внизу в любое время — Главная, Поиск, Анализ, Профиль\n\n"
+        "Нажмите кнопку ниже, чтобы открыть 👇"
     ),
 }
 

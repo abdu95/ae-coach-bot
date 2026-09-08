@@ -18,6 +18,13 @@ class FakeMessage:
     async def reply_text(self, text, parse_mode=None, reply_markup=None):
         self.sent.append({"text": text, "markup": reply_markup})
 
+    async def reply_photo(self, photo, caption=None, parse_mode=None, reply_markup=None):
+        # Normalized into the same {"text", "markup"} shape as reply_text
+        # (caption -> "text") so existing assertions against .sent work
+        # unchanged regardless of which one a handler actually calls -
+        # send_launcher uses this for the onboarding-screenshot message.
+        self.sent.append({"text": caption, "markup": reply_markup})
+
 
 def patch_state_for_bot_tests(state_module, fake_users: dict) -> None:
     """Monkey-patches state.get/reset/log_event/persisting/set_source so
