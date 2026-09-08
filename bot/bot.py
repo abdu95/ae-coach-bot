@@ -33,7 +33,7 @@ PILOT_CAP = int(os.getenv("PILOT_CAP", "10"))
 MINI_APP_URL = os.getenv("MINI_APP_URL", "")
 
 # A genericized (no real user's name in it) screenshot of the app's home
-# screen, annotated in the launcher caption below - real feedback (Gayrat)
+# screen, annotated in the launcher caption below - real user feedback
 # was that navigation wasn't obvious on first open, so this shows what
 # you'll land on and where to go before you ever tap through.
 ONBOARDING_SCREENSHOT = Path(__file__).resolve().parent / "assets" / "onboarding_screenshot.png"

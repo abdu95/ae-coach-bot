@@ -34,10 +34,10 @@ with mock.patch.object(state, "_pool", pool):
     # at all, regardless of what stale value the cached dict is holding.
     stale_cached_data = state._empty()
     stale_cached_data["lang"] = "ru"
-    stale_cached_data["name"] = "Anatoliy"
+    stale_cached_data["name"] = "Test User"
     stale_cached_data["usage_count"] = 1  # stale - real DB value is 2
 
-    state._save(5843532358, stale_cached_data)
+    state._save(1000000001, stale_cached_data)
 
     users_update_calls = [
         call for call in cursor.execute.call_args_list
