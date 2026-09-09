@@ -92,7 +92,12 @@ async def main():
     assert buttons_of(fake_query2.message.sent[-1]["markup"])
     print("PASS: picking a language with a name already set sends the launcher directly")
 
-    # 7. Text while waiting_name -> stores name, greets, then sends the launcher
+    # 7. Text while waiting_name -> stores name, greets with a "Next step"
+    # button - does NOT send the launcher yet. Real tester feedback
+    # (2026-09-09): the greeting and the launcher photo used to fire
+    # back-to-back with no gap, confusing enough to risk losing someone at
+    # onboarding - now the launcher only sends once the user actually taps
+    # through.
     _fake_users[uid] = state._empty()
     _fake_users[uid]["lang"] = "en"
     _fake_users[uid]["phase"] = "waiting_name"
@@ -103,9 +108,24 @@ async def main():
     await bot.handle_text(text_update, context)
     assert _fake_users[uid]["name"] == "Alice"
     assert _fake_users[uid]["phase"] == "idle"
-    assert len(text_update.message.sent) == 2
-    assert buttons_of(text_update.message.sent[-1]["markup"])
-    print("PASS: providing a name stores it and sends the launcher")
+    assert len(text_update.message.sent) == 1, "must not fire the launcher photo in the same breath as the greeting"
+    greet_markup = text_update.message.sent[-1]["markup"]
+    assert all(web_app is None for _, web_app in buttons_of(greet_markup)), "the Next-step button isn't a web_app button"
+    assert greet_markup.inline_keyboard[0][0].callback_data == "next_step"
+    print("PASS: providing a name stores it and shows a Next-step button, not the launcher yet")
+
+    # 7b. Tapping "Next step" sends the launcher
+    next_query = mock.Mock()
+    next_query.data = "next_step"
+    next_query.message = FakeMessage()
+    next_query.answer = mock.AsyncMock()
+    next_query.edit_message_reply_markup = mock.AsyncMock()
+    next_cb_update = mock.Mock()
+    next_cb_update.callback_query = next_query
+    next_cb_update.effective_user.id = uid
+    await bot.handle_callback(next_cb_update, context)
+    assert buttons_of(next_query.message.sent[-1]["markup"])
+    print("PASS: tapping Next step sends the launcher")
 
     # 8. Any stray text once idle just redirects to the launcher (no chat flow left)
     text_update2 = mock.Mock()

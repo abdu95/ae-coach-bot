@@ -86,6 +86,12 @@ STATS_AND_PRIVACY = {
     ),
 }
 
+NEXT_STEP_BUTTON = {
+    "en": "➡️ Next step",
+    "uz": "➡️ Keyingi qadam",
+    "ru": "➡️ Следующий шаг",
+}
+
 CV_RECEIVED = {
     "en": (
         "✅ CV received.\n\n"
@@ -677,6 +683,7 @@ STRINGS = {
     "vacancy_view_posting": VACANCY_VIEW_POSTING,
     "app_nudge": APP_NUDGE,
     "buy_custom_button": BUY_CUSTOM_BUTTON,
+    "next_step_button": NEXT_STEP_BUTTON,
 }
 
 

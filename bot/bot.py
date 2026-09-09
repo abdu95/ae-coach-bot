@@ -212,8 +212,15 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         user["name"] = name
         user["phase"] = "idle"
         state.log_event(user_id, "name_provided")
-        await update.message.reply_text(i18n.stats_and_privacy(name, user["lang"]))
-        await send_launcher(update.message, user)
+        # Real tester feedback (2026-09-09): this message and send_launcher's
+        # photo used to fire back-to-back with no gap, arriving almost
+        # simultaneously - confusing enough to risk losing someone right at
+        # onboarding. Now gated behind an explicit tap so the user actually
+        # reads the privacy note before the app-open screen shows up.
+        markup = InlineKeyboardMarkup([[
+            InlineKeyboardButton(i18n.t("next_step_button", user["lang"]), callback_data="next_step")
+        ]])
+        await update.message.reply_text(i18n.stats_and_privacy(name, user["lang"]), reply_markup=markup)
         return
 
     # Any other text (the bot no longer runs a chat flow) - redirect to the app.
@@ -237,6 +244,10 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         else:
             user["phase"] = "waiting_name"
             await message.reply_text(i18n.t("ask_name", user["lang"]))
+        return
+
+    if action == "next_step":
+        await send_launcher(message, user)
         return
 
 
