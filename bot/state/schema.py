@@ -152,6 +152,21 @@ def create_tables(cur) -> None:
         )
     """)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_alerted_vacancies_telegram_id ON alerted_vacancies (telegram_id)")
+    # Lets the Mini App show the exact vacancies from one digest when a
+    # user taps the alert message's button, instead of dropping them on
+    # the home screen with no link back to what the message was about
+    # (real user feedback). batch_id groups every row a single
+    # run_vacancy_alerts() digest inserted; searched_job_title/
+    # searched_location snapshot the search criteria at send time, since
+    # a user's saved search can change before they tap an older message.
+    cur.execute("ALTER TABLE alerted_vacancies ADD COLUMN IF NOT EXISTS batch_id TEXT")
+    cur.execute("ALTER TABLE alerted_vacancies ADD COLUMN IF NOT EXISTS vacancy_title TEXT")
+    cur.execute("ALTER TABLE alerted_vacancies ADD COLUMN IF NOT EXISTS vacancy_company TEXT")
+    cur.execute("ALTER TABLE alerted_vacancies ADD COLUMN IF NOT EXISTS vacancy_location TEXT")
+    cur.execute("ALTER TABLE alerted_vacancies ADD COLUMN IF NOT EXISTS vacancy_summary TEXT")
+    cur.execute("ALTER TABLE alerted_vacancies ADD COLUMN IF NOT EXISTS searched_job_title TEXT")
+    cur.execute("ALTER TABLE alerted_vacancies ADD COLUMN IF NOT EXISTS searched_location TEXT")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_alerted_vacancies_batch ON alerted_vacancies (batch_id)")
 
 
 def migrate_legacy_state(cur) -> None:
