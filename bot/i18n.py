@@ -344,6 +344,8 @@ ROADMAP_WAIT_NOTE = {
     "ru": "Обычно занимает 15–20 секунд.",
 }
 
+# The "2" free checks mentioned below is hardcoded copy, not read from config -
+# must match vacancy-webapp's FREE_LIMIT default (app/db/users.py) or update both.
 APP_INTRO = {
     "en": (
         "👋 <b>AcceptedAI</b>\n\n"
