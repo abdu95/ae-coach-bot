@@ -3,7 +3,7 @@
 
 WELCOME = {
     "en": (
-        "👋 <b>Accepted AI</b>\n\n"
+        "👋 <b>AcceptedAI</b>\n\n"
         "1️⃣ Upload your CV as a PDF or Word (.docx) file\n"
         "2️⃣ Paste the job description you are targeting\n"
         "3️⃣ I analyse your CV against it step by step\n\n"
@@ -11,7 +11,7 @@ WELCOME = {
         "💼 Prefer to browse live vacancies first? Type /app"
     ),
     "uz": (
-        "👋 <b>Accepted AI</b>\n\n"
+        "👋 <b>AcceptedAI</b>\n\n"
         "1️⃣ CV'ingizni PDF yoki Word (.docx) formatida yuklang\n"
         "2️⃣ Maqsad qilgan ish tavsifini (job description) joylashtiring\n"
         "3️⃣ Men CV'ingizni bosqichma-bosqich tahlil qilaman\n\n"
@@ -19,7 +19,7 @@ WELCOME = {
         "💼 Avval joriy vakansiyalarni ko'rmoqchimisiz? /app buyrug'ini yuboring"
     ),
     "ru": (
-        "👋 <b>Accepted AI</b>\n\n"
+        "👋 <b>AcceptedAI</b>\n\n"
         "1️⃣ Загрузите своё резюме (CV) в формате PDF или Word (.docx)\n"
         "2️⃣ Вставьте описание вакансии, на которую претендуете\n"
         "3️⃣ Я проанализирую ваше резюме по шагам\n\n"
@@ -36,19 +36,19 @@ APP_NUDGE = {
 
 ASK_NAME = {
     "en": (
-        "Hi, my name is Accepted AI. I help you get accepted into your dream job — "
+        "Hi, my name is AcceptedAI. I help you get accepted into your dream job — "
         "just like others who've already used this bot and landed their first-ever "
         "interview invite, or even a job offer! 🎉\n\n"
         "But first, how should I call you?"
     ),
     "uz": (
-        "Salom, mening ismim Accepted AI. Men sizga orzuingizdagi ishga qabul qilinishda "
+        "Salom, mening ismim AcceptedAI. Men sizga orzuingizdagi ishga qabul qilinishda "
         "yordam beraman — xuddi ushbu botdan foydalangan boshqalar birinchi marta "
         "suhbatga (interview) taklif olgani, hattoki ish taklifini qabul qilgani kabi! 🎉\n\n"
         "Ammo avval, sizni qanday deb chaqiray?"
     ),
     "ru": (
-        "Привет, меня зовут Accepted AI. Я помогаю получить работу мечты — как и другие, "
+        "Привет, меня зовут AcceptedAI. Я помогаю получить работу мечты — как и другие, "
         "кто уже пользовался этим ботом и получил своё первое приглашение на собеседование "
         "или даже оффер! 🎉\n\n"
         "Но для начала, как мне вас называть?"
@@ -358,7 +358,7 @@ ROADMAP_WAIT_NOTE = {
 
 APP_INTRO = {
     "en": (
-        "👋 <b>Accepted AI</b>\n\n"
+        "👋 <b>AcceptedAI</b>\n\n"
         "I help you get accepted into your dream job:\n"
         "📊 Analyze your CV against a job description — ATS score, bullet-point fixes, "
         "and a step-by-step roadmap\n"
@@ -370,7 +370,7 @@ APP_INTRO = {
         "Tap below to open it now 👇"
     ),
     "uz": (
-        "👋 <b>Accepted AI</b>\n\n"
+        "👋 <b>AcceptedAI</b>\n\n"
         "Men sizga orzuingizdagi ishga qabul qilinishda yordam beraman:\n"
         "📊 CV'ingizni ish e'loniga solishtiring — ATS bali, band tuzatishlari va "
         "bosqichma-bosqich reja\n"
@@ -384,7 +384,7 @@ APP_INTRO = {
         "Hoziroq ochish uchun pastdagi tugmani bosing 👇"
     ),
     "ru": (
-        "👋 <b>Accepted AI</b>\n\n"
+        "👋 <b>AcceptedAI</b>\n\n"
         "Я помогу вам получить работу мечты:\n"
         "📊 Сравню ваше резюме с вакансией — ATS-балл, исправления формулировок и "
         "пошаговый план\n"
