@@ -6,7 +6,7 @@ WELCOME = {
         "👋 <b>AcceptedAI</b>\n\n"
         "1️⃣ Upload your CV as a PDF or Word (.docx) file\n"
         "2️⃣ Paste the job description you are targeting\n"
-        "3️⃣ I analyse your CV against it step by step\n\n"
+        "3️⃣ I analyze your CV against it step by step\n\n"
         "📄 <b>Upload your CV to begin.</b>\n\n"
         "💼 Prefer to browse live vacancies first? Type /app"
     ),
@@ -36,22 +36,22 @@ APP_NUDGE = {
 
 ASK_NAME = {
     "en": (
-        "Hi, my name is AcceptedAI. I help you get accepted into your dream job — "
-        "just like others who've already used this bot and landed their first-ever "
-        "interview invite, or even a job offer! 🎉\n\n"
-        "But first, how should I call you?"
+        "Hi, I'm AcceptedAI 👋\n\n"
+        "I help you land your dream job — several users have already used this bot "
+        "to get interview invites.\n\n"
+        "To start, what's your name?"
     ),
     "uz": (
-        "Salom, mening ismim AcceptedAI. Men sizga orzuingizdagi ishga qabul qilinishda "
-        "yordam beraman — xuddi ushbu botdan foydalangan boshqalar birinchi marta "
-        "suhbatga (interview) taklif olgani, hattoki ish taklifini qabul qilgani kabi! 🎉\n\n"
-        "Ammo avval, sizni qanday deb chaqiray?"
+        "Salom, men AcceptedAI'man 👋\n\n"
+        "Sizga orzuingizdagi ishga erishishda yordam beraman — bir nechta foydalanuvchi "
+        "allaqachon shu bot yordamida suhbatga taklif olgan.\n\n"
+        "Boshlash uchun, ismingiz nima?"
     ),
     "ru": (
-        "Привет, меня зовут AcceptedAI. Я помогаю получить работу мечты — как и другие, "
-        "кто уже пользовался этим ботом и получил своё первое приглашение на собеседование "
-        "или даже оффер! 🎉\n\n"
-        "Но для начала, как мне вас называть?"
+        "Привет, я AcceptedAI 👋\n\n"
+        "Помогаю получить работу мечты — некоторые пользователи уже получили "
+        "приглашения на собеседование благодаря этому боту.\n\n"
+        "Для начала, как вас зовут?"
     ),
 }
 
@@ -61,7 +61,7 @@ STATS_AND_PRIVACY = {
         "spend scanning a CV on average. And a lot of good candidates get filtered out "
         "by fixable issues — bad formatting, missing keywords, parsing errors — not real "
         "experience gaps.\n\n"
-        "🔒 Btw, don't worry about privacy: your CV is only used to generate your report. "
+        "🔒 By the way, don't worry about privacy: your CV is only used to generate your report. "
         "It's never shared with recruiters or anyone else — delete it anytime from My CVs "
         "in the app."
     ),
@@ -112,13 +112,13 @@ CV_RECEIVED = {
 
 ANALYZING = {
     "en": (
-        "🔍 <b>Analysing your CV against this role…</b>\n\n"
+        "🔍 <b>Analyzing your CV against this role…</b>\n\n"
         "Here's what I'm doing:\n"
         "1️⃣ Checking your CV against the job's keywords (ATS Score)\n"
         "2️⃣ Checking your bullet points against the XYZ formula\n"
         "3️⃣ Mapping your skills against the tools this role needs\n"
         "4️⃣ Assessing your seniority level for this role\n\n"
-        "This produces a 4-part breakdown, then a personalised roadmap. "
+        "This produces a 4-part breakdown, then a personalized roadmap. "
         "Usually takes about 20–30 seconds — hang tight."
     ),
     "uz": (
