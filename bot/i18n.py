@@ -57,32 +57,20 @@ ASK_NAME = {
 
 STATS_AND_PRIVACY = {
     "en": (
-        "Alright {name}, we've got about 7 seconds — that's how much time recruiters "
-        "spend scanning a CV on average. And a lot of good candidates get filtered out "
-        "by fixable issues — bad formatting, missing keywords, parsing errors — not real "
-        "experience gaps.\n\n"
-        "🔒 By the way, don't worry about privacy: your CV is only used to generate your report. "
-        "It's never shared with recruiters or anyone else — delete it anytime from My CVs "
-        "in the app."
+        "Great, {name}! 🔒 One quick note on privacy: your CV is only used to generate "
+        "your report — it's never shared with recruiters or anyone else. You can delete "
+        "it anytime from My CVs in the app."
     ),
     "uz": (
-        "Xo'p, {name}, bizda taxminan 7 soniya bor — ish beruvchilar CV'ga o'rtacha shuncha "
-        "vaqt ajratishadi. Va ko'plab munosib nomzodlar tuzatsa bo'ladigan muammolar "
-        "tufayli chetlab o'tiladi — noto'g'ri formatlash, kalit so'zlar yo'qligi, tizim "
-        "CV'ni o'qiy olmasligi — bu haqiqiy tajriba yetishmovchiligi emas.\n\n"
-        "🔒 Aytgancha, maxfiylik haqida xavotir olmang: CV'ingiz faqat hisobot tayyorlash "
-        "uchun ishlatiladi. U ish beruvchilarga yoki boshqa hech kimga berilmaydi — "
-        "ilovadagi \"Mening CV'larim\" bo'limidan xohlagan vaqtda o'chirib tashlashingiz "
+        "Zo'r, {name}! 🔒 Maxfiylik haqida qisqacha: CV'ingiz faqat hisobot tayyorlash "
+        "uchun ishlatiladi — u ish beruvchilarga yoki boshqa hech kimga berilmaydi. Uni "
+        "ilovadagi \"Mening CV'larim\" bo'limidan istalgan vaqtda o'chirib tashlashingiz "
         "mumkin."
     ),
     "ru": (
-        "Хорошо, {name}, у нас есть около 7 секунд — именно столько рекрутёры в среднем "
-        "тратят на просмотр резюме. И многие достойные кандидаты отсеиваются из-за "
-        "исправимых проблем — плохого форматирования, отсутствия ключевых слов, ошибок "
-        "при разборе резюме системой — а не из-за нехватки опыта.\n\n"
-        "🔒 Кстати, не переживайте насчёт конфиденциальности: ваше резюме используется "
-        "только для подготовки отчёта. Оно не передаётся рекрутёрам и никому другому — "
-        "вы можете удалить его в любой момент в разделе «Мои резюме» в приложении."
+        "Отлично, {name}! 🔒 Коротко о конфиденциальности: ваше резюме используется "
+        "только для подготовки отчёта — оно не передаётся рекрутёрам и никому другому. "
+        "Вы можете удалить его в любой момент в разделе «Мои резюме» в приложении."
     ),
 }
 
