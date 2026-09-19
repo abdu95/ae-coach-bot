@@ -36,7 +36,14 @@ MINI_APP_URL = os.getenv("MINI_APP_URL", "")
 # screen, annotated in the launcher caption below - real user feedback
 # was that navigation wasn't obvious on first open, so this shows what
 # you'll land on and where to go before you ever tap through.
-ONBOARDING_SCREENSHOT = Path(__file__).resolve().parent / "assets" / "onboarding_screenshot.png"
+# One per language, since the screenshot shows the app's own UI text. A
+# language with no entry (English, for now) gets the caption as a plain
+# text message rather than another language's screenshot.
+_ASSETS = Path(__file__).resolve().parent / "assets"
+ONBOARDING_SCREENSHOTS = {
+    "uz": _ASSETS / "onboarding_screenshot_uz.png",
+    "ru": _ASSETS / "onboarding_screenshot_ru.png",
+}
 
 
 LANG_BUTTONS = {
@@ -80,10 +87,15 @@ async def send_launcher(message, user: dict) -> None:
     if markup is None:
         await message.reply_text(i18n.t("app_not_configured", user["lang"]))
         return
-    with open(ONBOARDING_SCREENSHOT, "rb") as photo:
+    caption = i18n.t("app_intro", user["lang"])
+    screenshot = ONBOARDING_SCREENSHOTS.get(user["lang"])
+    if screenshot is None:
+        await message.reply_text(caption, parse_mode=ParseMode.HTML, reply_markup=markup)
+        return
+    with open(screenshot, "rb") as photo:
         await message.reply_photo(
             photo=photo,
-            caption=i18n.t("app_intro", user["lang"]),
+            caption=caption,
             parse_mode=ParseMode.HTML,
             reply_markup=markup,
         )
