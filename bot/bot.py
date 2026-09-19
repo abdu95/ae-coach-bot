@@ -42,13 +42,15 @@ ONBOARDING_SCREENSHOT = Path(__file__).resolve().parent / "assets" / "onboarding
 LANG_BUTTONS = {
     "uz": ("🇺🇿 O'zbek", "lang_uz"),
     "ru": ("🇷🇺 Русский", "lang_ru"),
+    "en": ("🇬🇧 English", "lang_en"),
 }
+LANG_ACTIONS = {cb: code for code, (_, cb) in LANG_BUTTONS.items()}
 
 
 async def send_language_picker(message, hint_code: str | None) -> None:
     # language_code reflects the device's system language, not necessarily
     # the user's preferred chat language — used only to order the buttons.
-    order = ["ru", "uz"] if hint_code == "ru" else ["uz", "ru"]
+    order = {"ru": ["ru", "uz", "en"], "en": ["en", "uz", "ru"]}.get(hint_code, ["uz", "ru", "en"])
     buttons = [[InlineKeyboardButton(LANG_BUTTONS[c][0], callback_data=LANG_BUTTONS[c][1])] for c in order]
     await message.reply_text(
         "🌐 Choose your language / Tilni tanlang / Выберите язык",
@@ -235,16 +237,19 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     action = query.data
     message = query.message
 
-    await query.edit_message_reply_markup(reply_markup=None)
-
-    if action in ("lang_uz", "lang_ru"):
-        user["lang"] = "uz" if action == "lang_uz" else "ru"
+    if action in LANG_ACTIONS:
+        # The picker is a one-shot prompt; leaving it in the chat after the
+        # choice is just clutter, so remove it rather than only its buttons.
+        await query.delete_message()
+        user["lang"] = LANG_ACTIONS[action]
         if user["name"]:
             await send_launcher(message, user)
         else:
             user["phase"] = "waiting_name"
             await message.reply_text(i18n.t("ask_name", user["lang"]))
         return
+
+    await query.edit_message_reply_markup(reply_markup=None)
 
     if action == "next_step":
         await send_launcher(message, user)
