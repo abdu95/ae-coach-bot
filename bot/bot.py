@@ -19,6 +19,10 @@ logging.basicConfig(
     format="%(asctime)s — %(name)s — %(levelname)s — %(message)s",
     level=logging.INFO,
 )
+# httpx logs every request URL at INFO, and Telegram's Bot API puts the
+# bot token in the URL (/bot<TOKEN>/getUpdates), so INFO leaks the token
+# into Railway's logs every few seconds. WARNING still logs failures.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 ADMIN_IDS = {
