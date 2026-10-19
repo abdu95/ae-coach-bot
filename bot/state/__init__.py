@@ -39,6 +39,7 @@ def init_db() -> None:
             schema.migrate_legacy_state(cur)
             schema.migrate_legacy_cv_text(cur)
             schema.migrate_internal_user_id(cur)
+            schema.contract_internal_user_id(cur)
     finally:
         _pool.putconn(conn)
 

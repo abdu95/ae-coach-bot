@@ -119,9 +119,11 @@ with scratch_db() as dsn:
     print("PASS: inserts that only know user_id get telegram_id filled in, and per-user rules still hold")
 
     with conn, conn.cursor() as cur:
-        # An event for a telegram_id with no users row is still accepted, as before (no FK yet).
+        # An event for a telegram_id with no users row is still accepted, as before;
+        # since step 1.4 (user_id NOT NULL) it gets a bare backfill_orphan user.
         cur.execute("INSERT INTO events (telegram_id, event_type) VALUES (424242, 'x') RETURNING user_id")
-        assert cur.fetchone() == (None,)
+        orphan_id = cur.fetchone()[0]
+        assert q(cur, "SELECT telegram_id, source FROM users WHERE id = %s", (orphan_id,)) == [(424242, "backfill_orphan")]
         # The one-active-CV rule and the users FK are unchanged.
         try:
             cur.execute("SAVEPOINT s")
@@ -133,7 +135,8 @@ with scratch_db() as dsn:
             cur.execute("SAVEPOINT s")
             cur.execute("INSERT INTO cvs (telegram_id, label, cv_text) VALUES (515151, 'z', 'z')")
             raise AssertionError("cv for unknown user accepted")
-        except psycopg2.errors.ForeignKeyViolation:
+        except (psycopg2.errors.ForeignKeyViolation, psycopg2.errors.NotNullViolation):
+            # Before step 1.4 the telegram_id FK rejected it; since then user_id NOT NULL does.
             cur.execute("ROLLBACK TO SAVEPOINT s")
         conn.rollback()
     print("PASS: existing rules unchanged (unknown-user events allowed, one active CV, users FK)")

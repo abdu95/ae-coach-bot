@@ -102,8 +102,14 @@ with scratch_db() as dsn:
     state.get_or_create_order(BOB, 500_000, "5_checks")
     assert one(dsn, "SELECT user_id FROM events WHERE event_type = 'check_completed'") == [(bob_id,)]
     assert one(dsn, "SELECT user_id FROM orders WHERE package = '5_checks'") == [(bob_id,)]
-    state.log_event(31337, "orphan_event")  # no users row: still accepted, as before
-    assert one(dsn, "SELECT user_id, telegram_id FROM events WHERE event_type = 'orphan_event'") == [(None, 31337)]
+    with psycopg2.connect(dsn) as conn, conn.cursor() as cur:
+        cur.execute("ALTER TABLE events ENABLE TRIGGER trg_events_fill_user_id")
+        cur.execute("ALTER TABLE orders ENABLE TRIGGER trg_orders_fill_user_id")
+    # No users row: still accepted (never an error in a handler) - the trigger
+    # gives it a bare users row tagged backfill_orphan, as step 1.4 requires a user_id.
+    state.log_event(31337, "orphan_event")
+    assert one(dsn, """SELECT u.telegram_id, u.source FROM events e JOIN users u ON u.id = e.user_id
+                       WHERE e.event_type = 'orphan_event'""") == [(31337, "backfill_orphan")]
     paid = one(dsn, "UPDATE orders SET state = 'paid' RETURNING id")
     assert state.payment_stats()["unique_payers"] == 1 and len(paid) == 3
     assert state.event_stats(["started"]) == {"started": (1, 1)}

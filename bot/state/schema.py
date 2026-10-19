@@ -226,13 +226,17 @@ def migrate_legacy_cv_text(cur) -> None:
     data->>'cv_text') for anyone who uploaded a CV before the multi-CV
     `cvs` table existed. Safe on every startup: only inserts for
     telegram_ids with a non-empty legacy cv_text and no `cvs` row yet,
-    so it's a no-op once every pre-existing user has been copied over."""
+    so it's a no-op once every pre-existing user has been copied over.
+    NOT EXISTS, not NOT IN: once browser users' CVs have telegram_id NULL,
+    `x NOT IN (... NULL ...)` is never true and this would silently stop
+    matching anyone. Writes telegram_id only; the fill trigger (once it
+    exists) supplies user_id."""
     cur.execute("""
         INSERT INTO cvs (telegram_id, label, cv_text, is_active)
-        SELECT user_id, 'My CV', data->>'cv_text', true
-        FROM user_state
-        WHERE data->>'cv_text' IS NOT NULL AND data->>'cv_text' != ''
-          AND user_id NOT IN (SELECT telegram_id FROM cvs)
+        SELECT s.user_id, 'My CV', s.data->>'cv_text', true
+        FROM user_state s
+        WHERE s.data->>'cv_text' IS NOT NULL AND s.data->>'cv_text' != ''
+          AND NOT EXISTS (SELECT 1 FROM cvs c WHERE c.telegram_id = s.user_id)
     """)
 
 
@@ -261,7 +265,15 @@ def migrate_internal_user_id(cur) -> None:
     Safe on every startup: each statement is IF NOT EXISTS / OR REPLACE /
     only touches rows still missing a user_id."""
     cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS id BIGSERIAL")
-    cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS users_id_key ON users (id)")
+    # Once contract_internal_user_id() has promoted this index to the primary
+    # key it's named users_pkey, so IF NOT EXISTS on the old name would add a
+    # duplicate on every restart - check for any single-column unique index on id.
+    cur.execute("""
+        SELECT 1 FROM pg_index i JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = i.indkey[0]
+        WHERE i.indrelid = 'users'::regclass AND i.indisunique AND i.indnatts = 1 AND a.attname = 'id'
+    """)
+    if cur.fetchone() is None:
+        cur.execute("CREATE UNIQUE INDEX users_id_key ON users (id)")
     for table in ("events", "orders"):
         cur.execute(f"""
             INSERT INTO users (telegram_id, source)
@@ -280,6 +292,15 @@ def migrate_internal_user_id(cur) -> None:
         BEGIN
             IF NEW.user_id IS NULL AND NEW.telegram_id IS NOT NULL THEN
                 SELECT id INTO NEW.user_id FROM users WHERE telegram_id = NEW.telegram_id;
+                -- events/orders have always accepted a Telegram id with no users
+                -- row; once user_id is NOT NULL (step 1.4) that would become an
+                -- error, so give it a bare users row instead, tagged like the
+                -- step 1.2 orphan backfill. Other tables keep rejecting via FK.
+                IF NEW.user_id IS NULL AND TG_TABLE_NAME IN ('events', 'orders') THEN
+                    INSERT INTO users (telegram_id, source) VALUES (NEW.telegram_id, 'backfill_orphan')
+                    ON CONFLICT (telegram_id) DO NOTHING;
+                    SELECT id INTO NEW.user_id FROM users WHERE telegram_id = NEW.telegram_id;
+                END IF;
             ELSIF NEW.telegram_id IS NULL AND NEW.user_id IS NOT NULL THEN
                 SELECT telegram_id INTO NEW.telegram_id FROM users WHERE id = NEW.user_id;
             END IF;
@@ -310,3 +331,50 @@ def migrate_internal_user_id(cur) -> None:
         CREATE UNIQUE INDEX IF NOT EXISTS alerted_vacancies_user_id_vacancy_url_key
         ON alerted_vacancies (user_id, vacancy_url)
     """)
+
+
+def _has_constraint(cur, table: str, name: str) -> bool:
+    cur.execute("SELECT 1 FROM pg_constraint WHERE conrelid = %s::regclass AND conname = %s", (table, name))
+    return cur.fetchone() is not None
+
+
+def contract_internal_user_id(cur) -> None:
+    """Phase 1 step 1.4 ("contract") of the web-launch plan: make users.id
+    the real key, so a user without a Telegram account (browser sign-up,
+    Phase 2) can exist. Runs after migrate_internal_user_id(), whose
+    backfill guarantees every child row already has a user_id.
+
+    - users: PRIMARY KEY moves from telegram_id to id; telegram_id stays
+      UNIQUE (so every ON CONFLICT (telegram_id) upsert keeps working) but
+      becomes nullable.
+    - child tables: user_id NOT NULL + FK to users(id); the old FKs to
+      users(telegram_id) are dropped and telegram_id becomes nullable.
+    - events/orders never had an FK, and code may still log an event for a
+      Telegram id with no users row. Rather than turn that into an error,
+      the fill trigger (defined in migrate_internal_user_id) creates a bare
+      users row for it
+      (source='backfill_orphan', same as the step 1.2 backfill). The other
+      tables keep rejecting unknown users, as their FK always did.
+
+    The fill triggers stay until the child telegram_id columns are dropped
+    (TODO.md): they still link rows from code that writes telegram_id only.
+    Idempotent: every change checks the catalog or is IF [NOT] EXISTS."""
+    # Old FKs depend on users' telegram_id primary key, so they go first.
+    for table in ("cvs", "applications", "cv_analyses", "alerted_vacancies"):
+        cur.execute(f"ALTER TABLE {table} DROP CONSTRAINT IF EXISTS {table}_telegram_id_fkey")
+    if not _has_constraint(cur, "users", "users_telegram_id_key"):
+        cur.execute("ALTER TABLE users ADD CONSTRAINT users_telegram_id_key UNIQUE (telegram_id)")
+    cur.execute("""
+        SELECT a.attname FROM pg_constraint c
+        JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
+        WHERE c.conrelid = 'users'::regclass AND c.contype = 'p'
+    """)
+    if [r[0] for r in cur.fetchall()] == ["telegram_id"]:
+        cur.execute("ALTER TABLE users DROP CONSTRAINT users_pkey")
+        cur.execute("ALTER TABLE users ADD CONSTRAINT users_pkey PRIMARY KEY USING INDEX users_id_key")
+    cur.execute("ALTER TABLE users ALTER COLUMN telegram_id DROP NOT NULL")
+    for table in USER_CHILD_TABLES:
+        cur.execute(f"ALTER TABLE {table} ALTER COLUMN user_id SET NOT NULL")
+        cur.execute(f"ALTER TABLE {table} ALTER COLUMN telegram_id DROP NOT NULL")
+        if not _has_constraint(cur, table, f"{table}_user_id_fkey"):
+            cur.execute(f"ALTER TABLE {table} ADD CONSTRAINT {table}_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id)")
