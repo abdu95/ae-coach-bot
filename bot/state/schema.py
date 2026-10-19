@@ -167,6 +167,39 @@ def create_tables(cur) -> None:
     cur.execute("ALTER TABLE alerted_vacancies ADD COLUMN IF NOT EXISTS searched_job_title TEXT")
     cur.execute("ALTER TABLE alerted_vacancies ADD COLUMN IF NOT EXISTS searched_location TEXT")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_alerted_vacancies_batch ON alerted_vacancies (batch_id)")
+    # Payme checkout. These two tables were first created by hand in prod
+    # and only ever INSERTed into by code (state/payments.py, the webapp's
+    # app/db/payments.py, payme-webhook's main.py), so a fresh database
+    # had neither. Declared here (2026-10-19) to exactly match prod's live
+    # DDL, which makes this a no-op there and gives scratch/staging DBs
+    # the same schema. amount is in tiyin (1 UZS = 100 tiyin).
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS orders (
+            id          BIGSERIAL PRIMARY KEY,
+            telegram_id BIGINT NOT NULL,
+            amount      BIGINT NOT NULL,
+            package     TEXT   NOT NULL DEFAULT '10_checks',
+            state       TEXT   NOT NULL DEFAULT 'pending',
+            created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+    """)
+    # One row per Payme transaction (payme_id is Payme's own id). state
+    # and the *_time columns are Payme's protocol values (ms epoch), kept
+    # as-is so CheckTransaction/GetStatement can echo them back verbatim.
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS payme_transactions (
+            id           BIGSERIAL PRIMARY KEY,
+            payme_id     TEXT    NOT NULL UNIQUE,
+            order_id     BIGINT  NOT NULL REFERENCES orders(id),
+            amount       BIGINT  NOT NULL,
+            state        INTEGER NOT NULL DEFAULT 1,
+            create_time  BIGINT  NOT NULL DEFAULT 0,
+            perform_time BIGINT  NOT NULL DEFAULT 0,
+            cancel_time  BIGINT  NOT NULL DEFAULT 0,
+            reason       INTEGER,
+            created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+    """)
 
 
 def migrate_legacy_state(cur) -> None:

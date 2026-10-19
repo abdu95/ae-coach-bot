@@ -70,6 +70,7 @@ async def main():
     fake_query.message = FakeMessage()
     fake_query.answer = mock.AsyncMock()
     fake_query.edit_message_reply_markup = mock.AsyncMock()
+    fake_query.delete_message = mock.AsyncMock()
     cb_update = mock.Mock()
     cb_update.callback_query = fake_query
     cb_update.effective_user.id = uid
@@ -85,6 +86,7 @@ async def main():
     fake_query2.message = FakeMessage()
     fake_query2.answer = mock.AsyncMock()
     fake_query2.edit_message_reply_markup = mock.AsyncMock()
+    fake_query2.delete_message = mock.AsyncMock()
     cb_update2 = mock.Mock()
     cb_update2.callback_query = fake_query2
     cb_update2.effective_user.id = uid

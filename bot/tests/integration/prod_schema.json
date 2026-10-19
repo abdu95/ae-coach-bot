@@ -1,0 +1,564 @@
+{
+  "alerted_vacancies": {
+    "columns": {
+      "batch_id": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "created_at": {
+        "default": "now()",
+        "nullable": false,
+        "type": "timestamp with time zone"
+      },
+      "id": {
+        "default": "nextval('alerted_vacancies_id_seq'::regclass)",
+        "nullable": false,
+        "type": "bigint"
+      },
+      "searched_job_title": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "searched_location": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "telegram_id": {
+        "default": null,
+        "nullable": false,
+        "type": "bigint"
+      },
+      "vacancy_company": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "vacancy_location": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "vacancy_summary": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "vacancy_title": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "vacancy_url": {
+        "default": null,
+        "nullable": false,
+        "type": "text"
+      }
+    },
+    "constraints": {
+      "alerted_vacancies_pkey": "PRIMARY KEY (id)",
+      "alerted_vacancies_telegram_id_fkey": "FOREIGN KEY (telegram_id) REFERENCES users(telegram_id)",
+      "alerted_vacancies_telegram_id_vacancy_url_key": "UNIQUE (telegram_id, vacancy_url)"
+    },
+    "indexes": {
+      "alerted_vacancies_pkey": "CREATE UNIQUE INDEX alerted_vacancies_pkey ON public.alerted_vacancies USING btree (id)",
+      "alerted_vacancies_telegram_id_vacancy_url_key": "CREATE UNIQUE INDEX alerted_vacancies_telegram_id_vacancy_url_key ON public.alerted_vacancies USING btree (telegram_id, vacancy_url)",
+      "idx_alerted_vacancies_batch": "CREATE INDEX idx_alerted_vacancies_batch ON public.alerted_vacancies USING btree (batch_id)",
+      "idx_alerted_vacancies_telegram_id": "CREATE INDEX idx_alerted_vacancies_telegram_id ON public.alerted_vacancies USING btree (telegram_id)"
+    },
+    "triggers": []
+  },
+  "applications": {
+    "columns": {
+      "created_at": {
+        "default": "now()",
+        "nullable": false,
+        "type": "timestamp with time zone"
+      },
+      "cv_snapshot": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "id": {
+        "default": "nextval('applications_id_seq'::regclass)",
+        "nullable": false,
+        "type": "bigint"
+      },
+      "match_score": {
+        "default": null,
+        "nullable": true,
+        "type": "integer"
+      },
+      "matched_keywords": {
+        "default": null,
+        "nullable": true,
+        "type": "jsonb"
+      },
+      "missing_keywords": {
+        "default": null,
+        "nullable": true,
+        "type": "jsonb"
+      },
+      "notes": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "recruiter_contacted": {
+        "default": "false",
+        "nullable": false,
+        "type": "boolean"
+      },
+      "source": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "status": {
+        "default": "'applied'::text",
+        "nullable": false,
+        "type": "text"
+      },
+      "telegram_id": {
+        "default": null,
+        "nullable": false,
+        "type": "bigint"
+      },
+      "updated_at": {
+        "default": "now()",
+        "nullable": false,
+        "type": "timestamp with time zone"
+      },
+      "vacancy_company": {
+        "default": null,
+        "nullable": false,
+        "type": "text"
+      },
+      "vacancy_location": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "vacancy_summary": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "vacancy_title": {
+        "default": null,
+        "nullable": false,
+        "type": "text"
+      },
+      "vacancy_url": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      }
+    },
+    "constraints": {
+      "applications_pkey": "PRIMARY KEY (id)",
+      "applications_telegram_id_fkey": "FOREIGN KEY (telegram_id) REFERENCES users(telegram_id)"
+    },
+    "indexes": {
+      "applications_pkey": "CREATE UNIQUE INDEX applications_pkey ON public.applications USING btree (id)",
+      "idx_applications_telegram_id": "CREATE INDEX idx_applications_telegram_id ON public.applications USING btree (telegram_id)"
+    },
+    "triggers": []
+  },
+  "cv_analyses": {
+    "columns": {
+      "ats": {
+        "default": null,
+        "nullable": false,
+        "type": "jsonb"
+      },
+      "created_at": {
+        "default": "now()",
+        "nullable": false,
+        "type": "timestamp with time zone"
+      },
+      "id": {
+        "default": "nextval('cv_analyses_id_seq'::regclass)",
+        "nullable": false,
+        "type": "bigint"
+      },
+      "jd_text": {
+        "default": null,
+        "nullable": false,
+        "type": "text"
+      },
+      "level": {
+        "default": null,
+        "nullable": false,
+        "type": "jsonb"
+      },
+      "roadmap_items": {
+        "default": "'{}'::jsonb",
+        "nullable": false,
+        "type": "jsonb"
+      },
+      "telegram_id": {
+        "default": null,
+        "nullable": false,
+        "type": "bigint"
+      },
+      "tools": {
+        "default": null,
+        "nullable": false,
+        "type": "jsonb"
+      },
+      "xyz": {
+        "default": null,
+        "nullable": false,
+        "type": "jsonb"
+      }
+    },
+    "constraints": {
+      "cv_analyses_pkey": "PRIMARY KEY (id)",
+      "cv_analyses_telegram_id_fkey": "FOREIGN KEY (telegram_id) REFERENCES users(telegram_id)"
+    },
+    "indexes": {
+      "cv_analyses_pkey": "CREATE UNIQUE INDEX cv_analyses_pkey ON public.cv_analyses USING btree (id)",
+      "idx_cv_analyses_telegram_id": "CREATE INDEX idx_cv_analyses_telegram_id ON public.cv_analyses USING btree (telegram_id)"
+    },
+    "triggers": []
+  },
+  "cvs": {
+    "columns": {
+      "created_at": {
+        "default": "now()",
+        "nullable": false,
+        "type": "timestamp with time zone"
+      },
+      "cv_text": {
+        "default": null,
+        "nullable": false,
+        "type": "text"
+      },
+      "extracted_position": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "id": {
+        "default": "nextval('cvs_id_seq'::regclass)",
+        "nullable": false,
+        "type": "bigint"
+      },
+      "is_active": {
+        "default": "false",
+        "nullable": false,
+        "type": "boolean"
+      },
+      "label": {
+        "default": null,
+        "nullable": false,
+        "type": "text"
+      },
+      "telegram_id": {
+        "default": null,
+        "nullable": false,
+        "type": "bigint"
+      }
+    },
+    "constraints": {
+      "cvs_pkey": "PRIMARY KEY (id)",
+      "cvs_telegram_id_fkey": "FOREIGN KEY (telegram_id) REFERENCES users(telegram_id)"
+    },
+    "indexes": {
+      "cvs_pkey": "CREATE UNIQUE INDEX cvs_pkey ON public.cvs USING btree (id)",
+      "idx_cvs_one_active_per_user": "CREATE UNIQUE INDEX idx_cvs_one_active_per_user ON public.cvs USING btree (telegram_id) WHERE is_active",
+      "idx_cvs_telegram_id": "CREATE INDEX idx_cvs_telegram_id ON public.cvs USING btree (telegram_id)"
+    },
+    "triggers": []
+  },
+  "events": {
+    "columns": {
+      "created_at": {
+        "default": "now()",
+        "nullable": false,
+        "type": "timestamp with time zone"
+      },
+      "event_type": {
+        "default": null,
+        "nullable": false,
+        "type": "text"
+      },
+      "id": {
+        "default": "nextval('events_id_seq'::regclass)",
+        "nullable": false,
+        "type": "bigint"
+      },
+      "metadata": {
+        "default": null,
+        "nullable": true,
+        "type": "jsonb"
+      },
+      "telegram_id": {
+        "default": null,
+        "nullable": false,
+        "type": "bigint"
+      }
+    },
+    "constraints": {
+      "events_pkey": "PRIMARY KEY (id)"
+    },
+    "indexes": {
+      "events_pkey": "CREATE UNIQUE INDEX events_pkey ON public.events USING btree (id)",
+      "idx_events_type_time": "CREATE INDEX idx_events_type_time ON public.events USING btree (event_type, created_at)",
+      "idx_events_user": "CREATE INDEX idx_events_user ON public.events USING btree (telegram_id)"
+    },
+    "triggers": []
+  },
+  "greenhouse_companies": {
+    "columns": {
+      "active": {
+        "default": "true",
+        "nullable": false,
+        "type": "boolean"
+      },
+      "created_at": {
+        "default": "now()",
+        "nullable": false,
+        "type": "timestamp with time zone"
+      },
+      "display_name": {
+        "default": null,
+        "nullable": false,
+        "type": "text"
+      },
+      "domain": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "slug": {
+        "default": null,
+        "nullable": false,
+        "type": "text"
+      }
+    },
+    "constraints": {
+      "greenhouse_companies_pkey": "PRIMARY KEY (slug)"
+    },
+    "indexes": {
+      "greenhouse_companies_pkey": "CREATE UNIQUE INDEX greenhouse_companies_pkey ON public.greenhouse_companies USING btree (slug)"
+    },
+    "triggers": []
+  },
+  "orders": {
+    "columns": {
+      "amount": {
+        "default": null,
+        "nullable": false,
+        "type": "bigint"
+      },
+      "created_at": {
+        "default": "now()",
+        "nullable": false,
+        "type": "timestamp with time zone"
+      },
+      "id": {
+        "default": "nextval('orders_id_seq'::regclass)",
+        "nullable": false,
+        "type": "bigint"
+      },
+      "package": {
+        "default": "'10_checks'::text",
+        "nullable": false,
+        "type": "text"
+      },
+      "state": {
+        "default": "'pending'::text",
+        "nullable": false,
+        "type": "text"
+      },
+      "telegram_id": {
+        "default": null,
+        "nullable": false,
+        "type": "bigint"
+      }
+    },
+    "constraints": {
+      "orders_pkey": "PRIMARY KEY (id)"
+    },
+    "indexes": {
+      "orders_pkey": "CREATE UNIQUE INDEX orders_pkey ON public.orders USING btree (id)"
+    },
+    "triggers": []
+  },
+  "payme_transactions": {
+    "columns": {
+      "amount": {
+        "default": null,
+        "nullable": false,
+        "type": "bigint"
+      },
+      "cancel_time": {
+        "default": "0",
+        "nullable": false,
+        "type": "bigint"
+      },
+      "create_time": {
+        "default": "0",
+        "nullable": false,
+        "type": "bigint"
+      },
+      "created_at": {
+        "default": "now()",
+        "nullable": false,
+        "type": "timestamp with time zone"
+      },
+      "id": {
+        "default": "nextval('payme_transactions_id_seq'::regclass)",
+        "nullable": false,
+        "type": "bigint"
+      },
+      "order_id": {
+        "default": null,
+        "nullable": false,
+        "type": "bigint"
+      },
+      "payme_id": {
+        "default": null,
+        "nullable": false,
+        "type": "text"
+      },
+      "perform_time": {
+        "default": "0",
+        "nullable": false,
+        "type": "bigint"
+      },
+      "reason": {
+        "default": null,
+        "nullable": true,
+        "type": "integer"
+      },
+      "state": {
+        "default": "1",
+        "nullable": false,
+        "type": "integer"
+      }
+    },
+    "constraints": {
+      "payme_transactions_order_id_fkey": "FOREIGN KEY (order_id) REFERENCES orders(id)",
+      "payme_transactions_payme_id_key": "UNIQUE (payme_id)",
+      "payme_transactions_pkey": "PRIMARY KEY (id)"
+    },
+    "indexes": {
+      "payme_transactions_payme_id_key": "CREATE UNIQUE INDEX payme_transactions_payme_id_key ON public.payme_transactions USING btree (payme_id)",
+      "payme_transactions_pkey": "CREATE UNIQUE INDEX payme_transactions_pkey ON public.payme_transactions USING btree (id)"
+    },
+    "triggers": []
+  },
+  "user_state": {
+    "columns": {
+      "data": {
+        "default": null,
+        "nullable": false,
+        "type": "jsonb"
+      },
+      "updated_at": {
+        "default": "now()",
+        "nullable": false,
+        "type": "timestamp with time zone"
+      },
+      "user_id": {
+        "default": null,
+        "nullable": false,
+        "type": "bigint"
+      }
+    },
+    "constraints": {
+      "user_state_pkey": "PRIMARY KEY (user_id)"
+    },
+    "indexes": {
+      "user_state_pkey": "CREATE UNIQUE INDEX user_state_pkey ON public.user_state USING btree (user_id)"
+    },
+    "triggers": []
+  },
+  "users": {
+    "columns": {
+      "checks_used": {
+        "default": "0",
+        "nullable": false,
+        "type": "integer"
+      },
+      "first_seen_at": {
+        "default": "now()",
+        "nullable": false,
+        "type": "timestamp with time zone"
+      },
+      "joined_waitlist": {
+        "default": "false",
+        "nullable": false,
+        "type": "boolean"
+      },
+      "language": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "last_seen_at": {
+        "default": "now()",
+        "nullable": false,
+        "type": "timestamp with time zone"
+      },
+      "name": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "quota_override": {
+        "default": null,
+        "nullable": true,
+        "type": "integer"
+      },
+      "saved_job_title": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "saved_location": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "source": {
+        "default": "'organic'::text",
+        "nullable": true,
+        "type": "text"
+      },
+      "telegram_id": {
+        "default": null,
+        "nullable": false,
+        "type": "bigint"
+      },
+      "username": {
+        "default": null,
+        "nullable": true,
+        "type": "text"
+      },
+      "vacancy_alerts_enabled": {
+        "default": "false",
+        "nullable": false,
+        "type": "boolean"
+      },
+      "waitlist_at": {
+        "default": null,
+        "nullable": true,
+        "type": "timestamp with time zone"
+      }
+    },
+    "constraints": {
+      "users_pkey": "PRIMARY KEY (telegram_id)"
+    },
+    "indexes": {
+      "users_pkey": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (telegram_id)"
+    },
+    "triggers": []
+  }
+}
