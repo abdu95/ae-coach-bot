@@ -28,12 +28,12 @@
       },
       "telegram_id": {
         "default": null,
-        "nullable": false,
+        "nullable": true,
         "type": "bigint"
       },
       "user_id": {
         "default": null,
-        "nullable": true,
+        "nullable": false,
         "type": "bigint"
       },
       "vacancy_company": {
@@ -64,8 +64,8 @@
     },
     "constraints": {
       "alerted_vacancies_pkey": "PRIMARY KEY (id)",
-      "alerted_vacancies_telegram_id_fkey": "FOREIGN KEY (telegram_id) REFERENCES users(telegram_id)",
-      "alerted_vacancies_telegram_id_vacancy_url_key": "UNIQUE (telegram_id, vacancy_url)"
+      "alerted_vacancies_telegram_id_vacancy_url_key": "UNIQUE (telegram_id, vacancy_url)",
+      "alerted_vacancies_user_id_fkey": "FOREIGN KEY (user_id) REFERENCES users(id)"
     },
     "indexes": {
       "alerted_vacancies_pkey": "CREATE UNIQUE INDEX alerted_vacancies_pkey ON public.alerted_vacancies USING btree (id)",
@@ -133,7 +133,7 @@
       },
       "telegram_id": {
         "default": null,
-        "nullable": false,
+        "nullable": true,
         "type": "bigint"
       },
       "updated_at": {
@@ -143,7 +143,7 @@
       },
       "user_id": {
         "default": null,
-        "nullable": true,
+        "nullable": false,
         "type": "bigint"
       },
       "vacancy_company": {
@@ -174,7 +174,7 @@
     },
     "constraints": {
       "applications_pkey": "PRIMARY KEY (id)",
-      "applications_telegram_id_fkey": "FOREIGN KEY (telegram_id) REFERENCES users(telegram_id)"
+      "applications_user_id_fkey": "FOREIGN KEY (user_id) REFERENCES users(id)"
     },
     "indexes": {
       "applications_pkey": "CREATE UNIQUE INDEX applications_pkey ON public.applications USING btree (id)",
@@ -219,7 +219,7 @@
       },
       "telegram_id": {
         "default": null,
-        "nullable": false,
+        "nullable": true,
         "type": "bigint"
       },
       "tools": {
@@ -229,7 +229,7 @@
       },
       "user_id": {
         "default": null,
-        "nullable": true,
+        "nullable": false,
         "type": "bigint"
       },
       "xyz": {
@@ -240,7 +240,7 @@
     },
     "constraints": {
       "cv_analyses_pkey": "PRIMARY KEY (id)",
-      "cv_analyses_telegram_id_fkey": "FOREIGN KEY (telegram_id) REFERENCES users(telegram_id)"
+      "cv_analyses_user_id_fkey": "FOREIGN KEY (user_id) REFERENCES users(id)"
     },
     "indexes": {
       "cv_analyses_pkey": "CREATE UNIQUE INDEX cv_analyses_pkey ON public.cv_analyses USING btree (id)",
@@ -285,18 +285,18 @@
       },
       "telegram_id": {
         "default": null,
-        "nullable": false,
+        "nullable": true,
         "type": "bigint"
       },
       "user_id": {
         "default": null,
-        "nullable": true,
+        "nullable": false,
         "type": "bigint"
       }
     },
     "constraints": {
       "cvs_pkey": "PRIMARY KEY (id)",
-      "cvs_telegram_id_fkey": "FOREIGN KEY (telegram_id) REFERENCES users(telegram_id)"
+      "cvs_user_id_fkey": "FOREIGN KEY (user_id) REFERENCES users(id)"
     },
     "indexes": {
       "cvs_pkey": "CREATE UNIQUE INDEX cvs_pkey ON public.cvs USING btree (id)",
@@ -333,17 +333,18 @@
       },
       "telegram_id": {
         "default": null,
-        "nullable": false,
+        "nullable": true,
         "type": "bigint"
       },
       "user_id": {
         "default": null,
-        "nullable": true,
+        "nullable": false,
         "type": "bigint"
       }
     },
     "constraints": {
-      "events_pkey": "PRIMARY KEY (id)"
+      "events_pkey": "PRIMARY KEY (id)",
+      "events_user_id_fkey": "FOREIGN KEY (user_id) REFERENCES users(id)"
     },
     "indexes": {
       "events_pkey": "CREATE UNIQUE INDEX events_pkey ON public.events USING btree (id)",
@@ -420,17 +421,18 @@
       },
       "telegram_id": {
         "default": null,
-        "nullable": false,
+        "nullable": true,
         "type": "bigint"
       },
       "user_id": {
         "default": null,
-        "nullable": true,
+        "nullable": false,
         "type": "bigint"
       }
     },
     "constraints": {
-      "orders_pkey": "PRIMARY KEY (id)"
+      "orders_pkey": "PRIMARY KEY (id)",
+      "orders_user_id_fkey": "FOREIGN KEY (user_id) REFERENCES users(id)"
     },
     "indexes": {
       "idx_orders_user_id": "CREATE INDEX idx_orders_user_id ON public.orders USING btree (user_id)",
@@ -589,7 +591,7 @@
       },
       "telegram_id": {
         "default": null,
-        "nullable": false,
+        "nullable": true,
         "type": "bigint"
       },
       "username": {
@@ -609,11 +611,12 @@
       }
     },
     "constraints": {
-      "users_pkey": "PRIMARY KEY (telegram_id)"
+      "users_pkey": "PRIMARY KEY (id)",
+      "users_telegram_id_key": "UNIQUE (telegram_id)"
     },
     "indexes": {
-      "users_id_key": "CREATE UNIQUE INDEX users_id_key ON public.users USING btree (id)",
-      "users_pkey": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (telegram_id)"
+      "users_pkey": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)",
+      "users_telegram_id_key": "CREATE UNIQUE INDEX users_telegram_id_key ON public.users USING btree (telegram_id)"
     },
     "triggers": {}
   }

@@ -72,7 +72,8 @@ with scratch_db() as dsn:
             cur.execute("SAVEPOINT s")
             cur.execute("INSERT INTO applications (telegram_id, vacancy_title, vacancy_company) VALUES (424242, 't', 'c')")
             raise AssertionError("an application for a non-existent user was accepted")
-        except psycopg2.errors.ForeignKeyViolation:
+        except (psycopg2.errors.ForeignKeyViolation, psycopg2.errors.NotNullViolation):
+            # FK on telegram_id before step 1.4; user_id NOT NULL (+ FK to users.id) since.
             cur.execute("ROLLBACK TO SAVEPOINT s")
         cur.execute("INSERT INTO orders (telegram_id, amount) VALUES (1002, 9900000) RETURNING package, state")
         assert cur.fetchone() == ("10_checks", "pending")
