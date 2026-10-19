@@ -91,4 +91,22 @@ with scratch_db() as dsn:
     assert one(dsn, "SELECT count(*) FROM events WHERE telegram_id = %s AND event_type = 'started'", (BOB,)) == [(1,)]
     print("PASS: events and orders land on the right user; pending order reused per package at the current price")
 
+    # Step 1.3: the bot writes the internal user_id itself, and stats count by it.
+    bob_id = one(dsn, "SELECT id FROM users WHERE telegram_id = %s", (BOB,))[0][0]
+    assert one(dsn, "SELECT DISTINCT user_id FROM orders") == [(bob_id,)]
+    assert one(dsn, "SELECT count(*) FROM events WHERE user_id IS NULL OR user_id <> (SELECT id FROM users u WHERE u.telegram_id = events.telegram_id)") == [(0,)]
+    with psycopg2.connect(dsn) as conn, conn.cursor() as cur:
+        cur.execute("ALTER TABLE events DISABLE TRIGGER trg_events_fill_user_id")  # prove the bot sets it, not the trigger
+        cur.execute("ALTER TABLE orders DISABLE TRIGGER trg_orders_fill_user_id")
+    state.log_event(BOB, "check_completed")
+    state.get_or_create_order(BOB, 500_000, "5_checks")
+    assert one(dsn, "SELECT user_id FROM events WHERE event_type = 'check_completed'") == [(bob_id,)]
+    assert one(dsn, "SELECT user_id FROM orders WHERE package = '5_checks'") == [(bob_id,)]
+    state.log_event(31337, "orphan_event")  # no users row: still accepted, as before
+    assert one(dsn, "SELECT user_id, telegram_id FROM events WHERE event_type = 'orphan_event'") == [(None, 31337)]
+    paid = one(dsn, "UPDATE orders SET state = 'paid' RETURNING id")
+    assert state.payment_stats()["unique_payers"] == 1 and len(paid) == 3
+    assert state.event_stats(["started"]) == {"started": (1, 1)}
+    print("PASS: bot writes user_id itself on events/orders; stats count unique users by user_id")
+
 print("\nALL BOT DB FUNCTION CHECKS PASSED")

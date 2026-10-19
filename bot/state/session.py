@@ -79,13 +79,13 @@ def _upsert_and_load_account(telegram_id: int) -> dict:
             cur.execute("""
                 INSERT INTO users (telegram_id) VALUES (%s)
                 ON CONFLICT (telegram_id) DO UPDATE SET last_seen_at = now()
-                RETURNING language, checks_used, joined_waitlist, name, (xmax = 0) AS is_new
+                RETURNING id, language, checks_used, joined_waitlist, name, (xmax = 0) AS is_new
             """, (telegram_id,))
-            language, checks_used, joined_waitlist, name, is_new = cur.fetchone()
+            user_id, language, checks_used, joined_waitlist, name, is_new = cur.fetchone()
             if is_new:
                 cur.execute(
-                    "INSERT INTO events (telegram_id, event_type) VALUES (%s, 'user_seen')",
-                    (telegram_id,),
+                    "INSERT INTO events (user_id, telegram_id, event_type) VALUES (%s, %s, 'user_seen')",
+                    (user_id, telegram_id),
                 )
             return {"language": language, "checks_used": checks_used, "joined_waitlist": joined_waitlist, "name": name}
     finally:

@@ -19,7 +19,8 @@ def get_or_create_order(telegram_id: int, amount: int, package: str) -> int:
                 UPDATE orders SET amount = %s
                 WHERE id = (
                     SELECT id FROM orders
-                    WHERE telegram_id = %s AND package = %s AND state = 'pending'
+                    WHERE user_id = (SELECT id FROM users WHERE telegram_id = %s)
+                      AND package = %s AND state = 'pending'
                     ORDER BY created_at DESC LIMIT 1
                 )
                 RETURNING id
@@ -28,10 +29,10 @@ def get_or_create_order(telegram_id: int, amount: int, package: str) -> int:
             if row:
                 return row[0]
             cur.execute("""
-                INSERT INTO orders (telegram_id, amount, package)
-                VALUES (%s, %s, %s)
+                INSERT INTO orders (user_id, telegram_id, amount, package)
+                VALUES ((SELECT id FROM users WHERE telegram_id = %s), %s, %s, %s)
                 RETURNING id
-            """, (telegram_id, amount, package))
+            """, (telegram_id, telegram_id, amount, package))
             return cur.fetchone()[0]
     finally:
         state._pool.putconn(conn)
@@ -45,7 +46,7 @@ def payment_stats() -> dict:
     try:
         with conn, conn.cursor() as cur:
             cur.execute("""
-                SELECT count(*), count(DISTINCT telegram_id), coalesce(sum(amount), 0)
+                SELECT count(*), count(DISTINCT user_id), coalesce(sum(amount), 0)
                 FROM orders WHERE state = 'paid'
             """)
             count, unique_payers, total_tiyin = cur.fetchone()

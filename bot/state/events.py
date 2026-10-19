@@ -10,8 +10,12 @@ def log_event(telegram_id: int, event_type: str, metadata: dict | None = None) -
     try:
         with conn, conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO events (telegram_id, event_type, metadata) VALUES (%s, %s, %s)",
-                (telegram_id, event_type, json.dumps(metadata) if metadata is not None else None),
+                # user_id is the key going forward; telegram_id is still written
+                # (NOT NULL here until Phase 1 step 1.4) so an event for a
+                # Telegram user with no users row is still accepted, as before.
+                """INSERT INTO events (user_id, telegram_id, event_type, metadata)
+                   VALUES ((SELECT id FROM users WHERE telegram_id = %s), %s, %s, %s)""",
+                (telegram_id, telegram_id, event_type, json.dumps(metadata) if metadata is not None else None),
             )
     finally:
         state._pool.putconn(conn)
@@ -23,7 +27,7 @@ def event_stats(event_types: list[str]) -> dict[str, tuple[int, int]]:
     try:
         with conn, conn.cursor() as cur:
             cur.execute("""
-                SELECT event_type, count(*), count(DISTINCT telegram_id)
+                SELECT event_type, count(*), count(DISTINCT user_id)
                 FROM events
                 WHERE event_type = ANY(%s)
                 GROUP BY event_type
