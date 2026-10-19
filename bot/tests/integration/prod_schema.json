@@ -74,9 +74,9 @@
       "idx_alerted_vacancies_telegram_id": "CREATE INDEX idx_alerted_vacancies_telegram_id ON public.alerted_vacancies USING btree (telegram_id)",
       "idx_alerted_vacancies_user_id": "CREATE INDEX idx_alerted_vacancies_user_id ON public.alerted_vacancies USING btree (user_id)"
     },
-    "triggers": [
-      "trg_alerted_vacancies_fill_user_id"
-    ]
+    "triggers": {
+      "trg_alerted_vacancies_fill_user_id": "CREATE TRIGGER trg_alerted_vacancies_fill_user_id BEFORE INSERT OR UPDATE OF telegram_id ON public.alerted_vacancies FOR EACH ROW EXECUTE FUNCTION fill_user_id_from_telegram_id()"
+    }
   },
   "applications": {
     "columns": {
@@ -180,9 +180,9 @@
       "idx_applications_telegram_id": "CREATE INDEX idx_applications_telegram_id ON public.applications USING btree (telegram_id)",
       "idx_applications_user_id": "CREATE INDEX idx_applications_user_id ON public.applications USING btree (user_id)"
     },
-    "triggers": [
-      "trg_applications_fill_user_id"
-    ]
+    "triggers": {
+      "trg_applications_fill_user_id": "CREATE TRIGGER trg_applications_fill_user_id BEFORE INSERT OR UPDATE OF telegram_id ON public.applications FOR EACH ROW EXECUTE FUNCTION fill_user_id_from_telegram_id()"
+    }
   },
   "cv_analyses": {
     "columns": {
@@ -246,9 +246,9 @@
       "idx_cv_analyses_telegram_id": "CREATE INDEX idx_cv_analyses_telegram_id ON public.cv_analyses USING btree (telegram_id)",
       "idx_cv_analyses_user_id": "CREATE INDEX idx_cv_analyses_user_id ON public.cv_analyses USING btree (user_id)"
     },
-    "triggers": [
-      "trg_cv_analyses_fill_user_id"
-    ]
+    "triggers": {
+      "trg_cv_analyses_fill_user_id": "CREATE TRIGGER trg_cv_analyses_fill_user_id BEFORE INSERT OR UPDATE OF telegram_id ON public.cv_analyses FOR EACH ROW EXECUTE FUNCTION fill_user_id_from_telegram_id()"
+    }
   },
   "cvs": {
     "columns": {
@@ -303,9 +303,9 @@
       "idx_cvs_telegram_id": "CREATE INDEX idx_cvs_telegram_id ON public.cvs USING btree (telegram_id)",
       "idx_cvs_user_id": "CREATE INDEX idx_cvs_user_id ON public.cvs USING btree (user_id)"
     },
-    "triggers": [
-      "trg_cvs_fill_user_id"
-    ]
+    "triggers": {
+      "trg_cvs_fill_user_id": "CREATE TRIGGER trg_cvs_fill_user_id BEFORE INSERT OR UPDATE OF telegram_id ON public.cvs FOR EACH ROW EXECUTE FUNCTION fill_user_id_from_telegram_id()"
+    }
   },
   "events": {
     "columns": {
@@ -349,9 +349,9 @@
       "idx_events_user": "CREATE INDEX idx_events_user ON public.events USING btree (telegram_id)",
       "idx_events_user_id": "CREATE INDEX idx_events_user_id ON public.events USING btree (user_id)"
     },
-    "triggers": [
-      "trg_events_fill_user_id"
-    ]
+    "triggers": {
+      "trg_events_fill_user_id": "CREATE TRIGGER trg_events_fill_user_id BEFORE INSERT OR UPDATE OF telegram_id ON public.events FOR EACH ROW EXECUTE FUNCTION fill_user_id_from_telegram_id()"
+    }
   },
   "greenhouse_companies": {
     "columns": {
@@ -387,7 +387,7 @@
     "indexes": {
       "greenhouse_companies_pkey": "CREATE UNIQUE INDEX greenhouse_companies_pkey ON public.greenhouse_companies USING btree (slug)"
     },
-    "triggers": []
+    "triggers": {}
   },
   "orders": {
     "columns": {
@@ -434,9 +434,9 @@
       "idx_orders_user_id": "CREATE INDEX idx_orders_user_id ON public.orders USING btree (user_id)",
       "orders_pkey": "CREATE UNIQUE INDEX orders_pkey ON public.orders USING btree (id)"
     },
-    "triggers": [
-      "trg_orders_fill_user_id"
-    ]
+    "triggers": {
+      "trg_orders_fill_user_id": "CREATE TRIGGER trg_orders_fill_user_id BEFORE INSERT OR UPDATE OF telegram_id ON public.orders FOR EACH ROW EXECUTE FUNCTION fill_user_id_from_telegram_id()"
+    }
   },
   "payme_transactions": {
     "columns": {
@@ -500,7 +500,7 @@
       "payme_transactions_payme_id_key": "CREATE UNIQUE INDEX payme_transactions_payme_id_key ON public.payme_transactions USING btree (payme_id)",
       "payme_transactions_pkey": "CREATE UNIQUE INDEX payme_transactions_pkey ON public.payme_transactions USING btree (id)"
     },
-    "triggers": []
+    "triggers": {}
   },
   "user_state": {
     "columns": {
@@ -526,7 +526,7 @@
     "indexes": {
       "user_state_pkey": "CREATE UNIQUE INDEX user_state_pkey ON public.user_state USING btree (user_id)"
     },
-    "triggers": []
+    "triggers": {}
   },
   "users": {
     "columns": {
@@ -613,6 +613,6 @@
       "users_id_key": "CREATE UNIQUE INDEX users_id_key ON public.users USING btree (id)",
       "users_pkey": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (telegram_id)"
     },
-    "triggers": []
+    "triggers": {}
   }
 }

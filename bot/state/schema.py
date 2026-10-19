@@ -269,11 +269,19 @@ def migrate_internal_user_id(cur) -> None:
             WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.telegram_id = t.telegram_id)
             ON CONFLICT (telegram_id) DO NOTHING
         """)
+    # Fills whichever of the pair is missing (step 1.3 added the second
+    # direction): old code writes only telegram_id, code switched to the
+    # internal id writes only user_id, and both kinds of reader keep seeing
+    # complete rows while the three services switch over one by one. The
+    # name predates the second direction; kept so the triggers don't need
+    # re-pointing.
     cur.execute("""
         CREATE OR REPLACE FUNCTION fill_user_id_from_telegram_id() RETURNS trigger AS $$
         BEGIN
             IF NEW.user_id IS NULL AND NEW.telegram_id IS NOT NULL THEN
                 SELECT id INTO NEW.user_id FROM users WHERE telegram_id = NEW.telegram_id;
+            ELSIF NEW.telegram_id IS NULL AND NEW.user_id IS NOT NULL THEN
+                SELECT telegram_id INTO NEW.telegram_id FROM users WHERE id = NEW.user_id;
             END IF;
             RETURN NEW;
         END
@@ -288,6 +296,17 @@ def migrate_internal_user_id(cur) -> None:
         """)
         cur.execute(f"""
             CREATE OR REPLACE TRIGGER trg_{table}_fill_user_id
-            BEFORE INSERT OR UPDATE OF telegram_id ON {table}
+            BEFORE INSERT OR UPDATE OF telegram_id, user_id ON {table}
             FOR EACH ROW EXECUTE FUNCTION fill_user_id_from_telegram_id()
         """)
+    # user_id twins of the two per-user uniqueness rules, so they keep
+    # holding for rows keyed only by user_id (web users, from Phase 2), and
+    # so code switched to user_id can say ON CONFLICT (user_id, vacancy_url).
+    cur.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_cvs_one_active_per_user_id
+        ON cvs (user_id) WHERE is_active
+    """)
+    cur.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS alerted_vacancies_user_id_vacancy_url_key
+        ON alerted_vacancies (user_id, vacancy_url)
+    """)

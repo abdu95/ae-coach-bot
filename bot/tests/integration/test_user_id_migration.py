@@ -95,6 +95,29 @@ with scratch_db() as dsn:
         assert q(cur, "SELECT id, username, quota_override FROM users WHERE telegram_id = 7003") == [(carol_id, "carol", 12)]
     print("PASS: inserts that only know telegram_id still get the right user_id (all 6 tables)")
 
+    # Step 1.3 direction: code switched to the internal id writes only user_id.
+    with conn, conn.cursor() as cur:
+        dave_id = q(cur, "INSERT INTO users (telegram_id) VALUES (7004) RETURNING id")[0][0]
+        cur.execute("INSERT INTO cvs (user_id, label, cv_text, is_active) VALUES (%s, 'd.pdf', 'cv', true)", (dave_id,))
+        cur.execute("INSERT INTO applications (user_id, vacancy_title, vacancy_company) VALUES (%s, 't', 'c')", (dave_id,))
+        cur.execute("INSERT INTO cv_analyses (user_id, jd_text, ats, xyz, tools, level) VALUES (%s, 'jd', '{}', '{}', '{}', '{}')", (dave_id,))
+        cur.execute("INSERT INTO alerted_vacancies (user_id, vacancy_url) VALUES (%s, 'https://x/3')", (dave_id,))
+        cur.execute("INSERT INTO events (user_id, event_type) VALUES (%s, 'user_seen')", (dave_id,))
+        cur.execute("INSERT INTO orders (user_id, amount) VALUES (%s, 1000000)", (dave_id,))
+        assert unlinked(cur) == {}, unlinked(cur)
+        for t in CHILDREN:
+            assert q(cur, f"SELECT telegram_id FROM {t} WHERE user_id = %s", (dave_id,)) == [(7004,)], t
+        # The same rules, keyed by user_id.
+        cur.execute("INSERT INTO alerted_vacancies (user_id, vacancy_url) VALUES (%s, 'https://x/3') ON CONFLICT (user_id, vacancy_url) DO NOTHING", (dave_id,))
+        assert q(cur, "SELECT count(*) FROM alerted_vacancies WHERE user_id = %s", (dave_id,)) == [(1,)]
+        try:
+            cur.execute("SAVEPOINT s")
+            cur.execute("INSERT INTO cvs (user_id, label, cv_text, is_active) VALUES (%s, 'e.pdf', 'cv', true)", (dave_id,))
+            raise AssertionError("second active CV accepted when written by user_id")
+        except psycopg2.errors.UniqueViolation:
+            cur.execute("ROLLBACK TO SAVEPOINT s")
+    print("PASS: inserts that only know user_id get telegram_id filled in, and per-user rules still hold")
+
     with conn, conn.cursor() as cur:
         # An event for a telegram_id with no users row is still accepted, as before (no FK yet).
         cur.execute("INSERT INTO events (telegram_id, event_type) VALUES (424242, 'x') RETURNING user_id")

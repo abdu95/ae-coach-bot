@@ -48,8 +48,8 @@ def snapshot(cur) -> dict:
         constraints = dict(cur.fetchall())
         cur.execute("SELECT indexname, indexdef FROM pg_indexes WHERE schemaname = 'public' AND tablename = %s ORDER BY 1", (table,))
         indexes = dict(cur.fetchall())
-        cur.execute("SELECT tgname FROM pg_trigger WHERE tgrelid = %s::regclass AND NOT tgisinternal ORDER BY 1", (table,))
-        triggers = [r[0] for r in cur.fetchall()]
+        cur.execute("SELECT tgname, pg_get_triggerdef(oid) FROM pg_trigger WHERE tgrelid = %s::regclass AND NOT tgisinternal ORDER BY 1", (table,))
+        triggers = dict(cur.fetchall())
         tables[table] = {"columns": columns, "constraints": constraints, "indexes": indexes, "triggers": triggers}
     return tables
 
@@ -64,13 +64,11 @@ def diff(expected: dict, actual: dict) -> list[str]:
         if table not in expected:
             out.append(f"unexpected table: {table}")
             continue
-        for part in ("columns", "constraints", "indexes"):
+        for part in ("columns", "constraints", "indexes", "triggers"):
             exp, act = expected[table][part], actual[table][part]
             for key in sorted(exp.keys() | act.keys()):
                 if exp.get(key) != act.get(key):
                     out.append(f"{table}.{part}.{key}: expected {exp.get(key)!r}, got {act.get(key)!r}")
-        if expected[table]["triggers"] != actual[table]["triggers"]:
-            out.append(f"{table}.triggers: expected {expected[table]['triggers']}, got {actual[table]['triggers']}")
     return out
 
 
