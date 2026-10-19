@@ -234,3 +234,60 @@ def migrate_legacy_cv_text(cur) -> None:
         WHERE data->>'cv_text' IS NOT NULL AND data->>'cv_text' != ''
           AND user_id NOT IN (SELECT telegram_id FROM cvs)
     """)
+
+
+# Every table holding per-user rows. Each gets a user_id pointing at the
+# new internal users.id (web-launch plan, Phase 1).
+USER_CHILD_TABLES = ("cvs", "applications", "cv_analyses", "alerted_vacancies", "events", "orders")
+
+
+def migrate_internal_user_id(cur) -> None:
+    """Phase 1 step 1.2 ("expand") of the web-launch plan: give every user an
+    internal id, independent of Telegram, so browser users (no telegram_id)
+    can exist later. Purely additive - telegram_id stays the primary key and
+    every existing query, in all three services, keeps working unchanged.
+
+    - users.id: BIGSERIAL, so Postgres numbers existing rows and every new
+      INSERT INTO users (telegram_id) gets one automatically.
+    - <child>.user_id on every per-user table, backfilled from telegram_id.
+    - A BEFORE INSERT/UPDATE trigger fills user_id from telegram_id, so code
+      that only writes telegram_id (all of it, today) keeps every row linked.
+
+    events and orders have no foreign key, so they can reference a
+    telegram_id with no users row (prod had one: a 2026-08 Payme test
+    order). Those get a bare users row tagged source='backfill_orphan',
+    so every row can be linked and stats can exclude them.
+
+    Safe on every startup: each statement is IF NOT EXISTS / OR REPLACE /
+    only touches rows still missing a user_id."""
+    cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS id BIGSERIAL")
+    cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS users_id_key ON users (id)")
+    for table in ("events", "orders"):
+        cur.execute(f"""
+            INSERT INTO users (telegram_id, source)
+            SELECT DISTINCT t.telegram_id, 'backfill_orphan' FROM {table} t
+            WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.telegram_id = t.telegram_id)
+            ON CONFLICT (telegram_id) DO NOTHING
+        """)
+    cur.execute("""
+        CREATE OR REPLACE FUNCTION fill_user_id_from_telegram_id() RETURNS trigger AS $$
+        BEGIN
+            IF NEW.user_id IS NULL AND NEW.telegram_id IS NOT NULL THEN
+                SELECT id INTO NEW.user_id FROM users WHERE telegram_id = NEW.telegram_id;
+            END IF;
+            RETURN NEW;
+        END
+        $$ LANGUAGE plpgsql
+    """)
+    for table in USER_CHILD_TABLES:
+        cur.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS user_id BIGINT")
+        cur.execute(f"CREATE INDEX IF NOT EXISTS idx_{table}_user_id ON {table} (user_id)")
+        cur.execute(f"""
+            UPDATE {table} t SET user_id = u.id FROM users u
+            WHERE u.telegram_id = t.telegram_id AND t.user_id IS NULL
+        """)
+        cur.execute(f"""
+            CREATE OR REPLACE TRIGGER trg_{table}_fill_user_id
+            BEFORE INSERT OR UPDATE OF telegram_id ON {table}
+            FOR EACH ROW EXECUTE FUNCTION fill_user_id_from_telegram_id()
+        """)
