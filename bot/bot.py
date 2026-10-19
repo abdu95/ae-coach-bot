@@ -107,29 +107,29 @@ async def send_launcher(message, user: dict) -> None:
 
 # ── Commands ──────────────────────────────────────────────────────────────────
 
-async def enroll_pilot(message, user_id: int, lang: str) -> None:
-    if state.get_source(user_id) == "school21_pilot":
+async def enroll_pilot(message, telegram_id: int, lang: str) -> None:
+    if state.get_source(telegram_id) == "school21_pilot":
         await message.reply_text(i18n.t("pilot_already", lang))
         return
     if state.pilot_count() >= PILOT_CAP:
         await message.reply_text(i18n.t("pilot_full", lang))
         return
-    state.set_quota_override(user_id, PILOT_QUOTA, source="school21_pilot")
-    state.log_event(user_id, "pilot_enrolled")
+    state.set_quota_override(telegram_id, PILOT_QUOTA, source="school21_pilot")
+    state.log_event(telegram_id, "pilot_enrolled")
     await message.reply_text(i18n.pilot_enrolled(PILOT_QUOTA, lang))
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_id = update.effective_user.id
-    state.reset(user_id)
-    state.log_event(user_id, "started")
-    user = state.get(user_id)
+    telegram_id = update.effective_user.id
+    state.reset(telegram_id)
+    state.log_event(telegram_id, "started")
+    user = state.get(telegram_id)
 
     if context.args and context.args[0] == PILOT_CODE:
-        await enroll_pilot(update.message, user_id, user["lang"])
+        await enroll_pilot(update.message, telegram_id, user["lang"])
     elif context.args and context.args[0] in MARKETING_SOURCES:
-        state.set_source(user_id, MARKETING_SOURCES[context.args[0]])
-        state.log_event(user_id, "marketing_source_start", metadata={"source": context.args[0]})
+        state.set_source(telegram_id, MARKETING_SOURCES[context.args[0]])
+        state.log_event(telegram_id, "marketing_source_start", metadata={"source": context.args[0]})
 
     if not user["lang"]:
         await send_language_picker(update.message, update.effective_user.language_code)
@@ -141,10 +141,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def reset_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_id = update.effective_user.id
-    state.reset(user_id)
-    state.log_event(user_id, "reset")
-    user = state.get(user_id)
+    telegram_id = update.effective_user.id
+    state.reset(telegram_id)
+    state.log_event(telegram_id, "reset")
+    user = state.get(telegram_id)
     await update.message.reply_text(i18n.t("reset_done", user["lang"]))
     await send_launcher(update.message, user)
 
@@ -221,15 +221,15 @@ async def grant_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 # ── Text / callback fallbacks ─────────────────────────────────────────────────
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_id = update.effective_user.id
-    user = state.get(user_id)
+    telegram_id = update.effective_user.id
+    user = state.get(telegram_id)
     text = update.message.text.strip()
 
     if user["phase"] == "waiting_name":
         name = text[:50]
         user["name"] = name
         user["phase"] = "idle"
-        state.log_event(user_id, "name_provided")
+        state.log_event(telegram_id, "name_provided")
         # Real tester feedback (2026-09-09): this message and send_launcher's
         # photo used to fire back-to-back with no gap, arriving almost
         # simultaneously - confusing enough to risk losing someone right at
@@ -248,8 +248,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
-    user_id = update.effective_user.id
-    user = state.get(user_id)
+    telegram_id = update.effective_user.id
+    user = state.get(telegram_id)
     action = query.data
     message = query.message
 

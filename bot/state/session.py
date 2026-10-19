@@ -11,30 +11,30 @@ import state
 _users: dict = {}
 
 
-def get(user_id: int) -> dict:
-    if user_id not in _users:
-        loaded = _load(user_id)
+def get(telegram_id: int) -> dict:
+    if telegram_id not in _users:
+        loaded = _load(telegram_id)
         merged = _empty()
         if loaded:
             merged.update(loaded)
-        account = _upsert_and_load_account(user_id)
+        account = _upsert_and_load_account(telegram_id)
         merged["lang"] = account["language"] or ""
         merged["usage_count"] = account["checks_used"]
         merged["waitlisted"] = account["joined_waitlist"]
         merged["name"] = account["name"] or ""
-        _users[user_id] = merged
-    return _users[user_id]
+        _users[telegram_id] = merged
+    return _users[telegram_id]
 
 
-def reset(user_id: int) -> None:
-    current = get(user_id)
+def reset(telegram_id: int) -> None:
+    current = get(telegram_id)
     fresh = _empty()
     fresh["lang"] = current.get("lang", "")
     fresh["usage_count"] = current.get("usage_count", 0)
     fresh["waitlisted"] = current.get("waitlisted", False)
     fresh["name"] = current.get("name", "")
-    _users[user_id] = fresh
-    _save(user_id, fresh)
+    _users[telegram_id] = fresh
+    _save(telegram_id, fresh)
 
 
 def persisting(handler):
@@ -52,11 +52,11 @@ def persisting(handler):
     return wrapper
 
 
-def _load(user_id: int) -> dict | None:
+def _load(telegram_id: int) -> dict | None:
     conn = state._pool.getconn()
     try:
         with conn, conn.cursor() as cur:
-            cur.execute("SELECT data FROM user_state WHERE user_id = %s", (user_id,))
+            cur.execute("SELECT data FROM user_state WHERE user_id = %s", (telegram_id,))
             row = cur.fetchone()
             return row[0] if row else None
     finally:
@@ -67,7 +67,7 @@ def _load(user_id: int) -> dict | None:
 _ACCOUNT_KEYS = {"lang", "usage_count", "waitlisted", "name"}
 
 
-def _upsert_and_load_account(user_id: int) -> dict:
+def _upsert_and_load_account(telegram_id: int) -> dict:
     """Ensure a `users` row exists for this telegram id, bump last_seen_at,
     and return their account fields. Logs a `user_seen` event exactly once,
     the moment a user's row is first created (xmax = 0 is the standard
@@ -80,19 +80,19 @@ def _upsert_and_load_account(user_id: int) -> dict:
                 INSERT INTO users (telegram_id) VALUES (%s)
                 ON CONFLICT (telegram_id) DO UPDATE SET last_seen_at = now()
                 RETURNING language, checks_used, joined_waitlist, name, (xmax = 0) AS is_new
-            """, (user_id,))
+            """, (telegram_id,))
             language, checks_used, joined_waitlist, name, is_new = cur.fetchone()
             if is_new:
                 cur.execute(
                     "INSERT INTO events (telegram_id, event_type) VALUES (%s, 'user_seen')",
-                    (user_id,),
+                    (telegram_id,),
                 )
             return {"language": language, "checks_used": checks_used, "joined_waitlist": joined_waitlist, "name": name}
     finally:
         state._pool.putconn(conn)
 
 
-def _save(user_id: int, data: dict) -> None:
+def _save(telegram_id: int, data: dict) -> None:
     # checks_used is deliberately NOT written here. bot.py hasn't incremented
     # usage_count since the Stage 3 migration (the CV-analysis flow that used
     # to do that now lives entirely in the Mini App, which increments
@@ -117,7 +117,7 @@ def _save(user_id: int, data: dict) -> None:
                 VALUES (%s, %s, now())
                 ON CONFLICT (user_id) DO UPDATE
                 SET data = EXCLUDED.data, updated_at = now()
-            """, (user_id, json.dumps(session)))
+            """, (telegram_id, json.dumps(session)))
             cur.execute("""
                 UPDATE users
                 SET language = %s,
@@ -126,7 +126,7 @@ def _save(user_id: int, data: dict) -> None:
                     name = %s,
                     last_seen_at = now()
                 WHERE telegram_id = %s
-            """, (data["lang"] or None, data["waitlisted"], data["waitlisted"], data["name"] or None, user_id))
+            """, (data["lang"] or None, data["waitlisted"], data["waitlisted"], data["name"] or None, telegram_id))
     finally:
         state._pool.putconn(conn)
 
