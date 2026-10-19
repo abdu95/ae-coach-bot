@@ -31,6 +31,11 @@
         "nullable": false,
         "type": "bigint"
       },
+      "user_id": {
+        "default": null,
+        "nullable": true,
+        "type": "bigint"
+      },
       "vacancy_company": {
         "default": null,
         "nullable": true,
@@ -66,9 +71,12 @@
       "alerted_vacancies_pkey": "CREATE UNIQUE INDEX alerted_vacancies_pkey ON public.alerted_vacancies USING btree (id)",
       "alerted_vacancies_telegram_id_vacancy_url_key": "CREATE UNIQUE INDEX alerted_vacancies_telegram_id_vacancy_url_key ON public.alerted_vacancies USING btree (telegram_id, vacancy_url)",
       "idx_alerted_vacancies_batch": "CREATE INDEX idx_alerted_vacancies_batch ON public.alerted_vacancies USING btree (batch_id)",
-      "idx_alerted_vacancies_telegram_id": "CREATE INDEX idx_alerted_vacancies_telegram_id ON public.alerted_vacancies USING btree (telegram_id)"
+      "idx_alerted_vacancies_telegram_id": "CREATE INDEX idx_alerted_vacancies_telegram_id ON public.alerted_vacancies USING btree (telegram_id)",
+      "idx_alerted_vacancies_user_id": "CREATE INDEX idx_alerted_vacancies_user_id ON public.alerted_vacancies USING btree (user_id)"
     },
-    "triggers": []
+    "triggers": [
+      "trg_alerted_vacancies_fill_user_id"
+    ]
   },
   "applications": {
     "columns": {
@@ -132,6 +140,11 @@
         "nullable": false,
         "type": "timestamp with time zone"
       },
+      "user_id": {
+        "default": null,
+        "nullable": true,
+        "type": "bigint"
+      },
       "vacancy_company": {
         "default": null,
         "nullable": false,
@@ -164,9 +177,12 @@
     },
     "indexes": {
       "applications_pkey": "CREATE UNIQUE INDEX applications_pkey ON public.applications USING btree (id)",
-      "idx_applications_telegram_id": "CREATE INDEX idx_applications_telegram_id ON public.applications USING btree (telegram_id)"
+      "idx_applications_telegram_id": "CREATE INDEX idx_applications_telegram_id ON public.applications USING btree (telegram_id)",
+      "idx_applications_user_id": "CREATE INDEX idx_applications_user_id ON public.applications USING btree (user_id)"
     },
-    "triggers": []
+    "triggers": [
+      "trg_applications_fill_user_id"
+    ]
   },
   "cv_analyses": {
     "columns": {
@@ -210,6 +226,11 @@
         "nullable": false,
         "type": "jsonb"
       },
+      "user_id": {
+        "default": null,
+        "nullable": true,
+        "type": "bigint"
+      },
       "xyz": {
         "default": null,
         "nullable": false,
@@ -222,9 +243,12 @@
     },
     "indexes": {
       "cv_analyses_pkey": "CREATE UNIQUE INDEX cv_analyses_pkey ON public.cv_analyses USING btree (id)",
-      "idx_cv_analyses_telegram_id": "CREATE INDEX idx_cv_analyses_telegram_id ON public.cv_analyses USING btree (telegram_id)"
+      "idx_cv_analyses_telegram_id": "CREATE INDEX idx_cv_analyses_telegram_id ON public.cv_analyses USING btree (telegram_id)",
+      "idx_cv_analyses_user_id": "CREATE INDEX idx_cv_analyses_user_id ON public.cv_analyses USING btree (user_id)"
     },
-    "triggers": []
+    "triggers": [
+      "trg_cv_analyses_fill_user_id"
+    ]
   },
   "cvs": {
     "columns": {
@@ -262,6 +286,11 @@
         "default": null,
         "nullable": false,
         "type": "bigint"
+      },
+      "user_id": {
+        "default": null,
+        "nullable": true,
+        "type": "bigint"
       }
     },
     "constraints": {
@@ -271,9 +300,12 @@
     "indexes": {
       "cvs_pkey": "CREATE UNIQUE INDEX cvs_pkey ON public.cvs USING btree (id)",
       "idx_cvs_one_active_per_user": "CREATE UNIQUE INDEX idx_cvs_one_active_per_user ON public.cvs USING btree (telegram_id) WHERE is_active",
-      "idx_cvs_telegram_id": "CREATE INDEX idx_cvs_telegram_id ON public.cvs USING btree (telegram_id)"
+      "idx_cvs_telegram_id": "CREATE INDEX idx_cvs_telegram_id ON public.cvs USING btree (telegram_id)",
+      "idx_cvs_user_id": "CREATE INDEX idx_cvs_user_id ON public.cvs USING btree (user_id)"
     },
-    "triggers": []
+    "triggers": [
+      "trg_cvs_fill_user_id"
+    ]
   },
   "events": {
     "columns": {
@@ -301,6 +333,11 @@
         "default": null,
         "nullable": false,
         "type": "bigint"
+      },
+      "user_id": {
+        "default": null,
+        "nullable": true,
+        "type": "bigint"
       }
     },
     "constraints": {
@@ -309,9 +346,12 @@
     "indexes": {
       "events_pkey": "CREATE UNIQUE INDEX events_pkey ON public.events USING btree (id)",
       "idx_events_type_time": "CREATE INDEX idx_events_type_time ON public.events USING btree (event_type, created_at)",
-      "idx_events_user": "CREATE INDEX idx_events_user ON public.events USING btree (telegram_id)"
+      "idx_events_user": "CREATE INDEX idx_events_user ON public.events USING btree (telegram_id)",
+      "idx_events_user_id": "CREATE INDEX idx_events_user_id ON public.events USING btree (user_id)"
     },
-    "triggers": []
+    "triggers": [
+      "trg_events_fill_user_id"
+    ]
   },
   "greenhouse_companies": {
     "columns": {
@@ -380,15 +420,23 @@
         "default": null,
         "nullable": false,
         "type": "bigint"
+      },
+      "user_id": {
+        "default": null,
+        "nullable": true,
+        "type": "bigint"
       }
     },
     "constraints": {
       "orders_pkey": "PRIMARY KEY (id)"
     },
     "indexes": {
+      "idx_orders_user_id": "CREATE INDEX idx_orders_user_id ON public.orders USING btree (user_id)",
       "orders_pkey": "CREATE UNIQUE INDEX orders_pkey ON public.orders USING btree (id)"
     },
-    "triggers": []
+    "triggers": [
+      "trg_orders_fill_user_id"
+    ]
   },
   "payme_transactions": {
     "columns": {
@@ -492,6 +540,11 @@
         "nullable": false,
         "type": "timestamp with time zone"
       },
+      "id": {
+        "default": "nextval('users_id_seq'::regclass)",
+        "nullable": false,
+        "type": "bigint"
+      },
       "joined_waitlist": {
         "default": "false",
         "nullable": false,
@@ -557,6 +610,7 @@
       "users_pkey": "PRIMARY KEY (telegram_id)"
     },
     "indexes": {
+      "users_id_key": "CREATE UNIQUE INDEX users_id_key ON public.users USING btree (id)",
       "users_pkey": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (telegram_id)"
     },
     "triggers": []
